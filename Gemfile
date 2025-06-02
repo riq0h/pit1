@@ -40,6 +40,7 @@ gem 'mini_magick'                # Image processing
 gem 'nanoid'                     # Generate short unique IDs
 
 group :development, :test do
+  gem 'brakeman'
   gem 'debug', platforms: %i[mri windows]
   gem 'factory_bot_rails'
   gem 'faker'
