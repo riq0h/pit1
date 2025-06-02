@@ -2,7 +2,7 @@
   "name": "pit1",
   "version": "0.1",
   "type": "module",
-  "description": "Lightweight ActivityPub Starship",
+  "description": "Lightweight Fediverse Starship",
   "scripts": {
     "lint:js": "eslint app/javascript --fix",
     "lint:css": "prettier --write 'app/assets/stylesheets/**/*.css'",

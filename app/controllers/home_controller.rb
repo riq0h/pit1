@@ -2,6 +2,6 @@
 
 class HomeController < ApplicationController
   def index
-    render plain: 'pit1 ActivityPub Server - Coming Soon'
+    render plain: 'pit1 Lightweight Fediverse Starship'
   end
 end
