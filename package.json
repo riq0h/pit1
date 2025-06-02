@@ -1,0 +1,26 @@
+{
+  "name": "pit1",
+  "version": "0.1",
+  "type": "module",
+  "description": "Lightweight ActivityPub Starship",
+  "scripts": {
+    "lint:js": "eslint app/javascript --fix",
+    "lint:css": "prettier --write 'app/assets/stylesheets/**/*.css'",
+    "prettier": "prettier --write 'app/javascript/**/*.js' 'app/assets/stylesheets/**/*.css'",
+    "eslint": "eslint app/javascript",
+    "prettier:check": "prettier --check 'app/javascript/**/*.js' 'app/assets/stylesheets/**/*.css'"
+  },
+  "keywords": [
+    "activitypub",
+    "rails",
+    "fediverse",
+    "social"
+  ],
+  "author": "Rikuoh Tsujitani",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.2.5"
+  }
+}

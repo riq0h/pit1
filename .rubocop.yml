@@ -1,8 +1,85 @@
-# Omakase Ruby styling for Rails
-inherit_gem: { rubocop-rails-omakase: rubocop.yml }
+plugins:
+  - rubocop-rails
+  - rubocop-rspec
+  - rubocop-performance
 
-# Overwrite or add rules to create your own house style
-#
-# # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`
-# Layout/SpaceInsideArrayLiteralBrackets:
-#   Enabled: false
+AllCops:
+  TargetRubyVersion: 3.4.1
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - 'bin/**/*'
+    - 'config/**/*'
+    - 'db/**/*'
+    - 'node_modules/**/*'
+    - 'vendor/**/*'
+    - 'tmp/**/*'
+    - 'storage/**/*'
+    - 'spec/spec_helper.rb'
+    - 'spec/rails_helper.rb'
+
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - 'app/models/**/*'
+
+Metrics/MethodLength:
+  Max: 15
+  Exclude:
+    - 'app/controllers/**/*'
+
+Metrics/ClassLength:
+  Max: 150
+  Exclude:
+    - 'app/models/**/*'
+
+Metrics/BlockLength:
+  Exclude:
+    - 'config/routes.rb'
+    - 'spec/**/*'
+
+Rails/FilePath:
+  Enabled: false
+
+Rails/Output:
+  Exclude:
+    - 'app/controllers/**/*'
+
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+  EnforcedStyle: always
+
+Style/HashSyntax:
+  EnforcedStyle: ruby19_no_mixed_keys
+
+Style/RegexpLiteral:
+  AllowInnerSlashes: true
+
+Performance/RedundantBlockCall:
+  Enabled: true
+
+Performance/StringReplacement:
+  Enabled: true
+
+Rails/HasAndBelongsToMany:
+  Enabled: false
+
+Rails/SkipsModelValidations:
+  Exclude:
+    - 'app/models/**/*'
+
+Rails/OutputSafety:
+  Exclude:
+    - 'app/helpers/**/*'
+
+RSpec/ExampleLength:
+  Max: 10
+
+RSpec/MultipleExpectations:
+  Max: 5
+
+RSpec/NestedGroups:
+  Max: 3

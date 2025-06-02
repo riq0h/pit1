@@ -1,0 +1,11 @@
+# .prettierignore
+node_modules/
+app/assets/builds/
+public/assets/
+vendor/
+tmp/
+storage/
+*.min.js
+*.min.css
+*.sqlite3
+*.log

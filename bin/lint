@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+# bin/lint
+
+set -e
+
+echo "🚀 Running pit1 Linting..."
+echo ""
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Function to print status
+print_status() {
+    echo -e "${BLUE}[pit1]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+# Check if required tools are available
+check_dependencies() {
+    print_status "Checking dependencies..."
+    
+    if ! command -v bundle &> /dev/null; then
+        print_error "Bundler not found. Please install bundler first."
+        exit 1
+    fi
+    
+    if ! command -v npm &> /dev/null && ! command -v yarn &> /dev/null; then
+        print_error "npm or yarn not found. Please install Node.js first."
+        exit 1
+    fi
+    
+    print_success "Dependencies check passed"
+}
+
+# Run Rubocop
+run_rubocop() {
+    print_status "Running Rubocop (Ruby linting)..."
+    
+    if bundle exec rubocop --auto-correct; then
+        print_success "Rubocop passed"
+    else
+        print_error "Rubocop failed"
+        return 1
+    fi
+}
+
+# Run ESLint
+run_eslint() {
+    print_status "Running ESLint (JavaScript linting)..."
+    
+    if [ -x "$(command -v npm)" ]; then
+        if npm run eslint; then
+            print_success "ESLint passed"
+        else
+            print_error "ESLint failed"
+            return 1
+        fi
+    elif [ -x "$(command -v yarn)" ]; then
+        if yarn eslint; then
+            print_success "ESLint passed"
+        else
+            print_error "ESLint failed"
+            return 1
+        fi
+    fi
+}
+
+# Run Prettier
+run_prettier() {
+    print_status "Running Prettier (Code formatting)..."
+    
+    if [ -x "$(command -v npm)" ]; then
+        if npm run prettier; then
+            print_success "Prettier formatting applied"
+        else
+            print_error "Prettier failed"
+            return 1
+        fi
+    elif [ -x "$(command -v yarn)" ]; then
+        if yarn prettier; then
+            print_success "Prettier formatting applied"
+        else
+            print_error "Prettier failed"
+            return 1
+        fi
+    fi
+}
+
+# Main execution
+main() {
+    echo "=========================================="
+    echo "🔍 pit1 Linting Suite"
+    echo "=========================================="
+    echo ""
+    
+    check_dependencies
+    echo ""
+    
+    local exit_code=0
+    
+    # Run all linters
+    if ! run_rubocop; then
+        exit_code=1
+    fi
+    echo ""
+    
+    if ! run_eslint; then
+        exit_code=1
+    fi
+    echo ""
+    
+    if ! run_prettier; then
+        exit_code=1
+    fi
+    echo ""
+    
+    # Summary
+    echo "=========================================="
+    if [ $exit_code -eq 0 ]; then
+        print_success "All linting checks passed! 🎉"
+        echo ""
+        echo "Your code is properly formatted and follows best practices."
+    else
+        print_error "Some linting checks failed! 💥"
+        echo ""
+        echo "Please fix the issues above before committing."
+        echo ""
+        echo "Quick fix commands:"
+        echo "  - Rubocop: bundle exec rubocop --auto-correct-all"
+        echo "  - ESLint:  npm run lint:js (or yarn lint:js)"
+        echo "  - Prettier: npm run prettier (or yarn prettier)"
+    fi
+    echo "=========================================="
+    
+    exit $exit_code
+}
+
+# Handle command line arguments
+case "${1:-}" in
+    --help|-h)
+        echo "pit1 Linting Suite"
+        echo ""
+        echo "Usage: bin/lint [OPTION]"
+        echo ""
+        echo "Options:"
+        echo "  --help, -h     Show this help message"
+        echo "  --ruby         Run only Rubocop"
+        echo "  --js           Run only ESLint"
+        echo "  --prettier     Run only Prettier"
+        echo ""
+        echo "Without options, runs all linters (Rubocop + ESLint + Prettier)"
+        exit 0
+        ;;
+    --ruby)
+        check_dependencies
+        run_rubocop
+        exit $?
+        ;;
+    --js)
+        check_dependencies
+        run_eslint
+        exit $?
+        ;;
+    --prettier)
+        check_dependencies
+        run_prettier
+        exit $?
+        ;;
+    "")
+        main
+        ;;
+    *)
+        print_error "Unknown option: $1"
+        echo "Use 'bin/lint --help' for usage information."
+        exit 1
+        ;;
+esac
