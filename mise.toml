@@ -1,0 +1,10 @@
+[tools]
+ruby = "3.4.1"
+
+node = "20"  # Hotwire/ImportMap用
+
+[env]
+# 開発環境用の環境変数
+RAILS_ENV = "development"
+ACTIVITYPUB_DOMAIN = "localhost:3000"
+ACTIVITYPUB_HTTPS = "false"
