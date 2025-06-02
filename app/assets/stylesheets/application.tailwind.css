@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ActivityPub specific styles */
+@layer components {
+  .activitypub-content {
+    @apply prose prose-slate max-w-none;
+  }
+
+  .activitypub-content p {
+    @apply mb-4;
+  }
+
+  .activitypub-content a {
+    @apply text-blue-600 hover:text-blue-800 underline;
+  }
+
+  .mention {
+    @apply text-blue-600 hover:text-blue-800 font-medium;
+  }
+
+  .hashtag {
+    @apply text-blue-600 hover:text-blue-800 font-medium;
+  }
+
+  .post-content {
+    @apply break-words whitespace-pre-wrap;
+    max-height: 20rem;
+    overflow-y: auto;
+  }
+
+  .post-content.expanded {
+    max-height: none;
+  }
+
+  .character-counter {
+    @apply text-sm text-gray-500;
+  }
+
+  .character-counter.over-limit {
+    @apply text-red-500 font-bold;
+  }
+}
+
+/* Custom utilities for pit1 */
+@layer utilities {
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .content-9999 {
+    /* Special styling for 9999 character content */
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+}

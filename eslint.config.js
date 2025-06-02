@@ -4,15 +4,6 @@ export default [
   js.configs.recommended,
   {
     files: ['app/javascript/**/*.js'],
-    ignores: [
-      'node_modules/**',
-      'app/assets/builds/**',
-      'public/assets/**',
-      'vendor/**',
-      'tmp/**',
-      'storage/**'
-    ],
-
     languageOptions: {
       ecmaVersion: 2021,
       sourceType: 'module',
@@ -20,26 +11,17 @@ export default [
         window: 'readonly',
         document: 'readonly',
         console: 'readonly',
-        Turbo: 'readonly',
-        Stimulus: 'readonly',
-        application: 'readonly',
-        ActivityPub: 'readonly'
+        navigator: 'readonly',
+        fetch: 'readonly',
+        URL: 'readonly',
+        globalThis: 'readonly',
+        ActivityPubClient: 'writable',
+        WebfingerUtil: 'writable'
       }
     },
-
     rules: {
-      'no-console': 'warn',
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      'no-undef': 'error',
-      'prefer-const': 'error',
-      'no-var': 'error',
-      'no-eval': 'error',
-      'no-implied-eval': 'error',
-      eqeqeq: 'error',
-      curly: 'error',
-      'brace-style': ['error', '1tbs'],
-      'object-shorthand': 'error',
-      'quote-props': ['error', 'as-needed']
+      'no-console': ['warn', { allow: ['error', 'warn'] }],
+      'object-shorthand': 'error'
     }
   }
 ];

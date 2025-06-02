@@ -452,6 +452,7 @@ DEPENDENCIES
   sassc-rails
   solid_queue
   spring
+  sprockets-rails
   sqlite3 (>= 2.1)
   stimulus-rails
   turbo-rails
