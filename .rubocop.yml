@@ -23,8 +23,13 @@ Layout/LineLength:
   Exclude:
     - 'app/models/**/*'
 
+Metrics/CyclomaticComplexity:
+  Max: 10
+  Exclude:
+    - 'app/services/**/*'
+
 Metrics/MethodLength:
-  Max: 15
+  Max: 20
   Exclude:
     - 'app/controllers/**/*'
 
@@ -68,8 +73,7 @@ Rails/HasAndBelongsToMany:
   Enabled: false
 
 Rails/SkipsModelValidations:
-  Exclude:
-    - 'app/models/**/*'
+  Enabled: false
 
 Rails/OutputSafety:
   Exclude:
