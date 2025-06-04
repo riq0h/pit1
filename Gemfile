@@ -10,6 +10,7 @@ gem 'bootsnap', require: false
 gem 'image_processing', '~> 1.2'
 gem 'importmap-rails'
 gem 'jbuilder'
+gem 'ostruct'
 gem 'puma', '>= 5.0'
 gem 'rails', '~> 8.0.0'
 gem 'redis', '>= 4.0.1'
