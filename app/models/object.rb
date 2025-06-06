@@ -45,6 +45,17 @@ class Object < ApplicationRecord
   after_create :create_activity, if: :local?
   after_destroy :create_delete_activity, if: :local?
 
+  # === URL生成メソッド ===
+  def public_url
+    # ap_id の末尾部分（nanoid）を使用してHTML URL生成
+    id_part = ap_id.split('/').last
+    "https://#{Rails.application.config.activitypub.domain}/@#{actor.username}/#{id_part}"
+  end
+
+  def activitypub_url
+    ap_id
+  end
+
   # === ActivityPub関連メソッド ===
 
   def local?
@@ -53,14 +64,6 @@ class Object < ApplicationRecord
 
   def remote?
     !local
-  end
-
-  def activitypub_url
-    if local?
-      Rails.application.routes.url_helpers.object_url(id)
-    else
-      ap_id
-    end
   end
 
   def public?

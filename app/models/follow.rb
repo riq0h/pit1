@@ -2,7 +2,6 @@
 
 class Follow < ApplicationRecord
   # === バリデーション ===
-  validates :actor_id, uniqueness: { scope: :target_actor_id }
   validates :ap_id, presence: true, uniqueness: true
   validates :follow_activity_ap_id, presence: true
 

@@ -2,13 +2,16 @@
 
 class Actor < ApplicationRecord
   # === バリデーション ===
-  validates :username, presence: true,
-                       format: { with: /\A[a-zA-Z0-9_]+\z/ },
-                       length: { minimum: 1, maximum: 30 }
+  validates :username, presence: true, uniqueness: { scope: :domain },
+                       format: { with: /\A[a-zA-Z0-9_]+\z/ }, length: { maximum: 20 }
   validates :ap_id, presence: true, uniqueness: true
   validates :inbox_url, presence: true
   validates :outbox_url, presence: true
+  validates :followers_url, presence: true
+  validates :following_url, presence: true
   validates :public_key, presence: true
+  validates :local_account_slot, inclusion: { in: [1, 2] }, if: :local?
+  validates :local_account_slot, absence: true, unless: :local?
 
   # ドメイン関連バリデーション
   validates :domain, uniqueness: { scope: :username }
