@@ -1,0 +1,107 @@
+#!/bin/bash
+# データベース完全クリーンアップ & 再構築
+
+echo "🧹 Database Complete Cleanup & Rebuild"
+echo "======================================"
+
+# 1. Rails サーバー停止確認
+echo "🛑 Stopping Rails server (if running)..."
+pkill -f "rails server" 2>/dev/null || echo "No Rails server running"
+
+# 2. 既存データベースファイル完全削除
+echo ""
+echo "🗑️ Removing all database files..."
+rm -f storage/development.sqlite3*
+rm -f storage/test.sqlite3*
+rm -f storage/production.sqlite3*
+rm -f db/schema.rb
+rm -f db/structure.sql
+
+echo "✅ Database files removed"
+
+# 3. SQLite3プロセス確認・終了
+echo ""
+echo "🔍 Checking for SQLite3 processes..."
+if pgrep sqlite3 >/dev/null; then
+	echo "⚠️ SQLite3 processes found, terminating..."
+	pkill sqlite3
+	sleep 1
+else
+	echo "✅ No SQLite3 processes running"
+fi
+
+# 4. 一時ファイル削除
+echo ""
+echo "🧽 Cleaning temporary files..."
+rm -rf tmp/cache/
+rm -rf tmp/pids/
+rm -rf log/*.log
+echo "✅ Temporary files cleaned"
+
+# 5. Bundler環境クリーン
+echo ""
+echo "💎 Cleaning bundler environment..."
+bundle clean --force
+echo "✅ Bundler cleaned"
+
+# 6. Rails環境初期化
+echo ""
+echo "🚀 Reinitializing Rails environment..."
+bin/rails restart 2>/dev/null || echo "Rails restarted"
+
+# 7. データベース再作成
+echo ""
+echo "📊 Creating fresh database..."
+bin/rails db:create
+
+# 8. マイグレーション実行
+echo ""
+echo "🔄 Running migrations..."
+VERBOSE=true bin/rails db:migrate
+
+# 9. スキーマダンプ
+echo ""
+echo "📁 Generating schema dump..."
+bin/rails db:schema:dump
+
+# 10. 結果確認
+echo ""
+echo "✅ Verification:"
+echo "Database files:"
+ls -la storage/*.sqlite3* 2>/dev/null || echo "No database files yet"
+
+echo ""
+echo "Schema files:"
+ls -la db/schema* db/structure* 2>/dev/null || echo "No schema files yet"
+
+# 11. データベース構造確認
+echo ""
+echo "🗄️ Database structure check:"
+bin/rails runner "
+begin
+  puts '📊 Tables: ' + ActiveRecord::Base.connection.tables.join(', ')
+  
+  # FTS5テーブル確認
+  fts_result = ActiveRecord::Base.connection.execute(\"SELECT name FROM sqlite_master WHERE type='table' AND sql LIKE '%fts5%'\")
+  if fts_result.any?
+    puts '🔍 FTS5 tables: ' + fts_result.map { |row| row[0] }.join(', ')
+  else
+    puts '🔍 FTS5 tables: None found'
+  end
+  
+  # トリガー確認
+  trigger_result = ActiveRecord::Base.connection.execute(\"SELECT name FROM sqlite_master WHERE type='trigger'\")
+  puts '⚙️ Triggers: ' + trigger_result.map { |row| row[0] }.join(', ')
+  
+rescue => e
+  puts \"❌ Error checking database: #{e.message}\"
+end
+"
+
+echo ""
+echo "🎯 Cleanup and rebuild complete!"
+echo ""
+echo "📋 Next steps:"
+echo "  1. Verify no errors above"
+echo "  2. Test console: bin/rails console"
+echo "  3. Start server: bin/rails server"
