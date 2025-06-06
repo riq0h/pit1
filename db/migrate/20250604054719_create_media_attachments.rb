@@ -27,8 +27,6 @@ class CreateMediaAttachments < ActiveRecord::Migration[8.0]
     end
 
     # インデックス設定
-    add_index :media_attachments, :object_id unless index_exists?(:media_attachments, :object_id)
-    add_index :media_attachments, :actor_id unless index_exists?(:media_attachments, :actor_id)
     add_index :media_attachments, :attachment_type unless index_exists?(:media_attachments, :attachment_type)
     add_index :media_attachments, :processed unless index_exists?(:media_attachments, :processed)
     add_index :media_attachments, :blurhash unless index_exists?(:media_attachments, :blurhash)

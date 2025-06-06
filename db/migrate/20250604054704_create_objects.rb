@@ -1,21 +1,22 @@
 class CreateObjects < ActiveRecord::Migration[8.0]
   def change
-    create_table :objects do |t|
-      # ActivityPub識別
-      t.string :ap_id, null: false, index: { unique: true }
-      t.string :object_type, null: false
+    create_table :objects, id: :string do |t|
+      # ActivityPub情報
+      t.string :ap_id, null: false
+      t.string :object_type, null: false, default: 'Note'
+      t.references :actor, type: :string, null: false, foreign_key: true
 
-      # 関連情報
-      t.references :actor, null: false, foreign_key: true
-      t.string :in_reply_to_ap_id
-      t.string :conversation_ap_id
+      # コンテンツ（HTMLとプレーンテキストの両方を保持）
+      t.text :content                    # HTML版
+      t.text :content_plaintext          # プレーン版（FTS5検索用）
 
-      # 内容
-      t.text :content
-      t.text :content_plaintext
-      t.string :summary
+      t.text :summary                    # Content Warning
       t.string :url
       t.string :language, default: 'ja'
+
+      # 返信・会話
+      t.string :in_reply_to_ap_id
+      t.string :conversation_ap_id
 
       # メディア情報
       t.string :media_type
@@ -40,49 +41,63 @@ class CreateObjects < ActiveRecord::Migration[8.0]
       t.timestamps
     end
 
-    # インデックス設定
+    # 基本インデックス
     add_index :objects, :ap_id, unique: true unless index_exists?(:objects, :ap_id)
     add_index :objects, :object_type unless index_exists?(:objects, :object_type)
-    add_index :objects, %i[actor_id published_at] unless index_exists?(:objects, %i[actor_id published_at])
+    add_index :objects, :published_at unless index_exists?(:objects, :published_at)
+    add_index :objects, :visibility unless index_exists?(:objects, :visibility)
+    add_index :objects, :local unless index_exists?(:objects, :local)
     add_index :objects, :in_reply_to_ap_id unless index_exists?(:objects, :in_reply_to_ap_id)
     add_index :objects, :conversation_ap_id unless index_exists?(:objects, :conversation_ap_id)
-    add_index :objects, :local unless index_exists?(:objects, :local)
-    add_index :objects, :visibility unless index_exists?(:objects, :visibility)
-    add_index :objects, :published_at unless index_exists?(:objects, :published_at)
 
-    # 全文検索インデックス
-    execute <<-SQL
-      CREATE VIRTUAL TABLE objects_fts USING fts5(
-        content_plaintext,
-        summary,
-        content='objects',
-        content_rowid='id'
-      );
+    # FTS5仮想テーブル
+    reversible do |dir|
+      dir.up do
+        execute <<-SQL
+          CREATE VIRTUAL TABLE IF NOT EXISTS post_search USING fts5(
+            content_plaintext,
+            summary,
+            content='objects',
+            content_rowid='id'
+          );
+        SQL
 
-      CREATE TRIGGER objects_fts_insert AFTER INSERT ON objects BEGIN
-        INSERT INTO objects_fts(rowid, content_plaintext, summary)
-        VALUES (new.id, new.content_plaintext, new.summary);
-      END;
+        execute <<-SQL
+          CREATE TRIGGER IF NOT EXISTS post_search_insert#{' '}
+          AFTER INSERT ON objects#{' '}
+          BEGIN
+            INSERT INTO post_search(rowid, content_plaintext, summary)#{' '}
+            VALUES (new.id, COALESCE(new.content_plaintext, ''), COALESCE(new.summary, ''));
+          END;
+        SQL
 
-      CREATE TRIGGER objects_fts_delete AFTER DELETE ON objects BEGIN
-        INSERT INTO objects_fts(objects_fts, rowid, content_plaintext, summary)
-        VALUES('delete', old.id, old.content_plaintext, old.summary);
-      END;
+        execute <<-SQL
+          CREATE TRIGGER IF NOT EXISTS post_search_delete#{' '}
+          AFTER DELETE ON objects#{' '}
+          BEGIN
+            INSERT INTO post_search(post_search, rowid, content_plaintext, summary)#{' '}
+            VALUES('delete', old.id, COALESCE(old.content_plaintext, ''), COALESCE(old.summary, ''));
+          END;
+        SQL
 
-      CREATE TRIGGER objects_fts_update AFTER UPDATE ON objects BEGIN
-        INSERT INTO objects_fts(objects_fts, rowid, content_plaintext, summary)
-        VALUES('delete', old.id, old.content_plaintext, old.summary);
-        INSERT INTO objects_fts(rowid, content_plaintext, summary)
-        VALUES (new.id, new.content_plaintext, new.summary);
-      END;
-    SQL
-  end
+        execute <<-SQL
+          CREATE TRIGGER IF NOT EXISTS post_search_update#{' '}
+          AFTER UPDATE ON objects#{' '}
+          BEGIN
+            INSERT INTO post_search(post_search, rowid, content_plaintext, summary)#{' '}
+            VALUES('delete', old.id, COALESCE(old.content_plaintext, ''), COALESCE(old.summary, ''));
+            INSERT INTO post_search(rowid, content_plaintext, summary)#{' '}
+            VALUES (new.id, COALESCE(new.content_plaintext, ''), COALESCE(new.summary, ''));
+          END;
+        SQL
+      end
 
-  def down
-    execute 'DROP TRIGGER IF EXISTS objects_fts_update'
-    execute 'DROP TRIGGER IF EXISTS objects_fts_delete'
-    execute 'DROP TRIGGER IF EXISTS objects_fts_insert'
-    execute 'DROP TABLE IF EXISTS objects_fts'
-    drop_table :objects
+      dir.down do
+        execute 'DROP TRIGGER IF EXISTS post_search_update;'
+        execute 'DROP TRIGGER IF EXISTS post_search_delete;'
+        execute 'DROP TRIGGER IF EXISTS post_search_insert;'
+        execute 'DROP TABLE IF EXISTS post_search;'
+      end
+    end
   end
 end

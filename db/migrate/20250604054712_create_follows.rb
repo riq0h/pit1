@@ -21,7 +21,6 @@ class CreateFollows < ActiveRecord::Migration[8.0]
     # インデックス設定
     add_index :follows, %i[actor_id target_actor_id], unique: true unless index_exists?(:follows,
                                                                                         %i[actor_id target_actor_id])
-    add_index :follows, :target_actor_id unless index_exists?(:follows, :target_actor_id)
     add_index :follows, :ap_id, unique: true unless index_exists?(:follows, :ap_id)
     add_index :follows, :accepted unless index_exists?(:follows, :accepted)
     add_index :follows, :follow_activity_ap_id unless index_exists?(:follows, :follow_activity_ap_id)
