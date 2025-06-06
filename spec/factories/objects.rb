@@ -2,7 +2,7 @@
 
 FactoryBot.define do
   factory :object do
-    sequence(:ap_id) { |n| "https://example.com/objects/#{n}" }
+    sequence(:ap_id) { |_n| "https://example.com/objects/#{SecureRandom.alphanumeric(21)}" }
     object_type { 'Note' }
     association :actor
 
@@ -45,12 +45,12 @@ FactoryBot.define do
     end
 
     trait :long_post do
-      content { "<p>#{'A' * 5000}</p>" } # 5000文字の長文投稿
+      content { "<p>#{'A' * 5000}</p>" }
       content_plaintext { 'A' * 5000 }
     end
 
     trait :max_length do
-      content { "<p>#{'X' * 9999}</p>" } # 最大文字数
+      content { "<p>#{'X' * 9999}</p>" }
       content_plaintext { 'X' * 9999 }
     end
 
