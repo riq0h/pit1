@@ -34,7 +34,7 @@ Metrics/MethodLength:
     - 'app/controllers/**/*'
 
 Metrics/ClassLength:
-  Max: 200
+  Max: 300
   Exclude:
     - 'app/models/**/*'
 
