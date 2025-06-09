@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :object do
+  factory :object, class: 'ActivityPubObject' do
     sequence(:ap_id) { |_n| "https://example.com/objects/#{SecureRandom.alphanumeric(21)}" }
     object_type { 'Note' }
     association :actor
