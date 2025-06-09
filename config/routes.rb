@@ -13,7 +13,7 @@ Rails.application.routes.draw do
   # ActivityPub Inbox
   post '/users/:username/inbox', to: 'inbox#create', as: :user_inbox
 
-  # ActivityPub Outbox（今後実装）
+  # ActivityPub Outbox
   get '/users/:username/outbox', to: 'outbox#show', as: :user_outbox
   post '/users/:username/outbox', to: 'outbox#create'
 
@@ -21,10 +21,10 @@ Rails.application.routes.draw do
   get '/users/:username', to: 'actors#show', as: :user_actor,
                           constraints: { format: :json }
 
-  # WebFinger（既存）
+  # WebFinger
   get '/.well-known/webfinger', to: 'webfinger#show'
 
-  # WebFinger discovery (RFC 7033)
+  # WebFinger discovery
   get '/.well-known/webfinger', to: 'well_known#webfinger'
   get '/.well-known/host-meta', to: 'well_known#host_meta'
   get '/.well-known/nodeinfo', to: 'well_known#nodeinfo'

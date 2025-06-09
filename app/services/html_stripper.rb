@@ -24,7 +24,7 @@ module ActivityPub
     def self.sanitize(html_content)
       return '' if html_content.blank?
 
-      # 基本的なサニタイズ（実際の実装では専用gemを使用推奨）
+      # 基本的なサニタイズ
       html_content.gsub(/<script[^>]*>.*?<\/script>/mi, '')
                   .gsub(/<style[^>]*>.*?<\/style>/mi, '')
                   .gsub(/on\w+\s*=\s*["'][^"']*["']/i, '')
