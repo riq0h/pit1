@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
-class Object < ApplicationRecord
+class ActivityPubObject < ApplicationRecord
+  self.table_name = 'objects'
+
   # === 定数 ===
   OBJECT_TYPES = %w[Note Article Image Video Audio Document Page].freeze
   VISIBILITY_LEVELS = %w[public unlisted followers_only direct].freeze
@@ -19,8 +21,8 @@ class Object < ApplicationRecord
   has_many :media_attachments, dependent: :destroy, inverse_of: :object
 
   # 返信関係
-  belongs_to :in_reply_to, class_name: 'Object', optional: true
-  has_many :replies, class_name: 'Object', foreign_key: 'in_reply_to_id',
+  belongs_to :in_reply_to, class_name: 'ActivityPubObject', optional: true
+  has_many :replies, class_name: 'ActivityPubObject', foreign_key: 'in_reply_to_id',
                      dependent: :destroy, inverse_of: :in_reply_to
 
   # === スコープ ===
@@ -113,9 +115,9 @@ class Object < ApplicationRecord
   end
 
   def conversation_thread
-    return Object.where(id: id) if conversation_ap_id.blank?
+    return ActivityPubObject.where(id: id) if conversation_ap_id.blank?
 
-    Object.in_conversation(conversation_ap_id).recent
+    ActivityPubObject.in_conversation(conversation_ap_id).recent
   end
 
   # === 表示用メソッド ===
@@ -203,7 +205,7 @@ class Object < ApplicationRecord
   end
 
   def set_reply_conversation_id
-    parent = Object.find_by(ap_id: in_reply_to_ap_id)
+    parent = ActivityPubObject.find_by(ap_id: in_reply_to_ap_id)
     self.conversation_ap_id = parent&.conversation_ap_id || in_reply_to_ap_id
   end
 

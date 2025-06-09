@@ -28,7 +28,7 @@ class MediaAttachment < ApplicationRecord
 
   # === アソシエーション ===
   belongs_to :actor, inverse_of: :media_attachments
-  belongs_to :object, optional: true, inverse_of: :media_attachments
+  belongs_to :object, optional: true, inverse_of: :media_attachments, class_name: 'ActivityPubObject'
 
   # === スコープ ===
   scope :images, -> { where(media_type: 'image') }

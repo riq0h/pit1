@@ -14,13 +14,16 @@ class Activity < ApplicationRecord
 
   # === アソシエーション ===
   belongs_to :actor, inverse_of: :activities
-  belongs_to :object, optional: true, inverse_of: :activities
+  belongs_to :object, optional: true, inverse_of: :activities, class_name: 'ActivityPubObject'
 
   # === スコープ ===
   scope :local, -> { where(local: true) }
   scope :remote, -> { where(local: false) }
   scope :processed, -> { where(processed: true) }
   scope :unprocessed, -> { where(processed: false) }
+  scope :delivered, -> { where(delivered: true) }
+  scope :undelivered, -> { where(delivered: false) }
+  scope :failed_delivery, -> { where(delivered: false).where.not(last_delivery_error: nil) }
   scope :recent, -> { order(published_at: :desc) }
   scope :by_type, ->(type) { where(activity_type: type) }
 
@@ -32,7 +35,7 @@ class Activity < ApplicationRecord
 
   # === コールバック ===
   before_validation :set_defaults, on: :create
-  after_create :process_activity, if: :should_auto_process?
+  after_create :process_activity!, if: :should_auto_process?
 
   # === ActivityPub関連メソッド ===
 
@@ -125,7 +128,7 @@ class Activity < ApplicationRecord
 
   def find_target_by_ap_id
     # オブジェクトを AP ID で検索
-    Object.find_by(ap_id: target_ap_id) ||
+    ActivityPubObject.find_by(ap_id: target_ap_id) ||
       Actor.find_by(ap_id: target_ap_id) ||
       Activity.find_by(ap_id: target_ap_id)
   end

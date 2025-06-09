@@ -2,7 +2,7 @@
 
 class Actor < ApplicationRecord
   # アソシエーション
-  has_many :objects, dependent: :destroy
+  has_many :objects, dependent: :destroy, class_name: 'ActivityPubObject'
   has_many :activities, dependent: :destroy
   has_many :media_attachments, dependent: :destroy
 
@@ -19,8 +19,7 @@ class Actor < ApplicationRecord
   validates :outbox_url, presence: true
   validates :public_key, presence: true
 
-  # ローカルアクター制限
-  validates :local_account_slot, uniqueness: true, allow_nil: true
+  # ローカルアクター制限（SQLiteトリガーで制御）
   validate :local_actor_limit, if: :local?
 
   # スコープ
@@ -53,7 +52,8 @@ class Actor < ApplicationRecord
 
   # WebFinger identifier
   def webfinger_subject
-    "acct:#{username}@#{domain || Rails.application.config.default_domain}"
+    default_domain = ENV['DOMAIN'] || 'localhost:3000'
+    "acct:#{username}@#{domain || default_domain}"
   end
 
   # Display methods
@@ -169,14 +169,16 @@ class Actor < ApplicationRecord
   def set_ap_urls
     return unless local?
 
-    base_url = "#{Rails.application.config.force_ssl ? 'https' : 'http'}://#{Rails.application.config.default_domain}"
+    default_domain = ENV['DOMAIN'] || 'localhost:3000'
+    scheme = ENV['FORCE_SSL'] == 'true' ? 'https' : 'http'
+    base_url = "#{scheme}://#{default_domain}"
 
     self.ap_id ||= "#{base_url}/users/#{username}"
     self.inbox_url ||= "#{base_url}/users/#{username}/inbox"
     self.outbox_url ||= "#{base_url}/users/#{username}/outbox"
   end
 
-  # ローカルアクター数制限
+  # ローカルアクター数制限（SQLiteトリガーと連携）
   def local_actor_limit
     return unless local?
 
