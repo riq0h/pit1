@@ -1,0 +1,228 @@
+# frozen_string_literal: true
+
+class OutboxController < ApplicationController
+  skip_before_action :verify_authenticity_token
+  before_action :set_actor
+  before_action :ensure_activitypub_request
+
+  # GET /users/:username/outbox
+  # ActivityPub Outbox Collection を返す
+  def show
+    outbox_data = build_outbox_collection(@actor)
+
+    render json: outbox_data,
+           content_type: 'application/activity+json; charset=utf-8'
+  end
+
+  # POST /users/:username/outbox
+  # Activity作成・配信（将来実装予定）
+  def create
+    # TODO: 認証が実装されたら有効化
+    # ローカルユーザーのActivity作成・配信
+
+    render json: { error: 'Not implemented yet' }, status: :not_implemented
+  end
+
+  private
+
+  def set_actor
+    username = params[:username]
+    @actor = Actor.find_by(username: username, local: true)
+
+    return if @actor
+
+    render json: { error: 'Actor not found' }, status: :not_found
+  end
+
+  def ensure_activitypub_request
+    # ActivityPubリクエストかチェック
+    return if activitypub_request?
+
+    # HTML表示にリダイレクト（将来実装）
+    redirect_to profile_path(@actor.username)
+  end
+
+  def activitypub_request?
+    return true if request.content_type&.include?('application/activity+json')
+    return true if request.content_type&.include?('application/ld+json')
+
+    accept_header = request.headers['Accept'] || ''
+    return true if accept_header.include?('application/activity+json')
+    return true if accept_header.include?('application/ld+json')
+
+    # デフォルトではActivityPubとして扱う
+    true
+  end
+
+  def build_outbox_collection(actor)
+    activities = fetch_outbox_activities(actor)
+
+    {
+      '@context' => 'https://www.w3.org/ns/activitystreams',
+      'id' => actor.outbox_url,
+      'type' => 'OrderedCollection',
+      'totalItems' => activities.count,
+      'first' => build_first_page(actor, activities)
+    }
+  end
+
+  def fetch_outbox_activities(actor)
+    # ローカルアクターの公開アクティビティを取得
+    Activity.joins(:actor)
+            .where(actors: { id: actor.id })
+            .where(local: true)
+            .includes(:object, :actor)
+            .order(published_at: :desc)
+            .limit(20)
+  end
+
+  def build_first_page(actor, activities)
+    {
+      'type' => 'OrderedCollectionPage',
+      'id' => "#{actor.outbox_url}?page=1",
+      'partOf' => actor.outbox_url,
+      'orderedItems' => activities.map { |activity| build_activity_data(activity) }
+    }
+  end
+
+  def build_activity_data(activity)
+    base_data = {
+      '@context' => 'https://www.w3.org/ns/activitystreams',
+      'id' => activity.ap_id,
+      'type' => activity.activity_type,
+      'actor' => activity.actor.ap_id,
+      'published' => activity.published_at.iso8601
+    }
+
+    # Activityタイプ別の詳細データ追加
+    case activity.activity_type
+    when 'Create'
+      add_create_activity_data(base_data, activity)
+    when 'Follow'
+      add_follow_activity_data(base_data, activity)
+    when 'Accept', 'Reject'
+      add_response_activity_data(base_data, activity)
+    when 'Announce'
+      add_announce_activity_data(base_data, activity)
+    when 'Like'
+      add_like_activity_data(base_data, activity)
+    else
+      base_data
+    end
+  end
+
+  def add_create_activity_data(base_data, activity)
+    return base_data unless activity.object
+
+    base_data.merge(
+      'object' => build_embedded_object(activity.object),
+      'to' => build_activity_audience(activity.object, :to),
+      'cc' => build_activity_audience(activity.object, :cc)
+    )
+  end
+
+  def add_follow_activity_data(base_data, activity)
+    base_data.merge('object' => activity.target_ap_id)
+  end
+
+  def add_response_activity_data(base_data, activity)
+    base_data.merge('object' => activity.target_ap_id)
+  end
+
+  def add_announce_activity_data(base_data, activity)
+    base_data.merge(
+      'object' => activity.target_ap_id,
+      'to' => ['https://www.w3.org/ns/activitystreams#Public'],
+      'cc' => [activity.actor.followers_url]
+    )
+  end
+
+  def add_like_activity_data(base_data, activity)
+    base_data.merge('object' => activity.target_ap_id)
+  end
+
+  def build_embedded_object(object)
+    {
+      '@context' => 'https://www.w3.org/ns/activitystreams',
+      'id' => object.ap_id,
+      'type' => object.object_type,
+      'attributedTo' => object.actor.ap_id,
+      'content' => object.content,
+      'published' => object.published_at.iso8601,
+      'url' => object.public_url,
+      'to' => build_activity_audience(object, :to),
+      'cc' => build_activity_audience(object, :cc),
+      'sensitive' => object.sensitive?,
+      'summary' => object.summary,
+      'inReplyTo' => object.in_reply_to_ap_id,
+      'attachment' => build_object_attachments(object),
+      'tag' => build_object_tags(object)
+    }.compact
+  end
+
+  def build_activity_audience(object, type)
+    case object.visibility
+    when 'public'
+      build_public_audience(object, type)
+    when 'unlisted'
+      build_unlisted_audience(object, type)
+    when 'followers_only'
+      build_followers_audience(object, type)
+    when 'direct'
+      build_direct_audience(type)
+    else
+      []
+    end
+  end
+
+  def build_public_audience(object, type)
+    case type
+    when :to
+      ['https://www.w3.org/ns/activitystreams#Public']
+    when :cc
+      [object.actor.followers_url]
+    end
+  end
+
+  def build_unlisted_audience(object, type)
+    case type
+    when :to
+      [object.actor.followers_url]
+    when :cc
+      ['https://www.w3.org/ns/activitystreams#Public']
+    end
+  end
+
+  def build_followers_audience(object, type)
+    case type
+    when :to
+      [object.actor.followers_url]
+    when :cc
+      []
+    end
+  end
+
+  def build_direct_audience(_type)
+    # DMの場合は宛先を動的に設定（将来実装）
+    []
+  end
+
+  def build_object_attachments(object)
+    object.media_attachments.map do |attachment|
+      {
+        'type' => 'Document',
+        'mediaType' => attachment.mime_type,
+        'url' => attachment.file_url,
+        'name' => attachment.description || attachment.filename,
+        'width' => attachment.width,
+        'height' => attachment.height,
+        'blurhash' => attachment.blurhash
+      }.compact
+    end
+  end
+
+  def build_object_tags(_object)
+    # TODO: ハッシュタグ・メンション実装時に追加
+    []
+  end
+end
