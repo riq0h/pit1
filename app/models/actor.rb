@@ -52,8 +52,17 @@ class Actor < ApplicationRecord
 
   # WebFinger identifier
   def webfinger_subject
-    default_domain = ENV['DOMAIN'] || 'localhost:3000'
-    "acct:#{username}@#{domain || default_domain}"
+    local_domain = Rails.application.config.activitypub.domain
+    "acct:#{username}@#{domain || local_domain}"
+  end
+
+  # Public HTML URL
+  def public_url
+    return nil unless local?
+
+    local_domain = Rails.application.config.activitypub.domain
+    scheme = Rails.env.production? ? 'https' : 'http'
+    "#{scheme}://#{local_domain}/@#{username}"
   end
 
   # Display methods
@@ -169,9 +178,9 @@ class Actor < ApplicationRecord
   def set_ap_urls
     return unless local?
 
-    default_domain = ENV['DOMAIN'] || 'localhost:3000'
-    scheme = ENV['FORCE_SSL'] == 'true' ? 'https' : 'http'
-    base_url = "#{scheme}://#{default_domain}"
+    local_domain = Rails.application.config.activitypub.domain
+    scheme = Rails.env.production? ? 'https' : 'http'
+    base_url = "#{scheme}://#{local_domain}"
 
     self.ap_id ||= "#{base_url}/users/#{username}"
     self.inbox_url ||= "#{base_url}/users/#{username}/inbox"

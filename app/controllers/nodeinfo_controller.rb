@@ -1,0 +1,110 @@
+# frozen_string_literal: true
+
+class NodeinfoController < ApplicationController
+  skip_before_action :verify_authenticity_token
+
+  # GET /nodeinfo/2.1
+  # NodeInfo 2.1仕様実装
+  def show
+    render json: build_nodeinfo_response,
+           content_type: 'application/json; charset=utf-8'
+  end
+
+  private
+
+  def build_nodeinfo_response
+    {
+      version: '2.1',
+      software: {
+        name: 'pit1',
+        version: '0.1',
+        homepage: 'https://github.com/riq0h/pit1',
+        repository: 'https://github.com/riq0h/pit1'
+      },
+      protocols: ['activitypub'],
+      services: {
+        outbound: [],
+        inbound: []
+      },
+      usage: calculate_usage_stats,
+      openRegistrations: false,
+      metadata: build_metadata
+    }
+  end
+
+  def calculate_usage_stats
+    {
+      users: calculate_user_stats,
+      localPosts: ActivityPubObject.local.notes.count,
+      localComments: ActivityPubObject.local.where.not(in_reply_to_ap_id: nil).count
+    }
+  end
+
+  def calculate_user_stats
+    {
+      total: Actor.local.count,
+      activeMonth: Actor.local.where('updated_at > ?', 1.month.ago).count,
+      activeHalfyear: Actor.local.where('updated_at > ?', 6.months.ago).count
+    }
+  end
+
+  def build_metadata
+    base_metadata.merge(
+      features: supported_features,
+      spaceship: spaceship_metadata
+    )
+  end
+
+  def base_metadata
+    {
+      nodeName: Rails.application.config.instance_name,
+      nodeDescription: Rails.application.config.instance_description,
+      maintainer: maintainer_info,
+      langs: Rails.application.config.activitypub.supported_locales,
+      tosUrl: nil,
+      privacyPolicyUrl: nil,
+      impressumUrl: nil,
+      repositoryUrl: 'https://github.com/riq0h/pit1',
+      feedbackUrl: 'https://github.com/riq0h/pit1/issues',
+      disableRegistration: true,
+      disableLocalTimeline: false,
+      disableGlobalTimeline: false,
+      emailRequiredForSignup: false,
+      enableHcaptcha: false,
+      enableRecaptcha: false,
+      maxNoteTitleLength: 100,
+      maxNoteTextLength: Rails.application.config.activitypub.character_limit,
+      maxCwLength: 500,
+      enableEmail: false,
+      enableServiceWorker: false,
+      proxyAccountName: nil,
+      themeColor: '#1f2937'
+    }
+  end
+
+  def maintainer_info
+    {
+      name: Rails.application.config.instance_maintainer,
+      email: Rails.application.config.instance_contact_email
+    }
+  end
+
+  def supported_features
+    %w[
+      activitypub
+      federation
+      long_posts
+      media_attachments
+      mentions
+      hashtags
+    ]
+  end
+
+  def spaceship_metadata
+    {
+      maxSeats: Rails.application.config.activitypub.max_accounts,
+      occupiedSeats: Actor.local.count,
+      motto: 'A Lightweight Fediverse Starship'
+    }
+  end
+end

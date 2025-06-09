@@ -120,6 +120,54 @@ class ActivityPubObject < ApplicationRecord
     ActivityPubObject.in_conversation(conversation_ap_id).recent
   end
 
+  # === ActivityPub JSON-LD出力 ===
+
+  def to_activitypub
+    base_activitypub_data.merge(
+      extended_activitypub_data
+    ).compact
+  end
+
+  def base_activitypub_data
+    {
+      '@context' => 'https://www.w3.org/ns/activitystreams',
+      'id' => ap_id,
+      'type' => object_type,
+      'attributedTo' => actor.ap_id,
+      'content' => content,
+      'published' => published_at.iso8601,
+      'url' => public_url
+    }
+  end
+
+  def extended_activitypub_data
+    {
+      'inReplyTo' => in_reply_to_ap_id,
+      'to' => build_audience_list(:to),
+      'cc' => build_audience_list(:cc),
+      'attachment' => build_attachment_list,
+      'tag' => build_tag_list,
+      'summary' => summary,
+      'sensitive' => sensitive?,
+      'source' => source_data,
+      'replies' => replies_collection_data
+    }
+  end
+
+  def source_data
+    {
+      'content' => content_plaintext,
+      'mediaType' => 'text/plain'
+    }
+  end
+
+  def replies_collection_data
+    {
+      'type' => 'Collection',
+      'totalItems' => replies_count || 0
+    }
+  end
+
   # === 表示用メソッド ===
 
   def display_content
@@ -148,6 +196,76 @@ class ActivityPubObject < ApplicationRecord
   end
 
   private
+
+  # === ActivityPub ヘルパーメソッド ===
+
+  def build_audience_list(type)
+    case visibility
+    when 'public'
+      build_public_audience_list(type)
+    when 'unlisted'
+      build_unlisted_audience_list(type)
+    when 'followers_only'
+      build_followers_audience_list(type)
+    when 'direct'
+      build_direct_audience_list(type)
+    else
+      []
+    end
+  end
+
+  def build_public_audience_list(type)
+    case type
+    when :to
+      ['https://www.w3.org/ns/activitystreams#Public']
+    when :cc
+      [actor.followers_url]
+    end
+  end
+
+  def build_unlisted_audience_list(type)
+    case type
+    when :to
+      [actor.followers_url]
+    when :cc
+      ['https://www.w3.org/ns/activitystreams#Public']
+    end
+  end
+
+  def build_followers_audience_list(type)
+    case type
+    when :to
+      [actor.followers_url]
+    when :cc
+      []
+    end
+  end
+
+  def build_direct_audience_list(_type)
+    # DMの場合は宛先を動的に設定（将来実装）
+    []
+  end
+
+  def build_attachment_list
+    media_attachments.map do |attachment|
+      {
+        'type' => 'Document',
+        'mediaType' => attachment.mime_type,
+        'url' => attachment.file_url,
+        'name' => attachment.description || attachment.filename,
+        'width' => attachment.width,
+        'height' => attachment.height,
+        'blurhash' => attachment.blurhash
+      }.compact
+    end
+  end
+
+  def build_tag_list
+    # TODO: ハッシュタグ・メンション実装時に追加
+    []
+  end
+
+  # === バリデーション・コールバックヘルパー ===
 
   def set_defaults
     set_timestamps
