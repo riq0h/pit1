@@ -27,7 +27,7 @@ module ActivityPubCreateHandlers
   end
 
   def object_exists?(object_data)
-    Object.find_by(ap_id: object_data['id'])
+    ActivityPubObject.find_by(ap_id: object_data['id'])
   end
 
   def handle_existing_object(object_data)
@@ -36,7 +36,7 @@ module ActivityPubCreateHandlers
   end
 
   def create_new_object(object_data)
-    object = Object.create!(build_object_attributes(object_data))
+    object = ActivityPubObject.create!(build_object_attributes(object_data))
     Rails.logger.info "📝 Object created: #{object.id}"
     head :accepted
   end

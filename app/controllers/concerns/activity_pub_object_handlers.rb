@@ -32,7 +32,7 @@ module ActivityPubObjectHandlers
   end
 
   def update_object_content(object_data)
-    object = Object.find_by(ap_id: object_data['id'])
+    object = ActivityPubObject.find_by(ap_id: object_data['id'])
 
     return unless object&.actor == @sender
 
@@ -55,7 +55,7 @@ module ActivityPubObjectHandlers
     Rails.logger.info '🗑️ Processing Delete activity'
 
     object_id = extract_delete_object_id
-    object = Object.find_by(ap_id: object_id)
+    object = ActivityPubObject.find_by(ap_id: object_id)
 
     if authorized_to_delete?(object)
       object.destroy!

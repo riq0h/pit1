@@ -21,7 +21,7 @@ class ObjectsController < ApplicationController
     id_param = params[:id]
 
     # ap_id の末尾が id_param と一致するものを検索
-    @object = Object.find_by('ap_id LIKE ?', "%/objects/#{id_param}")
+    @object = ActivityPubObject.find_by('ap_id LIKE ?', "%/objects/#{id_param}")
 
     return if @object
 

@@ -69,10 +69,10 @@ class PostsController < ApplicationController
   end
 
   def find_post(actor, id_param)
-    Object.joins(:actor)
-          .where(actors: { id: actor.id })
-          .where('objects.ap_id LIKE ?', "%/objects/#{id_param}")
-          .first
+    ActivityPubObject.joins(:actor)
+                     .where(actors: { id: actor.id })
+                     .where('objects.ap_id LIKE ?', "%/objects/#{id_param}")
+                     .first
   end
 
   def render_not_found
