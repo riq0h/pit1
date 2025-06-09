@@ -18,7 +18,7 @@ class OutboxController < ApplicationController
   # Activity作成・配信（将来実装予定）
   def create
     # TODO: 認証が実装されたら有効化
-    # ローカルユーザーのActivity作成・配信
+    # ローカルユーザのActivity作成・配信
 
     render json: { error: 'Not implemented yet' }, status: :not_implemented
   end

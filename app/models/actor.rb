@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class Actor < ApplicationRecord
+  # パスワード認証機能
+  has_secure_password validations: false
+
   # アソシエーション
   has_many :objects, dependent: :destroy, class_name: 'ActivityPubObject'
   has_many :activities, dependent: :destroy
@@ -18,6 +21,7 @@ class Actor < ApplicationRecord
   validates :inbox_url, presence: true
   validates :outbox_url, presence: true
   validates :public_key, presence: true
+  validates :password, length: { minimum: 6 }, if: -> { local? && password.present? }
 
   # ローカルアクター制限（SQLiteトリガーで制御）
   validate :local_actor_limit, if: :local?

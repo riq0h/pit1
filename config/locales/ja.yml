@@ -1,0 +1,10 @@
+ja:
+  hello: "こんにちは"
+  auth:
+    login_required: "ログインが必要です"
+    logged_out: "ログアウトしました"
+    logged_in: "ログインしました"
+    invalid_credentials: "ユーザ名またはパスワードが正しくありません"
+  settings:
+    updated: "設定を更新しました"
+    update_failed: "設定の更新に失敗しました"

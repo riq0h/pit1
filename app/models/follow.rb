@@ -55,21 +55,21 @@ class Follow < ApplicationRecord
       accepted_at: Time.current
     )
 
-    # Accept アクティビティを作成（ローカルユーザーが承認する場合）
+    # Accept アクティビティを作成（ローカルユーザが承認する場合）
     create_accept_activity if target_actor.local?
   end
 
   def reject!
     return unless pending?
 
-    # Reject アクティビティを作成（ローカルユーザーが拒否する場合）
+    # Reject アクティビティを作成（ローカルユーザが拒否する場合）
     create_reject_activity if target_actor.local?
 
     destroy
   end
 
   def unfollow!
-    # Undo アクティビティを作成（ローカルユーザーがフォロー解除する場合）
+    # Undo アクティビティを作成（ローカルユーザがフォロー解除する場合）
     create_undo_activity if actor.local?
 
     destroy

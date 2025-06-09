@@ -29,3 +29,11 @@
 
 en:
   hello: "Hello world"
+  auth:
+    login_required: "Login required"
+    logged_out: "Logged out successfully"
+    logged_in: "Logged in successfully"
+    invalid_credentials: "Invalid username or password"
+  settings:
+    updated: "Settings updated successfully"
+    update_failed: "Failed to update settings"
