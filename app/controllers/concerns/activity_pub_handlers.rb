@@ -36,7 +36,7 @@ module ActivityPubHandlers
       accepted: false # 手動承認
     )
 
-    ActivityPub::SendAcceptJob.perform_later(follow)
+    SendAcceptJob.perform_later(follow)
     Rails.logger.info "✅ Follow created: #{follow.id}"
     head :accepted
   end

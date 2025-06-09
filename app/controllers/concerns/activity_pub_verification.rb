@@ -78,7 +78,7 @@ module ActivityPubVerification
   end
 
   def create_signature_verifier
-    ActivityPub::HttpSignatureVerifier.new(
+    HttpSignatureVerifier.new(
       method: request.method,
       path: request.fullpath,
       headers: request.headers,
@@ -97,7 +97,7 @@ module ActivityPubVerification
   end
 
   def fetch_remote_actor(actor_uri)
-    fetcher = ActivityPub::ActorFetcher.new
+    fetcher = ActorFetcher.new
     @sender = fetcher.fetch_and_create(actor_uri)
 
     raise ActivityPub::ValidationError, "Failed to fetch actor: #{actor_uri}" unless @sender
