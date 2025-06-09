@@ -1,0 +1,102 @@
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+  <!-- ユーザー情報ヘッダー -->
+  <div class="flex items-start space-x-3 mb-4">
+    <div class="flex-shrink-0">
+      <div class="h-10 w-10 bg-blue-500 rounded-full flex items-center justify-center">
+        <span class="text-white font-medium text-sm">
+          <%= post.actor.display_name&.first&.upcase || post.actor.username.first.upcase %>
+        </span>
+      </div>
+    </div>
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center space-x-2">
+        <h3 class="text-sm font-semibold text-gray-900 truncate">
+          <%= link_to profile_path(post.actor.username), class: "hover:underline" do %>
+            <%= post.actor.display_name.presence || post.actor.username %>
+          <% end %>
+        </h3>
+        <span class="text-gray-500 text-sm">@<%= post.actor.username %></span>
+        <% if post.actor.local? %>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+            <%= I18n.t('user.local') %>
+          </span>
+        <% end %>
+      </div>
+      <div class="flex items-center text-sm text-gray-500 mt-1">
+        <time datetime="<%= post.published_at.iso8601 %>" title="<%= l(post.published_at, format: :long) %>">
+          <%= time_ago_in_words(post.published_at) %><%= I18n.t('time.ago') %>
+        </time>
+        <span class="mx-1">·</span>
+        <span class="capitalize"><%= I18n.t("visibility.#{post.visibility}") %></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 投稿本文 -->
+  <div class="prose prose-sm max-w-none">
+    <div class="text-gray-900 whitespace-pre-wrap break-words">
+      <%= simple_format(h(post.content)) %>
+    </div>
+  </div>
+
+  <!-- メディア添付がある場合 -->
+  <% if post.media_attachments.any? %>
+    <div class="mt-4">
+      <div class="grid grid-cols-2 gap-2">
+        <% post.media_attachments.limit(4).each do |media| %>
+          <div class="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+            <% if media.image? %>
+              <img src="<%= media.url %>" alt="<%= media.description %>" 
+                   class="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                   loading="lazy">
+            <% elsif media.video? %>
+              <video class="w-full h-full object-cover" controls preload="metadata">
+                <source src="<%= media.url %>" type="<%= media.content_type %>">
+                <%= I18n.t('media.video_not_supported') %>
+              </video>
+            <% else %>
+              <div class="flex items-center justify-center h-full">
+                <div class="text-center">
+                  <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p class="mt-1 text-xs text-gray-500"><%= media.original_filename %></p>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- アクション（表示のみ） -->
+  <div class="flex items-center justify-between pt-4 mt-4 border-t border-gray-100">
+    <div class="flex items-center space-x-6">
+      <button class="flex items-center space-x-2 text-gray-500 hover:text-blue-600 transition-colors" disabled>
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.452l-3.457 1.188a1 1 0 01-1.283-1.283l1.188-3.457A8.959 8.959 0 013 12c0-4.418 3.582 8-8 8z" />
+        </svg>
+        <span class="text-sm">0</span>
+      </button>
+      <button class="flex items-center space-x-2 text-gray-500 hover:text-green-600 transition-colors" disabled>
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        <span class="text-sm">0</span>
+      </button>
+      <button class="flex items-center space-x-2 text-gray-500 hover:text-red-600 transition-colors" disabled>
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+        </svg>
+        <span class="text-sm">0</span>
+      </button>
+    </div>
+    <div class="flex items-center space-x-2">
+      <%= link_to post_html_path(post.actor.username, post.ap_id.split('/').last), 
+                  class: "text-sm text-gray-500 hover:text-blue-600 transition-colors" do %>
+        <%= I18n.t('post.view_details') %>
+      <% end %>
+    </div>
+  </div>
+</div>

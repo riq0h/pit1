@@ -4,6 +4,8 @@
   "type": "module",
   "description": "Lightweight Fediverse Starship",
   "scripts": {
+    "build:css": "tailwindcss -i ./app/assets/stylesheets/application.tailwind.css -o ./app/assets/stylesheets/application.css --watch",
+    "build:css:prod": "tailwindcss -i ./app/assets/stylesheets/application.tailwind.css -o ./app/assets/stylesheets/application.css --minify",
     "lint:js": "eslint app/javascript --fix",
     "lint:css": "prettier --write 'app/assets/stylesheets/**/*.css'",
     "prettier": "prettier --write 'app/javascript/**/*.js' 'app/assets/stylesheets/**/*.css'",
@@ -20,7 +22,12 @@
   "license": "MIT",
   "devDependencies": {
     "@eslint/js": "^9.0.0",
+    "@tailwindcss/container-queries": "^0.1.1",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.16",
+    "autoprefixer": "^10.4.21",
     "eslint": "^9.0.0",
-    "prettier": "^3.2.5"
+    "prettier": "^3.2.5",
+    "tailwindcss": "^4.1.8"
   }
 }

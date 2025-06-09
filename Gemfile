@@ -18,6 +18,7 @@ gem 'sassc-rails'
 gem 'sprockets-rails'
 gem 'sqlite3', '>= 2.1'
 gem 'stimulus-rails'
+gem 'tailwindcss-rails'
 gem 'turbo-rails'
 
 # ActivityPub & Federation

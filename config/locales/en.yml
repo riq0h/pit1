@@ -33,7 +33,31 @@ en:
     login_required: "Login required"
     logged_out: "Logged out successfully"
     logged_in: "Logged in successfully"
+    logged_in_as: "Logged in as %{username}"
     invalid_credentials: "Invalid username or password"
   settings:
     updated: "Settings updated successfully"
     update_failed: "Failed to update settings"
+  pages:
+    home:
+      title: "Home - pit1"
+      public_timeline: "Public Timeline"
+      no_posts_title: "No posts yet"
+      no_posts_description: "There are no posts yet."
+  navigation:
+    settings: "Settings"
+    login: "Login"
+    load_more: "Load more"
+  user:
+    local: "Local"
+  visibility:
+    public: "Public"
+    unlisted: "Unlisted"
+    followers_only: "Followers only"
+    direct: "Direct"
+  time:
+    ago: " ago"
+  post:
+    view_details: "View details"
+  media:
+    video_not_supported: "Video is not supported in this browser"

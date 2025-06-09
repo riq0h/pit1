@@ -4,7 +4,31 @@ ja:
     login_required: "ログインが必要です"
     logged_out: "ログアウトしました"
     logged_in: "ログインしました"
+    logged_in_as: "%{username} としてログイン中"
     invalid_credentials: "ユーザ名またはパスワードが正しくありません"
   settings:
     updated: "設定を更新しました"
     update_failed: "設定の更新に失敗しました"
+  pages:
+    home:
+      title: "ホーム - pit1"
+      public_timeline: "公開タイムライン"
+      no_posts_title: "投稿がありません"
+      no_posts_description: "まだ投稿がありません。"
+  navigation:
+    settings: "設定"
+    login: "ログイン"
+    load_more: "さらに読み込む"
+  user:
+    local: "ローカル"
+  visibility:
+    public: "公開"
+    unlisted: "未収載"
+    followers_only: "フォロワー限定"
+    direct: "ダイレクト"
+  time:
+    ago: "前"
+  post:
+    view_details: "詳細を見る"
+  media:
+    video_not_supported: "このブラウザーではビデオがサポートされていません"
