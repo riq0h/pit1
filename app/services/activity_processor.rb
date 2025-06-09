@@ -89,7 +89,7 @@ class ActivityProcessor
   def find_target_object
     return unless activity.target_ap_id
 
-    Object.find_by(ap_id: activity.target_ap_id)
+    ActivityPubObject.find_by(ap_id: activity.target_ap_id)
   end
 
   def find_target_activity
@@ -101,7 +101,7 @@ class ActivityProcessor
   def find_target_by_ap_id
     return unless activity.target_ap_id
 
-    Object.find_by(ap_id: activity.target_ap_id) ||
+    ActivityPubObject.find_by(ap_id: activity.target_ap_id) ||
       Actor.find_by(ap_id: activity.target_ap_id) ||
       Activity.find_by(ap_id: activity.target_ap_id)
   end
@@ -140,7 +140,7 @@ class ActivityProcessor
 
   def delete_target(target)
     case target
-    when Object
+    when ActivityPubObject
       target.destroy
       target.actor.decrement_posts_count! if target.object_type == 'Note'
     when Actor

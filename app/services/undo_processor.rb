@@ -28,7 +28,7 @@ class UndoProcessor
   def undo_like
     return unless target_activity.target_ap_id
 
-    target_obj = Object.find_by(ap_id: target_activity.target_ap_id)
+    target_obj = ActivityPubObject.find_by(ap_id: target_activity.target_ap_id)
     return unless target_obj
     return unless target_obj.favourites_count.positive?
 
@@ -39,7 +39,7 @@ class UndoProcessor
   def undo_announce
     return unless target_activity.target_ap_id
 
-    target_obj = Object.find_by(ap_id: target_activity.target_ap_id)
+    target_obj = ActivityPubObject.find_by(ap_id: target_activity.target_ap_id)
     return unless target_obj
     return unless target_obj.reblogs_count.positive?
 
