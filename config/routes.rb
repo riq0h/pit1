@@ -10,6 +10,20 @@ Rails.application.routes.draw do
   # ActivityPub & Federation Routes
   # ================================
 
+  # ActivityPub Inbox
+  post '/users/:username/inbox', to: 'inbox#create', as: :user_inbox
+
+  # ActivityPub Outbox（今後実装）
+  get '/users/:username/outbox', to: 'outbox#show', as: :user_outbox
+  post '/users/:username/outbox', to: 'outbox#create'
+
+  # ActivityPub Actor Profile
+  get '/users/:username', to: 'actors#show', as: :user_actor,
+                          constraints: { format: :json }
+
+  # WebFinger（既存）
+  get '/.well-known/webfinger', to: 'webfinger#show'
+
   # WebFinger discovery (RFC 7033)
   get '/.well-known/webfinger', to: 'well_known#webfinger'
   get '/.well-known/host-meta', to: 'well_known#host_meta'

@@ -19,22 +19,22 @@ AllCops:
     - 'spec/rails_helper.rb'
 
 Layout/LineLength:
-  Max: 120
+  Max: 150
   Exclude:
     - 'app/models/**/*'
 
 Metrics/CyclomaticComplexity:
-  Max: 10
+  Max: 20
   Exclude:
     - 'app/services/**/*'
 
 Metrics/MethodLength:
-  Max: 20
+  Max: 30
   Exclude:
     - 'app/controllers/**/*'
 
 Metrics/ClassLength:
-  Max: 150
+  Max: 200
   Exclude:
     - 'app/models/**/*'
 

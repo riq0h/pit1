@@ -1,144 +1,189 @@
 # frozen_string_literal: true
 
 class Actor < ApplicationRecord
-  # === バリデーション ===
-  validates :username, presence: true, uniqueness: { scope: :domain },
-                       format: { with: /\A[a-zA-Z0-9_]+\z/ }, length: { maximum: 20 }
+  # アソシエーション
+  has_many :objects, dependent: :destroy
+  has_many :activities, dependent: :destroy
+  has_many :media_attachments, dependent: :destroy
+
+  # フォロー関係
+  has_many :follows, dependent: :destroy
+  has_many :followed_actors, through: :follows, source: :target_actor
+  has_many :reverse_follows, class_name: 'Follow', foreign_key: 'target_actor_id', dependent: :destroy, inverse_of: :target_actor
+  has_many :followers, through: :reverse_follows, source: :actor
+
+  # バリデーション
+  validates :username, presence: true, format: { with: /\A[a-zA-Z0-9_]+\z/ }
   validates :ap_id, presence: true, uniqueness: true
   validates :inbox_url, presence: true
   validates :outbox_url, presence: true
-  validates :followers_url, presence: true
-  validates :following_url, presence: true
   validates :public_key, presence: true
-  validates :local_account_slot, inclusion: { in: [1, 2] }, if: :local?
-  validates :local_account_slot, absence: true, unless: :local?
 
-  # ドメイン関連バリデーション
-  validates :domain, uniqueness: { scope: :username }
-  validate :local_actor_limits
+  # ローカルアクター制限
+  validates :local_account_slot, uniqueness: true, allow_nil: true
+  validate :local_actor_limit, if: :local?
 
-  # === アソシエーション ===
-  has_many :activities, dependent: :destroy, inverse_of: :actor
-  has_many :objects, dependent: :destroy, inverse_of: :actor
-  has_many :media_attachments, dependent: :destroy, inverse_of: :actor
-
-  # フォロー関係
-  has_many :following_relationships, class_name: 'Follow', dependent: :destroy, inverse_of: :actor
-  has_many :follower_relationships, class_name: 'Follow',
-                                    foreign_key: 'target_actor_id', dependent: :destroy, inverse_of: :target_actor
-
-  # through関係
-  has_many :following_actors, through: :following_relationships, source: :target_actor
-  has_many :follower_actors, through: :follower_relationships, source: :actor
-
-  # === スコープ ===
+  # スコープ
   scope :local, -> { where(local: true) }
   scope :remote, -> { where(local: false) }
-  scope :not_suspended, -> { where(suspended: false) }
-  scope :active, -> { not_suspended }
+  scope :discoverable, -> { where(discoverable: true) }
 
-  # === コールバック ===
-  before_validation :set_ap_id, if: :local?
-  before_validation :set_urls, if: :local?
-  before_create :generate_keypair, if: :local?
+  # コールバック
+  before_create :generate_key_pair, if: :local?
+  before_create :set_ap_urls, if: :local?
 
-  # === ActivityPub関連メソッド ===
+  # ActivityPub URLs
+  def followers_url
+    return super if super.present?
 
-  def local?
-    local
+    "#{ap_id}/followers" if local?
   end
 
-  def remote?
-    !local
+  def following_url
+    return super if super.present?
+
+    "#{ap_id}/following" if local?
   end
 
-  def acct
-    if local?
-      username
-    else
-      "#{username}@#{domain}"
-    end
+  def featured_url
+    return super if super.present?
+
+    "#{ap_id}/collections/featured" if local?
   end
 
+  # WebFinger identifier
   def webfinger_subject
-    "acct:#{acct}"
+    "acct:#{username}@#{domain || Rails.application.config.default_domain}"
   end
 
-  def activitypub_url
-    if local?
-      Rails.application.routes.url_helpers.actor_url(username)
-    else
-      ap_id
-    end
+  # Display methods
+  def display_name_or_username
+    display_name.presence || username
   end
 
-  def inbox_url_for_delivery
-    shared_inbox_url.presence || inbox_url
+  def full_username
+    local? ? username : "#{username}@#{domain}"
   end
 
-  # === 統計更新メソッド ===
-
-  def increment_posts_count!
-    update!(posts_count: posts_count + 1)
+  # Key management
+  def public_key_object
+    @public_key_object ||= OpenSSL::PKey::RSA.new(public_key) if public_key.present?
   end
 
-  def decrement_posts_count!
-    return unless posts_count.positive?
-
-    update!(posts_count: posts_count - 1)
+  def private_key_object
+    @private_key_object ||= OpenSSL::PKey::RSA.new(private_key) if private_key.present?
   end
 
-  def update_following_count!
-    new_count = following_relationships.accepted.count
-    update!(following_count: new_count)
+  def public_key_id
+    "#{ap_id}#main-key"
   end
 
-  def update_followers_count!
-    new_count = follower_relationships.accepted.count
-    update!(followers_count: new_count)
+  # Activity generation
+  def generate_follow_activity(target_actor)
+    {
+      '@context' => 'https://www.w3.org/ns/activitystreams',
+      'type' => 'Follow',
+      'id' => "#{ap_id}#follows/#{SecureRandom.uuid}",
+      'actor' => ap_id,
+      'object' => target_actor.ap_id
+    }
+  end
+
+  def generate_accept_activity(follow)
+    {
+      '@context' => 'https://www.w3.org/ns/activitystreams',
+      'type' => 'Accept',
+      'id' => "#{ap_id}#accepts/follows/#{follow.id}",
+      'actor' => ap_id,
+      'object' => {
+        'type' => 'Follow',
+        'id' => follow.follow_activity_ap_id,
+        'actor' => follow.actor.ap_id,
+        'object' => ap_id
+      }
+    }
+  end
+
+  # ActivityPub JSON-LD representation
+  def to_activitypub
+    base_activitypub_data.merge(activitypub_links).merge(activitypub_images).compact
   end
 
   private
 
-  def set_ap_id
-    return unless local? && username.present?
-
-    self.ap_id = build_actor_url
+  # ActivityPub base data
+  def base_activitypub_data
+    {
+      '@context' => [
+        'https://www.w3.org/ns/activitystreams',
+        'https://w3id.org/security/v1'
+      ],
+      'type' => actor_type || 'Person',
+      'id' => ap_id,
+      'preferredUsername' => username,
+      'name' => display_name,
+      'summary' => summary,
+      'url' => ap_id,
+      'discoverable' => discoverable,
+      'manuallyApprovesFollowers' => manually_approves_followers
+    }
   end
 
-  def set_urls
-    return unless local? && username.present?
-
-    base_url = build_base_url
-    self.inbox_url = "#{base_url}/users/#{username}/inbox"
-    self.outbox_url = "#{base_url}/users/#{username}/outbox"
-    self.followers_url = "#{base_url}/users/#{username}/followers"
-    self.following_url = "#{base_url}/users/#{username}/following"
+  # ActivityPub URLs
+  def activitypub_links
+    {
+      'inbox' => inbox_url,
+      'outbox' => outbox_url,
+      'followers' => followers_url,
+      'following' => following_url,
+      'featured' => featured_url,
+      'publicKey' => {
+        'id' => public_key_id,
+        'owner' => ap_id,
+        'publicKeyPem' => public_key
+      }
+    }
   end
 
-  def build_base_url
-    protocol = Rails.application.config.force_ssl ? 'https' : 'http'
-    host = Rails.application.config.default_host || 'localhost:3000'
-    "#{protocol}://#{host}"
+  # ActivityPub images
+  def activitypub_images
+    {
+      'icon' => icon_url ? { 'type' => 'Image', 'url' => icon_url } : nil,
+      'image' => header_url ? { 'type' => 'Image', 'url' => header_url } : nil
+    }
   end
 
-  def build_actor_url
-    Rails.application.routes.url_helpers.actor_url(username)
-  rescue StandardError
-    "#{build_base_url}/users/#{username}"
+  # RSA鍵ペア生成
+  def generate_key_pair
+    return unless local? && private_key.blank?
+
+    Rails.logger.info "🔑 Generating RSA key pair for #{username}"
+
+    rsa_key = OpenSSL::PKey::RSA.new(2048)
+
+    self.private_key = rsa_key.to_pem
+    self.public_key = rsa_key.public_key.to_pem
   end
 
-  def generate_keypair
-    keypair = OpenSSL::PKey::RSA.generate(2048)
-    self.private_key = keypair.to_pem
-    self.public_key = keypair.public_key.to_pem
+  # ActivityPub URL設定
+  def set_ap_urls
+    return unless local?
+
+    base_url = "#{Rails.application.config.force_ssl ? 'https' : 'http'}://#{Rails.application.config.default_domain}"
+
+    self.ap_id ||= "#{base_url}/users/#{username}"
+    self.inbox_url ||= "#{base_url}/users/#{username}/inbox"
+    self.outbox_url ||= "#{base_url}/users/#{username}/outbox"
   end
 
-  def local_actor_limits
-    return unless local? && new_record?
+  # ローカルアクター数制限
+  def local_actor_limit
+    return unless local?
 
-    return unless Actor.local.count >= 2
+    local_count = Actor.where(local: true).where.not(id: id).count
 
-    errors.add(:base, 'This spaceship is a two-seater.')
+    return unless local_count >= 2
+
+    errors.add(:local, 'This spaceship is a two-seater')
   end
 end
