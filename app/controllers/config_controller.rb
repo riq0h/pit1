@@ -27,13 +27,21 @@ class ConfigController < ApplicationController
 
   def build_base_config
     stored_config = load_stored_config
+    build_instance_config_hash(stored_config)
+  end
+
+  def build_instance_config_hash(stored_config)
     {
-      instance_name: stored_config['instance_name'] || Rails.application.config.instance_name,
-      instance_description: stored_config['instance_description'] || Rails.application.config.instance_description,
-      instance_contact_email: stored_config['instance_contact_email'] || Rails.application.config.instance_contact_email,
-      instance_maintainer: stored_config['instance_maintainer'] || Rails.application.config.instance_maintainer,
-      blog_footer: stored_config['blog_footer'] || Rails.application.config.blog_footer
+      instance_name: config_value(stored_config, 'instance_name'),
+      instance_description: config_value(stored_config, 'instance_description'),
+      instance_contact_email: config_value(stored_config, 'instance_contact_email'),
+      instance_maintainer: config_value(stored_config, 'instance_maintainer'),
+      blog_footer: config_value(stored_config, 'blog_footer')
     }
+  end
+
+  def config_value(stored_config, key)
+    stored_config[key] || Rails.application.config.send(key.to_sym)
   end
 
   def build_activitypub_config
@@ -41,18 +49,16 @@ class ConfigController < ApplicationController
       activitypub_domain: Rails.application.config.activitypub.domain,
       character_limit: Rails.application.config.activitypub.character_limit,
       max_accounts: Rails.application.config.activitypub.max_accounts,
-      federation_enabled: true  # 常に有効化
+      federation_enabled: true # 常に有効化
     }
   end
 
   def update_instance_config
-    begin
-      save_config(config_params)
-      true
-    rescue => e
-      Rails.logger.error "Config update failed: #{e.message}"
-      false
-    end
+    save_config(config_params)
+    true
+  rescue StandardError => e
+    Rails.logger.error "Config update failed: #{e.message}"
+    false
   end
 
   def load_stored_config
@@ -62,7 +68,7 @@ class ConfigController < ApplicationController
     else
       {}
     end
-  rescue => e
+  rescue StandardError => e
     Rails.logger.error "Failed to load config: #{e.message}"
     {}
   end
@@ -70,29 +76,29 @@ class ConfigController < ApplicationController
   def save_config(new_config)
     config_file = Rails.root.join('config', 'instance_config.yml')
     current_config = load_stored_config
-    
+
+    log_config_details(new_config, current_config, config_file)
+    updated_config = merge_configs(current_config, new_config)
+    write_config_file(config_file, updated_config)
+  end
+
+  def log_config_details(new_config, current_config, config_file)
     Rails.logger.info "New config: #{new_config.inspect}"
     Rails.logger.info "Current config: #{current_config.inspect}"
-    
-    # 新しい設定をマージ
-    updated_config = current_config.merge(new_config.to_h.stringify_keys)
-    
-    Rails.logger.info "Updated config: #{updated_config.inspect}"
     Rails.logger.info "Writing to: #{config_file}"
-    
-    # ファイルに保存
+  end
+
+  def merge_configs(current_config, new_config)
+    current_config.merge(new_config.to_h.stringify_keys)
+  end
+
+  def write_config_file(config_file, updated_config)
+    Rails.logger.info "Updated config: #{updated_config.inspect}"
     File.write(config_file, updated_config.to_yaml)
-    
-    Rails.logger.info "Config saved successfully"
+    Rails.logger.info 'Config saved successfully'
   end
 
   def config_params
-    params.require(:config).permit(
-      :instance_name,
-      :instance_description,
-      :instance_contact_email,
-      :instance_maintainer,
-      :blog_footer
-    )
+    params.expect(config: %i[instance_name instance_description instance_contact_email instance_maintainer blog_footer])
   end
 end

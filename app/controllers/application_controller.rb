@@ -45,14 +45,14 @@ class ApplicationController < ActionController::Base
 
   # インスタンス設定を読み込み
   def load_instance_settings
-    @instance_settings ||= begin
+    @load_instance_settings ||= begin
       config_file = Rails.root.join('config', 'instance_config.yml')
       if File.exist?(config_file)
         YAML.load_file(config_file) || {}
       else
         {}
       end
-    rescue => e
+    rescue StandardError => e
       Rails.logger.error "Failed to load instance config: #{e.message}"
       {}
     end
