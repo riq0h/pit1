@@ -1,0 +1,157 @@
+<% content_for :title, "#{@actor.display_name || @actor.username}の投稿" %>
+
+<div class="max-w-6xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+
+  <!-- 投稿詳細カード -->
+  <article class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <!-- ユーザー情報ヘッダー -->
+    <header class="p-6 border-b border-gray-100">
+      <div class="flex items-start space-x-4">
+        <div class="flex-shrink-0">
+          <div class="h-12 w-12 bg-blue-500 rounded-full flex items-center justify-center">
+            <span class="text-white font-bold text-lg">
+              <%= @actor.display_name&.first&.upcase || @actor.username.first.upcase %>
+            </span>
+          </div>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg font-semibold text-gray-900 truncate">
+              <%= link_to profile_path(@actor.username), class: "hover:underline" do %>
+                <%= @actor.display_name.presence || @actor.username %>
+              <% end %>
+            </h1>
+            <span class="text-gray-500 text-base">
+              @<%= @actor.username %><%= @actor.domain.present? ? "@#{@actor.domain}" : "" %>
+            </span>
+          </div>
+          <div class="flex items-center text-sm text-gray-500 mt-1">
+            <time datetime="<%= @post.published_at.iso8601 %>" title="<%= l(@post.published_at, format: :long) %>">
+              <%= l(@post.published_at, format: :long) %>
+            </time>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 投稿本文 -->
+    <div class="p-6">
+      <div class="prose prose-lg max-w-none">
+        <div class="text-gray-900 whitespace-pre-wrap break-words text-xl leading-relaxed">
+          <%= simple_format(h(@post.content)) %>
+        </div>
+      </div>
+
+      <!-- メディア添付がある場合 -->
+      <% if @post.media_attachments.any? %>
+        <div class="mt-6">
+          <div class="grid gap-4 <%= @post.media_attachments.count > 1 ? 'grid-cols-2' : 'grid-cols-1' %>">
+            <% @post.media_attachments.each do |media| %>
+              <div class="<%= @post.media_attachments.count == 1 ? 'max-w-lg' : '' %> rounded-lg overflow-hidden border border-gray-200">
+                <% if media.image? %>
+                  <img src="<%= media.file_url %>" alt="<%= media.alt_text %>" 
+                       class="w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                       loading="lazy">
+                <% elsif media.video? %>
+                  <video class="w-full h-auto" controls preload="metadata">
+                    <source src="<%= media.file_url %>" type="<%= media.mime_type %>">
+                    <%= I18n.t('media.video_not_supported') %>
+                  </video>
+                <% else %>
+                  <div class="flex items-center justify-center p-8 bg-gray-50">
+                    <div class="text-center">
+                      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <p class="mt-2 text-sm text-gray-500"><%= media.filename %></p>
+                      <p class="text-xs text-gray-400"><%= media.mime_type %></p>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- 統計情報（返信がある場合のみ） -->
+    <% if @post.replies_count > 0 %>
+      <footer class="px-6 py-4 border-t border-gray-100 bg-gray-50">
+        <div class="flex items-center space-x-6 text-sm text-gray-600">
+          <div class="flex items-center space-x-2">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.452l-3.457 1.188a1 1 0 01-1.283-1.283l1.188-3.457A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8 4.418 0 8 3.582 8 8z" />
+            </svg>
+            <span><%= @post.replies_count %>件の返信</span>
+          </div>
+        </div>
+      </footer>
+    <% end %>
+  </article>
+
+  <!-- リプライ表示 -->
+  <% if @post.replies_count > 0 %>
+    <section class="mt-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">返信 (<%= @post.replies_count %>)</h2>
+      <% 
+        # 返信投稿を取得（in_reply_to_ap_idが現在の投稿のap_idと一致）
+        replies = ActivityPubObject.where(in_reply_to_ap_id: @post.ap_id)
+                                   .where(visibility: ['public', 'unlisted'])
+                                   .where(object_type: 'Note')
+                                   .includes(:actor)
+                                   .order(published_at: :asc)
+                                   .limit(20)
+      %>
+      <% if replies.any? %>
+        <div class="space-y-4">
+          <% replies.each do |reply| %>
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 ml-8">
+              <!-- リプライユーザー情報 -->
+              <div class="flex items-start space-x-3 mb-3">
+                <div class="flex-shrink-0">
+                  <div class="h-8 w-8 bg-gray-500 rounded-full flex items-center justify-center">
+                    <span class="text-white font-medium text-xs">
+                      <%= reply.actor.display_name&.first&.upcase || reply.actor.username.first.upcase %>
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center space-x-2">
+                    <h3 class="text-sm font-semibold text-gray-900 truncate">
+                      <%= link_to profile_path(reply.actor.username), class: "hover:underline" do %>
+                        <%= reply.actor.display_name.presence || reply.actor.username %>
+                      <% end %>
+                    </h3>
+                    <span class="text-gray-500 text-sm">
+                      @<%= reply.actor.username %><%= reply.actor.domain.present? ? "@#{reply.actor.domain}" : "" %>
+                    </span>
+                  </div>
+                  <div class="text-xs text-gray-500 mt-1">
+                    <%= link_to post_html_path(reply.actor.username, reply.ap_id.split('/').last), 
+                                class: "hover:text-blue-600 transition-colors" do %>
+                      <time datetime="<%= reply.published_at.iso8601 %>" title="<%= l(reply.published_at, format: :long) %>">
+                        <%= time_ago_in_words(reply.published_at) %><%= I18n.t('time.ago') %>
+                      </time>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- リプライ本文 -->
+              <div class="prose prose-sm max-w-none ml-11">
+                <div class="text-gray-900 whitespace-pre-wrap break-words">
+                  <%= simple_format(h(reply.content)) %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="bg-gray-50 rounded-lg border border-gray-200 p-6 text-center text-gray-500">
+          この投稿への返信はまだ取得されていません
+        </div>
+      <% end %>
+    </section>
+  <% end %>
+</div>

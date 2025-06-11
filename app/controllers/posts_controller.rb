@@ -69,9 +69,9 @@ class PostsController < ApplicationController
   end
 
   def find_post(actor, id_param)
-    ActivityPubObject.joins(:actor)
-                     .where(actors: { id: actor.id })
-                     .where('objects.ap_id LIKE ?', "%/objects/#{id_param}")
+    # ap_idの末尾部分（nanoid）で検索
+    ActivityPubObject.where(actor: actor)
+                     .where('ap_id LIKE ?', "%/#{id_param}")
                      .first
   end
 

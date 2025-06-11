@@ -19,8 +19,6 @@ ja:
     settings: "設定"
     login: "ログイン"
     load_more: "さらに読み込む"
-  user:
-    local: "ローカル"
   visibility:
     public: "公開"
     unlisted: "未収載"
@@ -28,7 +26,50 @@ ja:
     direct: "ダイレクト"
   time:
     ago: "前"
-  post:
-    view_details: "詳細を見る"
+    formats:
+      default: "%Y年%m月%d日"
+      short: "%m月%d日"
+      long: "%Y/%m/%d %H:%M"
+      with_time: "%Y年%m月%d日 %H:%M"
+  datetime:
+    distance_in_words:
+      about_x_hours:
+        one: "約1時間"
+        other: "約%{count}時間"
+      about_x_months:
+        one: "約1ヶ月"
+        other: "約%{count}ヶ月"
+      about_x_years:
+        one: "約1年"
+        other: "約%{count}年"
+      almost_x_years:
+        one: "1年弱"
+        other: "%{count}年弱"
+      half_a_minute: "30秒"
+      less_than_x_minutes:
+        one: "1分以内"
+        other: "%{count}分以内"
+      less_than_x_seconds:
+        one: "1秒以内"
+        other: "%{count}秒以内"
+      over_x_years:
+        one: "1年以上"
+        other: "%{count}年以上"
+      x_days:
+        one: "1日"
+        other: "%{count}日"
+      x_minutes:
+        one: "1分"
+        other: "%{count}分"
+      x_months:
+        one: "1ヶ月"
+        other: "%{count}ヶ月"
+      x_years:
+        one: "1年"
+        other: "%{count}年"
+      x_seconds:
+        one: "1秒"
+        other: "%{count}秒"
   media:
     video_not_supported: "このブラウザーではビデオがサポートされていません"
+    original_filename: "ファイル名"
