@@ -8,7 +8,7 @@ class ApplicationController < ActionController::Base
   before_action :set_locale
 
   # 認証ヘルパーメソッドをビューでも使用可能にする
-  helper_method :current_user, :user_signed_in?
+  helper_method :current_user, :user_signed_in?, :blog_title, :blog_footer
 
   private
 
@@ -29,6 +29,33 @@ class ApplicationController < ActionController::Base
   # ログイン状態判定
   def user_signed_in?
     current_user.present?
+  end
+
+  # ブログタイトル（インスタンス名を使用）
+  def blog_title
+    stored_settings = load_instance_settings
+    stored_settings['instance_name'] || Rails.application.config.instance_name
+  end
+
+  # ブログフッター
+  def blog_footer
+    stored_settings = load_instance_settings
+    stored_settings['blog_footer'] || Rails.application.config.blog_footer
+  end
+
+  # インスタンス設定を読み込み
+  def load_instance_settings
+    @instance_settings ||= begin
+      config_file = Rails.root.join('config', 'instance_config.yml')
+      if File.exist?(config_file)
+        YAML.load_file(config_file) || {}
+      else
+        {}
+      end
+    rescue => e
+      Rails.logger.error "Failed to load instance config: #{e.message}"
+      {}
+    end
   end
 
   # 認証必須ページの保護

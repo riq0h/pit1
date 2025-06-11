@@ -123,6 +123,7 @@ GEM
     ffi (1.17.2-x86_64-darwin)
     ffi (1.17.2-x86_64-linux-gnu)
     ffi (1.17.2-x86_64-linux-musl)
+    foreman (0.88.1)
     fugit (1.11.1)
       et-orbi (~> 1, >= 1.2.11)
       raabro (~> 1.4)
@@ -438,6 +439,7 @@ DEPENDENCIES
   debug
   factory_bot_rails
   faker
+  foreman
   httparty
   image_processing (~> 1.2)
   importmap-rails

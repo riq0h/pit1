@@ -39,5 +39,12 @@ module Pit1
     # Don't generate system test files.
     config.generators.system_tests = nil
     config.active_record.schema_format = :sql
+    
+    # インスタンス設定のデフォルト値
+    config.instance_name = "pit1"
+    config.instance_description = "A Lightweight Fediverse Starship"
+    config.instance_contact_email = ""
+    config.instance_maintainer = ""
+    config.blog_footer = "ActivityPub Server - pit1"
   end
 end

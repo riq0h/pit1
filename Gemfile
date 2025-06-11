@@ -38,6 +38,7 @@ gem 'solid_queue' # Rails 8 solid queue for background jobs
 
 # Utilities
 gem 'blurhash'                   # Image placeholder generation
+gem 'foreman'
 gem 'marcel'                     # MIME type detection
 gem 'mini_magick'                # Image processing
 gem 'nanoid'                     # Generate short unique IDs

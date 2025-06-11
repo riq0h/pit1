@@ -39,6 +39,6 @@ class ProfilesController < ApplicationController
       .where(object_type: 'Note')
       .includes(:actor)
       .order(published_at: :desc)
-      .limit(20)
+      .limit(30)
   end
 end

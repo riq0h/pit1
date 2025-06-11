@@ -66,7 +66,8 @@ Rails.application.routes.draw do
   get '/login', to: 'sessions#new'
   post '/login', to: 'sessions#create'
   delete '/logout', to: 'sessions#destroy'
-  get '/settings', to: 'admin/settings#show'
+  get '/config', to: 'config#show', as: :config
+  patch '/config', to: 'config#update'
 
   # ================================
   # Mastodon API (サードパーティクライアント用)
@@ -128,15 +129,11 @@ Rails.application.routes.draw do
   end
 
   # ================================
-  # Admin Routes
+  # Admin Routes (将来拡張用)
   # ================================
 
   namespace :admin do
     get '/', to: 'dashboard#index'
-
-    # Settings
-    get '/settings', to: 'settings#show'
-    patch '/settings', to: 'settings#update'
 
     # Users (2ユーザー制限管理)
     get '/users', to: 'users#index'

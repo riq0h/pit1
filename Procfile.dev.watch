@@ -1,0 +1,2 @@
+web: bin/rails server
+css: bash -c 'echo "CSS Watcher: monitoring for changes..."; while inotifywait -e modify -r app/assets/stylesheets/ app/views/ 2>/dev/null; do echo "CSS change detected, rebuilding..."; bin/rails tailwindcss:build; done'

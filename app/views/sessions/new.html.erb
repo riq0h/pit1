@@ -1,67 +1,56 @@
-<div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-  <div class="sm:mx-auto sm:w-full sm:max-w-md">
-    <div class="text-center">
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">🚀 pit1</h1>
-      <p class="text-lg text-gray-600">A Lightweight Fediverse Starship</p>
+<% content_for :title, "ログイン - #{blog_title}" %>
+
+<!-- ブログ風ログインページ -->
+<div class="max-w-md mx-auto mt-16">
+  <!-- ログインフォームヘッダー -->
+  <header class="mb-8 text-center">
+    <h1 class="text-2xl text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+      ログイン
+    </h1>
+  </header>
+
+  <!-- ログインフォーム -->
+  <%= form_with url: login_path, method: :post, local: true, class: "space-y-6" do |form| %>
+    <div>
+      <%= form.label :username, "ユーザー名", 
+          class: "block text-sm text-gray-700 mb-2", 
+          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+      <%= form.text_field :username, 
+          placeholder: "ユーザー名を入力",
+          required: true,
+          autofocus: true,
+          autocomplete: "username",
+          class: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-gray-500 transition-colors",
+          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
     </div>
-  </div>
 
-  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-    <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10 border border-gray-200">
-      <div class="text-center mb-6">
-        <h2 class="text-2xl font-semibold text-gray-900">ログイン</h2>
-        <p class="mt-2 text-sm text-gray-600">管理者アカウントでログインしてください</p>
-      </div>
-
-      <%= form_with url: login_path, method: :post, local: true, class: "space-y-6" do |form| %>
-        <div>
-          <%= form.label :username, "ユーザ名", class: "block text-sm font-medium text-gray-700" %>
-          <div class="mt-1">
-            <%= form.text_field :username, 
-                placeholder: "ユーザ名を入力",
-                required: true,
-                autofocus: true,
-                autocomplete: "username",
-                class: "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" %>
-          </div>
-        </div>
-
-        <div>
-          <%= form.label :password, "パスワード", class: "block text-sm font-medium text-gray-700" %>
-          <div class="mt-1">
-            <%= form.password_field :password,
-                placeholder: "パスワードを入力",
-                required: true,
-                autocomplete: "current-password",
-                class: "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" %>
-          </div>
-        </div>
-
-        <div>
-          <%= form.submit "ログイン", 
-              class: "w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out" %>
-        </div>
-      <% end %>
-
-      <% if flash[:alert] %>
-        <div class="mt-4 bg-red-50 border border-red-200 rounded-md p-4">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-              </svg>
-            </div>
-            <div class="ml-3">
-              <p class="text-sm text-red-700"><%= flash[:alert] %></p>
-            </div>
-          </div>
-        </div>
-      <% end %>
-
-      <div class="mt-6 text-center">
-        <%= link_to "ホームに戻る", root_path, 
-            class: "text-sm text-blue-600 hover:text-blue-500 transition duration-150 ease-in-out" %>
-      </div>
+    <div>
+      <%= form.label :password, "パスワード", 
+          class: "block text-sm text-gray-700 mb-2", 
+          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+      <%= form.password_field :password,
+          placeholder: "パスワードを入力",
+          required: true,
+          autocomplete: "current-password",
+          class: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-gray-500 transition-colors",
+          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
     </div>
-  </div>
+
+    <div class="pt-4">
+      <%= link_to "ログイン", "javascript:void(0)", 
+          onclick: "this.closest('form').submit()",
+          class: "text-gray-900 hover:text-gray-600 transition-colors",
+          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400; text-decoration: underline; text-underline-offset: 4px;" %>
+    </div>
+  <% end %>
+
+  <!-- エラーメッセージ -->
+  <% if flash[:alert] %>
+    <div class="mt-6 p-4 bg-red-50 border border-red-200 rounded-md">
+      <p class="text-sm text-red-700" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+        <%= flash[:alert] %>
+      </p>
+    </div>
+  <% end %>
+
 </div>

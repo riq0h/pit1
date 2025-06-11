@@ -14,6 +14,6 @@ class HomeController < ApplicationController
                      .where(visibility: %w[public unlisted])
                      .includes(:actor, :media_attachments)
                      .order(published_at: :desc)
-                     .limit(20)
+                     .limit(30)
   end
 end

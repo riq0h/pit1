@@ -6,7 +6,7 @@ ja:
     logged_in: "ログインしました"
     logged_in_as: "%{username} としてログイン中"
     invalid_credentials: "ユーザ名またはパスワードが正しくありません"
-  settings:
+  config:
     updated: "設定を更新しました"
     update_failed: "設定の更新に失敗しました"
   pages:

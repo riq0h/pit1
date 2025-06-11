@@ -1,0 +1,6 @@
+---
+instance_name: っっっっっっっっb
+instance_description: A lightweight ActivityPub server built with Rails 8 and SQLite
+instance_contact_email: admin@localhost
+instance_maintainer: pit1 Administrator
+blog_footer: ActivityPub Server - pit1
