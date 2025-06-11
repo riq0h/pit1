@@ -28,8 +28,6 @@ class CreateActors < ActiveRecord::Migration[8.0]
       t.boolean :bot, null: false, default: false
       t.boolean :suspended, null: false, default: false
 
-      # pit1特有: ローカルアカウントのスロット番号（1 or 2）
-      t.integer :local_account_slot, limit: 1
 
       # 統計
       t.integer :followers_count, null: false, default: 0
@@ -49,31 +47,6 @@ class CreateActors < ActiveRecord::Migration[8.0]
     add_index :actors, :domain
     add_index :actors, :local
     add_index :actors, :suspended
-    add_index :actors, %i[local local_account_slot], unique: true, where: 'local = 1'
 
-    # SQLiteトリガー: 2アカウント制限
-    reversible do |dir|
-      dir.up do
-        execute <<-SQL
-          CREATE TRIGGER limit_local_actors
-          BEFORE INSERT ON actors
-          WHEN NEW.local = 1
-          BEGIN
-            -- 空いているスロット番号を自動割り当て
-            UPDATE NEW SET local_account_slot = (
-              CASE#{' '}
-                WHEN NOT EXISTS (SELECT 1 FROM actors WHERE local = 1 AND local_account_slot = 1) THEN 1
-                WHEN NOT EXISTS (SELECT 1 FROM actors WHERE local = 1 AND local_account_slot = 2) THEN 2
-                ELSE RAISE(ABORT, 'This spaceship is a two-seater. Maximum 2 local accounts allowed.')
-              END
-            );
-          END;
-        SQL
-      end
-
-      dir.down do
-        execute 'DROP TRIGGER IF EXISTS limit_local_actors;'
-      end
-    end
   end
 end

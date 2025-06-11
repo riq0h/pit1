@@ -1,44 +1,37 @@
 CREATE TABLE IF NOT EXISTS "schema_migrations" ("version" varchar NOT NULL PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS "ar_internal_metadata" ("key" varchar NOT NULL PRIMARY KEY, "value" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
-CREATE TABLE IF NOT EXISTS "actors" ("id" varchar NOT NULL PRIMARY KEY, "username" varchar(20) NOT NULL, "domain" varchar(255), "display_name" varchar(100), "summary" text, "ap_id" varchar NOT NULL, "inbox_url" varchar NOT NULL, "outbox_url" varchar NOT NULL, "followers_url" varchar NOT NULL, "following_url" varchar NOT NULL, "public_key" text NOT NULL, "private_key" text, "avatar_url" varchar, "header_url" varchar, "local" boolean DEFAULT 0 NOT NULL, "locked" boolean DEFAULT 0 NOT NULL, "bot" boolean DEFAULT 0 NOT NULL, "suspended" boolean DEFAULT 0 NOT NULL, "local_account_slot" integer(1), "followers_count" integer DEFAULT 0 NOT NULL, "following_count" integer DEFAULT 0 NOT NULL, "posts_count" integer DEFAULT 0 NOT NULL, "raw_data" json, "last_fetched_at" datetime(6), "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, "actor_type" varchar DEFAULT 'Person' /*application='Pit1'*/, "discoverable" boolean DEFAULT 1 /*application='Pit1'*/, "manually_approves_followers" boolean DEFAULT 0 /*application='Pit1'*/, "featured_url" varchar /*application='Pit1'*/, "icon_url" varchar /*application='Pit1'*/, "password_digest" varchar /*application='Pit1'*/);
-CREATE UNIQUE INDEX "index_actors_on_ap_id" ON "actors" ("ap_id") /*application='Pit1'*/;
+CREATE TABLE IF NOT EXISTS "actors" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "username" varchar NOT NULL, "domain" varchar, "ap_id" varchar NOT NULL, "display_name" varchar, "summary" text, "avatar_url" varchar, "header_url" varchar, "inbox_url" varchar NOT NULL, "outbox_url" varchar NOT NULL, "followers_url" varchar, "following_url" varchar, "shared_inbox_url" varchar, "public_key" text NOT NULL, "private_key" text, "followers_count" integer DEFAULT 0, "following_count" integer DEFAULT 0, "posts_count" integer DEFAULT 0, "local" boolean DEFAULT 0 NOT NULL, "suspended" boolean DEFAULT 0, "locked" boolean DEFAULT 0, "last_fetched_at" datetime(6), "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, "actor_type" varchar DEFAULT 'Person' /*application='Pit1'*/, "discoverable" boolean DEFAULT 1 /*application='Pit1'*/, "manually_approves_followers" boolean DEFAULT 0 /*application='Pit1'*/, "featured_url" varchar /*application='Pit1'*/, "icon_url" varchar /*application='Pit1'*/, "password_digest" varchar /*application='Pit1'*/);
 CREATE UNIQUE INDEX "index_actors_on_username_and_domain" ON "actors" ("username", "domain") /*application='Pit1'*/;
 CREATE INDEX "index_actors_on_domain" ON "actors" ("domain") /*application='Pit1'*/;
 CREATE INDEX "index_actors_on_local" ON "actors" ("local") /*application='Pit1'*/;
-CREATE INDEX "index_actors_on_suspended" ON "actors" ("suspended") /*application='Pit1'*/;
-CREATE UNIQUE INDEX "index_actors_on_local_and_local_account_slot" ON "actors" ("local", "local_account_slot") WHERE local = 1 /*application='Pit1'*/;
-CREATE TABLE IF NOT EXISTS "objects" ("id" varchar NOT NULL PRIMARY KEY, "ap_id" varchar NOT NULL, "object_type" varchar DEFAULT 'Note' NOT NULL, "actor_id" varchar NOT NULL, "content" text, "content_plaintext" text, "summary" text, "url" varchar, "language" varchar DEFAULT 'ja', "in_reply_to_ap_id" varchar, "conversation_ap_id" varchar, "media_type" varchar, "blurhash" varchar, "width" integer, "height" integer, "sensitive" boolean DEFAULT 0, "visibility" varchar DEFAULT 'public', "raw_data" json, "published_at" datetime(6), "local" boolean DEFAULT 0, "replies_count" integer DEFAULT 0, "reblogs_count" integer DEFAULT 0, "favourites_count" integer DEFAULT 0, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_1377a551fa"
+CREATE UNIQUE INDEX "index_actors_on_ap_id" ON "actors" ("ap_id") /*application='Pit1'*/;
+CREATE INDEX "index_actors_on_inbox_url" ON "actors" ("inbox_url") /*application='Pit1'*/;
+CREATE INDEX "index_actors_on_shared_inbox_url" ON "actors" ("shared_inbox_url") /*application='Pit1'*/;
+CREATE TABLE IF NOT EXISTS "objects" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "ap_id" varchar NOT NULL, "object_type" varchar NOT NULL, "actor_id" integer NOT NULL, "in_reply_to_ap_id" varchar, "conversation_ap_id" varchar, "content" text, "content_plaintext" text, "summary" varchar, "url" varchar, "language" varchar DEFAULT 'ja', "media_type" varchar, "blurhash" varchar, "width" integer, "height" integer, "sensitive" boolean DEFAULT 0, "visibility" varchar DEFAULT 'public', "raw_data" json, "published_at" datetime(6), "local" boolean DEFAULT 0, "replies_count" integer DEFAULT 0, "reblogs_count" integer DEFAULT 0, "favourites_count" integer DEFAULT 0, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_1377a551fa"
 FOREIGN KEY ("actor_id")
   REFERENCES "actors" ("id")
 );
-CREATE INDEX "index_objects_on_actor_id" ON "objects" ("actor_id") /*application='Pit1'*/;
 CREATE UNIQUE INDEX "index_objects_on_ap_id" ON "objects" ("ap_id") /*application='Pit1'*/;
+CREATE INDEX "index_objects_on_actor_id" ON "objects" ("actor_id") /*application='Pit1'*/;
 CREATE INDEX "index_objects_on_object_type" ON "objects" ("object_type") /*application='Pit1'*/;
-CREATE INDEX "index_objects_on_published_at" ON "objects" ("published_at") /*application='Pit1'*/;
-CREATE INDEX "index_objects_on_visibility" ON "objects" ("visibility") /*application='Pit1'*/;
-CREATE INDEX "index_objects_on_local" ON "objects" ("local") /*application='Pit1'*/;
+CREATE INDEX "index_objects_on_actor_id_and_published_at" ON "objects" ("actor_id", "published_at") /*application='Pit1'*/;
 CREATE INDEX "index_objects_on_in_reply_to_ap_id" ON "objects" ("in_reply_to_ap_id") /*application='Pit1'*/;
 CREATE INDEX "index_objects_on_conversation_ap_id" ON "objects" ("conversation_ap_id") /*application='Pit1'*/;
-CREATE VIRTUAL TABLE post_search USING fts5(
-            content_plaintext,
-            summary,
-            content='objects',
-            content_rowid='id'
-          )
-/* post_search(content_plaintext,summary) */;
-CREATE TABLE IF NOT EXISTS 'post_search_data'(id INTEGER PRIMARY KEY, block BLOB);
-CREATE TABLE IF NOT EXISTS 'post_search_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS 'post_search_docsize'(id INTEGER PRIMARY KEY, sz BLOB);
-CREATE TABLE IF NOT EXISTS 'post_search_config'(k PRIMARY KEY, v) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS "user_limits" ("id" varchar NOT NULL PRIMARY KEY, "actor_id" varchar, "limit_type" varchar(50) NOT NULL, "limit_value" integer NOT NULL, "current_usage" integer DEFAULT 0 NOT NULL, "enabled" boolean DEFAULT 1 NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_1c7d473965"
-FOREIGN KEY ("actor_id")
-  REFERENCES "actors" ("id")
-);
-CREATE INDEX "index_user_limits_on_actor_id" ON "user_limits" ("actor_id") /*application='Pit1'*/;
-CREATE UNIQUE INDEX "index_user_limits_on_actor_id_and_limit_type" ON "user_limits" ("actor_id", "limit_type") /*application='Pit1'*/;
-CREATE INDEX "index_user_limits_on_limit_type" ON "user_limits" ("limit_type") /*application='Pit1'*/;
-CREATE INDEX "index_user_limits_on_enabled" ON "user_limits" ("enabled") /*application='Pit1'*/;
-CREATE INDEX "index_user_limits_on_system_limits" ON "user_limits" ("limit_type") WHERE actor_id IS NULL /*application='Pit1'*/;
+CREATE INDEX "index_objects_on_local" ON "objects" ("local") /*application='Pit1'*/;
+CREATE INDEX "index_objects_on_visibility" ON "objects" ("visibility") /*application='Pit1'*/;
+CREATE INDEX "index_objects_on_published_at" ON "objects" ("published_at") /*application='Pit1'*/;
+CREATE VIRTUAL TABLE objects_fts USING fts5(
+        content_plaintext,
+        summary,
+        content='objects',
+        content_rowid='id'
+      )
+/* objects_fts(content_plaintext,summary) */;
+CREATE TABLE IF NOT EXISTS 'objects_fts_data'(id INTEGER PRIMARY KEY, block BLOB);
+CREATE TABLE IF NOT EXISTS 'objects_fts_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS 'objects_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB);
+CREATE TABLE IF NOT EXISTS 'objects_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS "user_limits" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "current_users" integer DEFAULT 0, "max_users" integer DEFAULT 2, "max_post_length" integer DEFAULT 9999, "registration_open" boolean DEFAULT 0, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
 CREATE INDEX "index_actors_on_actor_type" ON "actors" ("actor_type") /*application='Pit1'*/;
 CREATE INDEX "index_actors_on_discoverable" ON "actors" ("discoverable") /*application='Pit1'*/;
 CREATE INDEX "index_actors_on_manually_approves_followers" ON "actors" ("manually_approves_followers") /*application='Pit1'*/;

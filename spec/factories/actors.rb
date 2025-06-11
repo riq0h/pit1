@@ -29,7 +29,6 @@ FactoryBot.define do
     trait :local do
       local { true }
       domain { nil }
-      local_account_slot { 1 } # 1番目のスロット
       sequence(:ap_id) { |n| "https://localhost:3000/users/user#{n}" }
 
       private_key do
