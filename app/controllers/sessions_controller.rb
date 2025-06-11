@@ -58,11 +58,11 @@ class SessionsController < ApplicationController
   end
 
   def redirect_to_after_login
-    redirect_url = session.delete(:return_to) || settings_path
+    redirect_url = session.delete(:return_to) || config_path
     redirect_to redirect_url, notice: I18n.t('auth.logged_in')
   end
 
   def redirect_if_signed_in
-    redirect_to settings_path if user_signed_in?
+    redirect_to config_path if user_signed_in?
   end
 end

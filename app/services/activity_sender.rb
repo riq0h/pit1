@@ -28,7 +28,7 @@ class ActivitySender
   def build_headers(target_inbox, body, signing_actor)
     {
       'Content-Type' => 'application/activity+json',
-      'User-Agent' => 'Pit1/1.0 (ActivityPub)',
+      'User-Agent' => 'letter/0.1 (ActivityPub)',
       'Date' => Time.now.httpdate,
       'Host' => URI(target_inbox).host,
       'Digest' => generate_digest(body),

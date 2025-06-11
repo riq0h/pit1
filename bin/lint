@@ -3,7 +3,7 @@
 
 set -e
 
-echo "🚀 Running pit1 Linting..."
+echo "🚀 Running letter Linting..."
 echo ""
 
 # Colors for output
@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 
 # Function to print status
 print_status() {
-    echo -e "${BLUE}[pit1]${NC} $1"
+    echo -e "${BLUE}[letter]${NC} $1"
 }
 
 print_success() {
@@ -104,7 +104,7 @@ run_prettier() {
 # Main execution
 main() {
     echo "=========================================="
-    echo "🔍 pit1 Linting Suite"
+    echo "🔍 letter Linting Suite"
     echo "=========================================="
     echo ""
     
@@ -153,7 +153,7 @@ main() {
 # Handle command line arguments
 case "${1:-}" in
     --help|-h)
-        echo "pit1 Linting Suite"
+        echo "letter Linting Suite"
         echo ""
         echo "Usage: bin/lint [OPTION]"
         echo ""

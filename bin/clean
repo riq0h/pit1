@@ -4,7 +4,7 @@
 echo "🧹 Database Complete Cleanup & Rebuild"
 echo "======================================"
 
-# 1. Rails サーバー停止確認
+# 1. Rails サーバ停止確認
 echo "🛑 Stopping Rails server (if running)..."
 pkill -f "rails server" 2>/dev/null || echo "No Rails server running"
 

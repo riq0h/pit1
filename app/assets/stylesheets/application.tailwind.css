@@ -43,7 +43,7 @@
   }
 }
 
-/* Custom utilities for pit1 */
+/* Custom utilities for letter */
 @layer utilities {
   .text-shadow {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -53,5 +53,9 @@
     /* Special styling for 9999 character content */
     word-break: break-word;
     overflow-wrap: break-word;
+  }
+
+  .posts-section-spacing {
+    margin-top: 2rem; /* 32px equivalent */
   }
 }

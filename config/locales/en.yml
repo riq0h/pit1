@@ -40,7 +40,7 @@ en:
     update_failed: "Failed to update settings"
   pages:
     home:
-      title: "Home - pit1"
+      title: "Home - letter"
       public_timeline: "Public Timeline"
       no_posts_title: "No posts yet"
       no_posts_description: "There are no posts yet."

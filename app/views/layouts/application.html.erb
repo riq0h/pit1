@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title><%= content_for(:title) || "Pit1" %></title>
+    <title><%= content_for(:title) || "letter" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
@@ -26,7 +26,7 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="bg-white text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+  <body class="text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400; background-color: <%= background_color %>; overflow-y: scroll;">
     <!-- ブログ風シンプルヘッダー -->
     <header class="max-w-4xl mx-auto px-6 py-8">
       <div class="flex justify-between items-center">
@@ -43,7 +43,7 @@
               <%= link_to config_path, class: "text-gray-500 hover:text-gray-700 mr-4" do %>
                 設定
               <% end %>
-              <%= link_to logout_path, method: :delete, class: "text-gray-500 hover:text-gray-700" do %>
+              <%= link_to logout_path, data: { "turbo-method": :delete }, class: "text-gray-500 hover:text-gray-700" do %>
                 ログアウト
               <% end %>
             <% else %>

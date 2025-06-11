@@ -16,10 +16,10 @@ class NodeinfoController < ApplicationController
     {
       version: '2.1',
       software: {
-        name: 'pit1',
+        name: 'letter',
         version: '0.1',
-        homepage: 'https://github.com/riq0h/pit1',
-        repository: 'https://github.com/riq0h/pit1'
+        homepage: 'https://github.com/riq0h/letter',
+        repository: 'https://github.com/riq0h/letter'
       },
       protocols: ['activitypub'],
       services: {
@@ -64,8 +64,8 @@ class NodeinfoController < ApplicationController
       tosUrl: nil,
       privacyPolicyUrl: nil,
       impressumUrl: nil,
-      repositoryUrl: 'https://github.com/riq0h/pit1',
-      feedbackUrl: 'https://github.com/riq0h/pit1/issues',
+      repositoryUrl: 'https://github.com/riq0h/letter',
+      feedbackUrl: 'https://github.com/riq0h/letter/issues',
       disableRegistration: true,
       disableLocalTimeline: false,
       disableGlobalTimeline: false,
@@ -104,7 +104,7 @@ class NodeinfoController < ApplicationController
     {
       maxSeats: Rails.application.config.activitypub.max_accounts,
       occupiedSeats: Actor.local.count,
-      motto: 'A Lightweight Fediverse Starship'
+      motto: 'General Letter Intercommunication System based on ActivityPub'
     }
   end
 end

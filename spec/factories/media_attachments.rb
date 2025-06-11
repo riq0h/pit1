@@ -15,7 +15,7 @@ FactoryBot.define do
     width { 800 }
     height { 600 }
     blurhash { 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }
-    description { 'A test image for pit1' }
+    description { 'A test image for letter' }
     processed { true }
 
     metadata do

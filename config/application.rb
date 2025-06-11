@@ -18,7 +18,7 @@ require 'action_cable/engine'
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
-module Pit1
+module Letter
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.0
@@ -41,10 +41,10 @@ module Pit1
     config.active_record.schema_format = :sql
     
     # インスタンス設定のデフォルト値
-    config.instance_name = "pit1"
-    config.instance_description = "A Lightweight Fediverse Starship"
+    config.instance_name = "letter"
+    config.instance_description = "General Letter Intercommunication System based on ActivityPub"
     config.instance_contact_email = ""
     config.instance_maintainer = ""
-    config.blog_footer = "ActivityPub Server - pit1"
+    config.blog_footer = "General Letter Intercommunication System based on ActivityPub"
   end
 end

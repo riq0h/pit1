@@ -16,7 +16,7 @@ class CreateActors < ActiveRecord::Migration[8.0]
 
       # 鍵ペア
       t.text :public_key, null: false
-      t.text :private_key # ローカルユーザーのみ
+      t.text :private_key # ローカルユーザのみ
 
       # メディア
       t.string :avatar_url

@@ -33,11 +33,11 @@ Rails.application.configure do
   config.activitypub.signature_algorithm = 'rsa-sha256'
 
   # インスタンス情報
-  config.instance_name = ENV.fetch('INSTANCE_NAME', 'pit1 ActivityPub Server')
+  config.instance_name = ENV.fetch('INSTANCE_NAME', 'letter')
   config.instance_description = ENV.fetch('INSTANCE_DESCRIPTION',
-                                          'A lightweight ActivityPub server built with Rails 8 and SQLite')
+                                          'General Letter Intercommunication System based on ActivityPub')
   config.instance_contact_email = ENV.fetch('CONTACT_EMAIL', 'admin@localhost')
-  config.instance_maintainer = ENV.fetch('MAINTAINER_NAME', 'pit1 Administrator')
+  config.instance_maintainer = ENV.fetch('MAINTAINER_NAME', 'letter Administrator')
 
   # UI設定
   config.activitypub.default_locale = 'ja'

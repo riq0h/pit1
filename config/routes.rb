@@ -57,7 +57,7 @@ Rails.application.routes.draw do
   # ホームページ
   root 'home#index'
 
-  # ユーザープロフィール
+  # ユーザプロフィール
   get '/@:username', to: 'profiles#show', as: :profile
   # 個別投稿表示 (ap_id の末尾部分を使用)
   get '/@:username/:id', to: 'posts#show_html', as: :post_html
@@ -65,7 +65,7 @@ Rails.application.routes.draw do
   # 認証・管理
   get '/login', to: 'sessions#new'
   post '/login', to: 'sessions#create'
-  delete '/logout', to: 'sessions#destroy'
+  delete '/logout', to: 'sessions#destroy', as: :logout
   get '/config', to: 'config#show', as: :config
   patch '/config', to: 'config#update'
 
@@ -135,7 +135,7 @@ Rails.application.routes.draw do
   namespace :admin do
     get '/', to: 'dashboard#index'
 
-    # Users (2ユーザー制限管理)
+    # Users (2ユーザ制限管理)
     get '/users', to: 'users#index'
     get '/users/:id', to: 'users#show'
 

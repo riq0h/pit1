@@ -1,18 +1,18 @@
-<% content_for :title, "#{@actor.display_name.presence || @actor.username} - pit1" %>
+<% content_for :title, "#{@actor.display_name.presence || @actor.username} - letter" %>
 
-<!-- ブログ風ユーザープロフィール -->
-<div class="mb-16">
+<!-- ブログ風ユーザプロフィール -->
+<div class="mb-8">
   <!-- プロフィールヘッダー（四角い線で囲み） -->
-  <header class="mb-8 p-6 border border-gray-200 rounded-lg">
+  <header class="p-6 border-2 border-gray-400">
     <div class="flex items-center space-x-4 mb-4">
       <!-- アバター -->
-      <div class="h-12 w-12 bg-gray-500 rounded-full flex items-center justify-center">
+      <div class="h-12 w-12 bg-gray-500 flex items-center justify-center">
         <span class="text-white font-medium">
           <%= @actor.display_name&.first&.upcase || @actor.username.first.upcase %>
         </span>
       </div>
       
-      <!-- ユーザー名 -->
+      <!-- ユーザ名 -->
       <div>
         <h1 class="text-2xl text-gray-900" style="font-weight: 300;">
           <%= @actor.display_name.presence || @actor.username %>
@@ -25,22 +25,45 @@
     
     <!-- プロフィール説明 -->
     <% if @actor.summary.present? %>
-      <div class="prose prose-gray max-w-none text-gray-700 mb-4">
+      <div class="text-gray-700 leading-relaxed mb-4">
         <%= simple_format(h(@actor.summary)) %>
       </div>
     <% end %>
     
     <!-- 統計情報（シンプル表示） -->
-    <div class="text-sm text-gray-600">
+    <div class="text-sm text-gray-600 mb-4">
       <span class="mr-4"><%= number_with_delimiter(@posts_count) %> 投稿</span>
       <span class="mr-4"><%= number_with_delimiter(@following_count) %> フォロー中</span>
       <span><%= number_with_delimiter(@followers_count) %> フォロワー</span>
     </div>
+
+    <!-- 自己紹介 -->
+    <% if user_bio.present? %>
+      <div class="text-gray-700 leading-relaxed">
+        <%= auto_link_urls(user_bio).html_safe %>
+      </div>
+    <% end %>
   </header>
 </div>
 
+<!-- タブナビゲーション -->
+<nav class="mb-8">
+  <div class="flex">
+    <%= link_to profile_path(@actor.username), 
+        class: "px-6 py-3 transition-colors #{@current_tab == 'posts' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-700'}", 
+        style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
+      投稿
+    <% end %>
+    <%= link_to profile_path(@actor.username, tab: 'media'), 
+        class: "px-6 py-3 transition-colors #{@current_tab == 'media' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-700'}", 
+        style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
+      画像
+    <% end %>
+  </div>
+</nav>
+
 <!-- 投稿一覧（ブログ記事風） -->
-<div class="prose prose-gray max-w-none" style="margin-top: 80px;">
+<section class="prose prose-gray max-w-none posts-section-spacing">
   <% if @posts.any? %>
     <% @posts.each do |post| %>
       <%= render 'shared/post_card', post: post %>
@@ -63,17 +86,5 @@
         </div>
       </div>
     <% end %>
-  <% else %>
-    <!-- 投稿なしの状態 -->
-    <div class="text-center py-16">
-      <h2 class="text-xl text-gray-900 mb-4">投稿がありません</h2>
-      <p class="text-gray-600">
-        <% if @actor.local? %>
-          まだ投稿がありません。
-        <% else %>
-          このユーザーからの投稿はまだ取得されていません。
-        <% end %>
-      </p>
-    </div>
   <% end %>
-</div>
+</section>

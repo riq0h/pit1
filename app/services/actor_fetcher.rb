@@ -60,7 +60,7 @@ class ActorFetcher
       actor_uri,
       headers: {
         'Accept' => 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
-        'User-Agent' => 'Pit1/1.0 (ActivityPub)'
+        'User-Agent' => 'letter/0.1 (ActivityPub)'
       },
       timeout: @timeout,
       follow_redirects: true

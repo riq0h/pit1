@@ -79,7 +79,7 @@ FactoryBot.define do
     factory :system_user_limit, class: 'UserLimit' do
       actor { nil }
       limit_type { 'max_users' }
-      limit_value { 2 } # pit1の2ユーザー制限
+      limit_value { 2 } # letterの2ユーザ制限
       current_usage { 0 }
     end
   end

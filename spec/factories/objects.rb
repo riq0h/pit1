@@ -6,8 +6,8 @@ FactoryBot.define do
     object_type { 'Note' }
     association :actor
 
-    content { '<p>This is a test post for pit1 ActivityPub server! 🚀</p>' }
-    content_plaintext { 'This is a test post for pit1 ActivityPub server! 🚀' }
+    content { '<p>This is a test post for letter ActivityPub server! 🚀</p>' }
+    content_plaintext { 'This is a test post for letter ActivityPub server! 🚀' }
     summary { nil }
     url { ap_id }
     language { 'ja' }
@@ -102,8 +102,8 @@ FactoryBot.define do
     end
 
     trait :with_hashtags do
-      content { '<p>Testing #ActivityPub and #Rails integration! #pit1</p>' }
-      content_plaintext { 'Testing #ActivityPub and #Rails integration! #pit1' }
+      content { '<p>Testing #ActivityPub and #Rails integration! #letter</p>' }
+      content_plaintext { 'Testing #ActivityPub and #Rails integration! #letter' }
     end
 
     trait :with_mentions do

@@ -5,7 +5,7 @@ FactoryBot.define do
     sequence(:username) { |n| "user#{n}" }
     sequence(:ap_id) { |n| "https://example.com/users/user#{n}" }
     display_name { "Test User #{username.capitalize}" }
-    summary { "I'm a test user for pit1 ActivityPub server!" }
+    summary { "I'm a test user for letter ActivityPub server!" }
 
     inbox_url { "#{ap_id}/inbox" }
     outbox_url { "#{ap_id}/outbox" }

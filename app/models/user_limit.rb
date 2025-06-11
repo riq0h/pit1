@@ -20,7 +20,7 @@ class UserLimit < ApplicationRecord
   LIMIT_TYPES = {
     'max_accounts' => {
       name: 'Maximum Accounts',
-      description: 'Maximum number of local accounts (pit1 = 2)',
+      description: 'Maximum number of local accounts (letter = 2)',
       default_value: 2,
       scope: :system
     }

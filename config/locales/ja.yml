@@ -9,9 +9,10 @@ ja:
   config:
     updated: "設定を更新しました"
     update_failed: "設定の更新に失敗しました"
+    invalid_background_color: "背景色は#から始まる6桁のカラーコードで入力してください（例: #fdfbfb）"
   pages:
     home:
-      title: "ホーム - pit1"
+      title: "ホーム - letter"
       public_timeline: "公開タイムライン"
       no_posts_title: "投稿がありません"
       no_posts_description: "まだ投稿がありません。"

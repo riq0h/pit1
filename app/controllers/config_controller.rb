@@ -36,12 +36,20 @@ class ConfigController < ApplicationController
       instance_description: config_value(stored_config, 'instance_description'),
       instance_contact_email: config_value(stored_config, 'instance_contact_email'),
       instance_maintainer: config_value(stored_config, 'instance_maintainer'),
-      blog_footer: config_value(stored_config, 'blog_footer')
+      blog_footer: config_value(stored_config, 'blog_footer'),
+      user_bio: config_value(stored_config, 'user_bio'),
+      background_color: config_value(stored_config, 'background_color')
     }
   end
 
   def config_value(stored_config, key)
-    stored_config[key] || Rails.application.config.send(key.to_sym)
+    if key == 'background_color'
+      stored_config[key] || '#fdfbfb'
+    elsif key == 'user_bio'
+      stored_config[key] || ''
+    else
+      stored_config[key] || Rails.application.config.send(key.to_sym)
+    end
   end
 
   def build_activitypub_config
@@ -54,7 +62,10 @@ class ConfigController < ApplicationController
   end
 
   def update_instance_config
-    save_config(config_params)
+    params = config_params
+    return false if params.nil?
+
+    save_config(params)
     true
   rescue StandardError => e
     Rails.logger.error "Config update failed: #{e.message}"
@@ -99,6 +110,15 @@ class ConfigController < ApplicationController
   end
 
   def config_params
-    params.expect(config: %i[instance_name instance_description instance_contact_email instance_maintainer blog_footer])
+    permitted_params = params.expect(config: %i[instance_name instance_description instance_contact_email instance_maintainer blog_footer user_bio
+                                                background_color])
+
+    # 背景色のバリデーション
+    if permitted_params[:background_color].present? && !permitted_params[:background_color].match?(/\A#[0-9a-fA-F]{6}\z/)
+      flash.now[:alert] = I18n.t('config.invalid_background_color')
+      return nil
+    end
+
+    permitted_params
   end
 end
