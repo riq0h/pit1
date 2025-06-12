@@ -52,7 +52,7 @@ class ProfilesController < ApplicationController
             .where(actor: @actor)
             .where(visibility: %w[public unlisted])
             .where(object_type: 'Note')
-            .where('LENGTH(objects.id) = 6')
+            .where(local: true)
             .includes(:actor)
             .order(published_at: :desc)
 
@@ -66,7 +66,7 @@ class ProfilesController < ApplicationController
             .where(actor: @actor)
             .where(visibility: %w[public unlisted])
             .where(object_type: 'Note')
-            .where('LENGTH(objects.id) = 6')
+            .where(local: true)
             .includes(:actor, :media_attachments)
             .order(published_at: :desc)
             .distinct
@@ -108,7 +108,7 @@ class ProfilesController < ApplicationController
       .where(actor: @actor)
       .where(visibility: %w[public unlisted])
       .where(object_type: 'Note')
-      .where('LENGTH(objects.id) = 6')
+      .where(local: true)
   end
 
   def base_media_query
@@ -118,7 +118,7 @@ class ProfilesController < ApplicationController
       .where(actor: @actor)
       .where(visibility: %w[public unlisted])
       .where(object_type: 'Note')
-      .where('LENGTH(objects.id) = 6')
+      .where(local: true)
       .distinct
   end
 end

@@ -37,7 +37,7 @@ module Api
       def statuses
         statuses = @account.objects
                            .where(object_type: 'Note')
-                           .where('LENGTH(objects.id) = 6')
+                           .where(local: true)
                            .order(published_at: :desc)
                            .limit(20)
 

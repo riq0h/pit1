@@ -19,7 +19,7 @@ class HomeController < ApplicationController
     query = ActivityPubObject.joins(:actor)
                              .where(actors: { local: true })
                              .where(visibility: %w[public unlisted])
-                             .where('LENGTH(objects.id) = 6')
+                             .where(local: true)
                              .includes(:actor, :media_attachments)
                              .order(published_at: :desc)
 
@@ -57,6 +57,6 @@ class HomeController < ApplicationController
     ActivityPubObject.joins(:actor)
                      .where(actors: { local: true })
                      .where(visibility: %w[public unlisted])
-                     .where('LENGTH(objects.id) = 6')
+                     .where(local: true)
   end
 end

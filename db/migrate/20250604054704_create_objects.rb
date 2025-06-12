@@ -50,15 +50,14 @@ class CreateObjects < ActiveRecord::Migration[8.0]
     add_index :objects, :in_reply_to_ap_id unless index_exists?(:objects, :in_reply_to_ap_id)
     add_index :objects, :conversation_ap_id unless index_exists?(:objects, :conversation_ap_id)
 
-    # FTS5仮想テーブル
+    # FTS5仮想テーブル（Snowflake ID対応）
     reversible do |dir|
       dir.up do
         execute <<-SQL
           CREATE VIRTUAL TABLE IF NOT EXISTS post_search USING fts5(
+            object_id UNINDEXED,
             content_plaintext,
-            summary,
-            content='objects',
-            content_rowid='id'
+            summary
           );
         SQL
 
@@ -66,7 +65,7 @@ class CreateObjects < ActiveRecord::Migration[8.0]
           CREATE TRIGGER IF NOT EXISTS post_search_insert#{' '}
           AFTER INSERT ON objects#{' '}
           BEGIN
-            INSERT INTO post_search(rowid, content_plaintext, summary)#{' '}
+            INSERT INTO post_search(object_id, content_plaintext, summary)#{' '}
             VALUES (new.id, COALESCE(new.content_plaintext, ''), COALESCE(new.summary, ''));
           END;
         SQL
@@ -75,8 +74,7 @@ class CreateObjects < ActiveRecord::Migration[8.0]
           CREATE TRIGGER IF NOT EXISTS post_search_delete#{' '}
           AFTER DELETE ON objects#{' '}
           BEGIN
-            INSERT INTO post_search(post_search, rowid, content_plaintext, summary)#{' '}
-            VALUES('delete', old.id, COALESCE(old.content_plaintext, ''), COALESCE(old.summary, ''));
+            DELETE FROM post_search WHERE object_id = old.id;
           END;
         SQL
 
@@ -84,9 +82,8 @@ class CreateObjects < ActiveRecord::Migration[8.0]
           CREATE TRIGGER IF NOT EXISTS post_search_update#{' '}
           AFTER UPDATE ON objects#{' '}
           BEGIN
-            INSERT INTO post_search(post_search, rowid, content_plaintext, summary)#{' '}
-            VALUES('delete', old.id, COALESCE(old.content_plaintext, ''), COALESCE(old.summary, ''));
-            INSERT INTO post_search(rowid, content_plaintext, summary)#{' '}
+            DELETE FROM post_search WHERE object_id = old.id;
+            INSERT INTO post_search(object_id, content_plaintext, summary)#{' '}
             VALUES (new.id, COALESCE(new.content_plaintext, ''), COALESCE(new.summary, ''));
           END;
         SQL

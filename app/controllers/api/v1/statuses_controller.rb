@@ -136,7 +136,7 @@ module Api
 
       def set_status
         @status = ActivityPubObject.where(object_type: 'Note')
-                                   .where('LENGTH(objects.id) = 6')
+                                   .where(local: true)
                                    .find(params[:id])
       end
 

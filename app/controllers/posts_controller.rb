@@ -69,9 +69,9 @@ class PostsController < ApplicationController
   end
 
   def find_post(actor, id_param)
-    # 6桁IDで直接検索（6桁IDの投稿のみ対象）
+    # ローカル投稿のみ対象
     ActivityPubObject.where(actor: actor)
-                     .where('LENGTH(objects.id) = 6')
+                     .where(local: true)
                      .find_by(id: id_param)
   end
 
