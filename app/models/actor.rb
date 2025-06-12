@@ -9,6 +9,19 @@ class Actor < ApplicationRecord
   has_many :activities, dependent: :destroy
   has_many :media_attachments, dependent: :destroy
 
+  # OAuth 2.0 associations (Doorkeeper)
+  has_many :access_grants,
+           class_name: 'Doorkeeper::AccessGrant',
+           foreign_key: :resource_owner_id,
+           dependent: :delete_all,
+           inverse_of: :resource_owner
+
+  has_many :access_tokens,
+           class_name: 'Doorkeeper::AccessToken',
+           foreign_key: :resource_owner_id,
+           dependent: :delete_all,
+           inverse_of: :resource_owner
+
   # フォロー関係
   has_many :follows, dependent: :destroy
   has_many :followed_actors, through: :follows, source: :target_actor
@@ -169,8 +182,6 @@ class Actor < ApplicationRecord
   # RSA鍵ペア生成
   def generate_key_pair
     return unless local? && private_key.blank?
-
-    Rails.logger.info "🔑 Generating RSA key pair for #{username}"
 
     rsa_key = OpenSSL::PKey::RSA.new(2048)
 

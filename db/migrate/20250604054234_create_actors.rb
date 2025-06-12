@@ -1,6 +1,6 @@
 class CreateActors < ActiveRecord::Migration[8.0]
   def change
-    create_table :actors, id: :string do |t|
+    create_table :actors do |t|
       # 基本情報
       t.string :username, null: false, limit: 20
       t.string :domain, limit: 255

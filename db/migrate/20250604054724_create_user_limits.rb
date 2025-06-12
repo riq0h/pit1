@@ -1,8 +1,8 @@
 class CreateUserLimits < ActiveRecord::Migration[8.0]
   def change
-    create_table :user_limits, id: :string do |t|
+    create_table :user_limits do |t|
       # 関連付け
-      t.references :actor, type: :string, null: true, foreign_key: true
+      t.references :actor, null: true, foreign_key: true
       # actor_id = nil はシステム制限（max_accounts）
 
       # 制限設定

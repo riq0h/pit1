@@ -50,8 +50,6 @@ class HttpSignatureVerifier
 
     raise ActivityPub::SignatureError, "Missing signature parameters: #{missing.join(', ')}" if missing.any?
 
-    Rails.logger.debug { "🔒 Signature params: keyId=#{params['keyId']}, algorithm=#{params['algorithm']}" }
-
     params
   end
 
@@ -60,14 +58,9 @@ class HttpSignatureVerifier
     # キャッシュ確認
     actor = Actor.find_by(ap_id: actor_uri)
 
-    if actor&.public_key.present?
-      Rails.logger.debug { "🔑 Using cached public key for #{actor_uri}" }
-      return parse_public_key(actor.public_key)
-    end
+    return parse_public_key(actor.public_key) if actor&.public_key.present?
 
     # リモートから取得
-    Rails.logger.debug { "🌐 Fetching actor from #{actor_uri}" }
-
     response = fetch_actor_data(actor_uri)
     public_key_data = response.dig('publicKey', 'publicKeyPem')
 
@@ -135,10 +128,7 @@ class HttpSignatureVerifier
   def build_signing_string(headers_list)
     header_names = headers_list.split
     signature_parts = build_signature_parts(header_names)
-    signing_string = signature_parts.join("\n")
-
-    Rails.logger.debug { "🔒 Signing string:\n#{signing_string}" }
-    signing_string
+    signature_parts.join("\n")
   end
 
   def configure_http_client(uri)
@@ -211,7 +201,6 @@ class HttpSignatureVerifier
     )
 
     if verified
-      Rails.logger.debug '✅ Signature verification successful'
       true
     else
       Rails.logger.warn '❌ Signature verification failed'

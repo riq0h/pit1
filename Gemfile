@@ -30,6 +30,7 @@ gem 'rsa'                        # RSA key generation for HTTP signatures
 
 # Authentication & Security
 gem 'bcrypt', '~> 3.1.7' # Password hashing
+gem 'doorkeeper', '~> 5.7'       # OAuth 2.0 server
 gem 'jwt'                        # JWT tokens for OAuth
 gem 'rack-cors'                  # CORS handling
 

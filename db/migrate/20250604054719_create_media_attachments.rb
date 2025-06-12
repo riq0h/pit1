@@ -2,7 +2,7 @@ class CreateMediaAttachments < ActiveRecord::Migration[8.0]
   def change
     create_table :media_attachments do |t|
       # 関連情報
-      t.references :object, null: false, foreign_key: true
+      t.references :object, type: :string, null: false, foreign_key: true
       t.references :actor, null: false, foreign_key: true
 
       # ファイル情報

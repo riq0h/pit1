@@ -29,8 +29,6 @@ class SendActivityJob < ApplicationJob
   private
 
   def send_to_inbox(inbox_url)
-    Rails.logger.debug { "📨 Sending to #{inbox_url}" }
-
     activity_data = build_activity_data(@activity)
     sender = ActivitySender.new
 

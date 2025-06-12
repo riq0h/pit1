@@ -103,6 +103,8 @@ GEM
       irb (~> 1.10)
       reline (>= 0.3.8)
     diff-lcs (1.6.2)
+    doorkeeper (5.8.2)
+      railties (>= 5)
     drb (2.2.3)
     erb (5.0.1)
     erubi (1.13.1)
@@ -437,6 +439,7 @@ DEPENDENCIES
   brakeman
   bullet
   debug
+  doorkeeper (~> 5.7)
   factory_bot_rails
   faker
   foreman

@@ -4,7 +4,7 @@ class CreateObjects < ActiveRecord::Migration[8.0]
       # ActivityPub情報
       t.string :ap_id, null: false
       t.string :object_type, null: false, default: 'Note'
-      t.references :actor, type: :string, null: false, foreign_key: true
+      t.references :actor, null: false, foreign_key: true
 
       # コンテンツ（HTMLとプレーンテキストの両方を保持）
       t.text :content                    # HTML版

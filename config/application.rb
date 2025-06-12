@@ -46,5 +46,6 @@ module Letter
     config.instance_contact_email = ""
     config.instance_maintainer = ""
     config.blog_footer = "General Letter Intercommunication System based on ActivityPub"
+    config.x.local_domain = "localhost:3000"
   end
 end

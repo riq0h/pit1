@@ -7,7 +7,7 @@ class CreateActivities < ActiveRecord::Migration[8.0]
 
       # 関連情報
       t.references :actor, null: false, foreign_key: true
-      t.references :object, null: true, foreign_key: true
+      t.references :object, type: :string, null: true, foreign_key: true
       t.string :target_ap_id
 
       # ActivityPub データ

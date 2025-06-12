@@ -1,4 +1,12 @@
 Rails.application.routes.draw do
+  # OAuth 2.0 endpoints (Doorkeeper)
+  scope :oauth do
+    get '/authorize' => 'oauth/authorizations#new', as: :oauth_authorization
+    post '/authorize' => 'oauth/authorizations#create'
+    delete '/authorize' => 'oauth/authorizations#destroy'
+    post '/token' => 'oauth/tokens#create', as: :oauth_token
+    post '/revoke' => 'oauth/tokens#revoke', as: :oauth_revoke
+  end
   # Health check endpoint
   get 'up' => 'rails/health#show', :as => :rails_health_check
 

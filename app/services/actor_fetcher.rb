@@ -25,13 +25,10 @@ class ActorFetcher
   end
 
   def fetch_actor_data(actor_uri)
-    Rails.logger.debug { "📡 HTTP GET #{actor_uri}" }
-
     response = perform_actor_request(actor_uri)
     actor_data = parse_actor_response(response)
     validate_actor_data(actor_data)
 
-    Rails.logger.debug '✅ Actor data fetched successfully'
     actor_data
   rescue JSON::ParserError => e
     raise ActivityPub::ActorFetchError, "Invalid JSON response: #{e.message}"

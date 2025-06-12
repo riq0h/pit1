@@ -25,3 +25,12 @@ module ActivityPub
   # レート制限エラー
   class RateLimitError < Error; end
 end
+
+# Mastodon API compatible exceptions
+module Mastodon
+  class Error < StandardError; end
+  class ValidationError < Error; end
+  class RateLimitExceededError < Error; end
+  class NotPermittedError < Error; end
+  class UnexpectedResponseError < Error; end
+end

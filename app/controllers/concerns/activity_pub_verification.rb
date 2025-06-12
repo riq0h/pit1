@@ -42,8 +42,6 @@ module ActivityPubVerification
 
     validate_activity_structure
     check_json_ld_context
-
-    Rails.logger.debug { "📋 Activity parsed: #{@activity['type']} from #{@activity['actor']}" }
   rescue JSON::ParserError => e
     raise ActivityPub::ValidationError, "Invalid JSON: #{e.message}"
   end
