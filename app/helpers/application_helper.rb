@@ -5,10 +5,6 @@ module ApplicationHelper
     load_instance_config['background_color'] || '#fdfbfb'
   end
 
-  def user_bio
-    load_instance_config['user_bio'] || ''
-  end
-
   def auto_link_urls(text)
     return '' if text.blank?
 

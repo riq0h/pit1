@@ -10,7 +10,7 @@ class ConfigController < ApplicationController
 
   # PATCH /config
   def update
-    if update_instance_config
+    if update_instance_config && update_user_profile
       redirect_to config_path, notice: I18n.t('config.updated')
     else
       @config = current_instance_config
@@ -37,7 +37,6 @@ class ConfigController < ApplicationController
       instance_contact_email: config_value(stored_config, 'instance_contact_email'),
       instance_maintainer: config_value(stored_config, 'instance_maintainer'),
       blog_footer: config_value(stored_config, 'blog_footer'),
-      user_bio: config_value(stored_config, 'user_bio'),
       background_color: config_value(stored_config, 'background_color')
     }
   end
@@ -45,8 +44,6 @@ class ConfigController < ApplicationController
   def config_value(stored_config, key)
     if key == 'background_color'
       stored_config[key] || '#fdfbfb'
-    elsif key == 'user_bio'
-      stored_config[key] || ''
     else
       stored_config[key] || Rails.application.config.send(key.to_sym)
     end
@@ -109,8 +106,18 @@ class ConfigController < ApplicationController
     Rails.logger.info 'Config saved successfully'
   end
 
+  def update_user_profile
+    return true if params[:actor].blank?
+
+    actor_params = params.expect(actor: [:summary])
+    current_user.update(actor_params)
+  rescue StandardError => e
+    Rails.logger.error "User profile update failed: #{e.message}"
+    false
+  end
+
   def config_params
-    permitted_params = params.expect(config: %i[instance_name instance_description instance_contact_email instance_maintainer blog_footer user_bio
+    permitted_params = params.expect(config: %i[instance_name instance_description instance_contact_email instance_maintainer blog_footer
                                                 background_color])
 
     # 背景色のバリデーション

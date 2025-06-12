@@ -1,11 +1,8 @@
-<% content_for :title, "letter" %>
-
-<!-- 無限スクロール対応タイムライン -->
-<div id="posts-container">
+<%= turbo_frame_tag "load_more" do %>
   <% @posts.each do |post| %>
     <%= render 'shared/post_card', post: post %>
   <% end %>
-  
+
   <% if @more_posts_available %>
     <%= turbo_frame_tag "load_more", src: root_path(max_id: @older_max_id), loading: :lazy do %>
       <div class="text-center py-8">
@@ -28,5 +25,4 @@
       </div>
     <% end %>
   <% end %>
-</div>
-
+<% end %>

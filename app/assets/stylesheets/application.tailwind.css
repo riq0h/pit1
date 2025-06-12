@@ -5,7 +5,7 @@
 /* ActivityPub specific styles */
 @layer components {
   .activitypub-content {
-    @apply prose prose-slate max-w-none;
+    @apply max-w-none;
   }
 
   .activitypub-content p {

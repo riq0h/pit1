@@ -69,10 +69,10 @@ class PostsController < ApplicationController
   end
 
   def find_post(actor, id_param)
-    # ap_idの末尾部分（nanoid）で検索
+    # 6桁IDで直接検索（6桁IDの投稿のみ対象）
     ActivityPubObject.where(actor: actor)
-                     .where('ap_id LIKE ?', "%/#{id_param}")
-                     .first
+                     .where('LENGTH(objects.id) = 6')
+                     .find_by(id: id_param)
   end
 
   def render_not_found

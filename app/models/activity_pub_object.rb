@@ -42,6 +42,7 @@ class ActivityPubObject < ApplicationRecord
 
   # === コールバック ===
   before_validation :set_defaults, on: :create
+  before_validation :generate_unique_id, on: :create, if: :local?
   before_save :extract_plaintext
   before_save :set_conversation_id
   after_create :create_activity, if: :local?
@@ -49,9 +50,10 @@ class ActivityPubObject < ApplicationRecord
 
   # === URL生成メソッド ===
   def public_url
-    # ap_id の末尾部分（nanoid）を使用してHTML URL生成
-    id_part = ap_id.split('/').last
-    "https://#{Rails.application.config.activitypub.domain}/@#{actor.username}/#{id_part}"
+    # 6桁IDを使用してHTML URL生成
+    scheme = Rails.env.production? ? 'https' : 'http'
+    domain = Rails.application.config.activitypub.domain
+    "#{scheme}://#{domain}/@#{actor.username}/#{id}"
   end
 
   def activitypub_url
@@ -295,14 +297,63 @@ class ActivityPubObject < ApplicationRecord
   def set_ap_id_for_local
     return unless local? && ap_id.blank?
 
+    # 6桁IDが生成されていない場合は生成
+    generate_unique_id if id.blank?
+
     self.ap_id = generate_ap_id
   end
 
+  def generate_unique_id
+    return if id.present? || !local?
+
+    loop do
+      candidate_id = generate_short_id
+      break if unique_id?(candidate_id)
+    end
+  end
+
+  def generate_short_id
+    # 6桁の英数字を生成（大文字小文字＋数字）
+    chars = [*'0'..'9', *'a'..'z', *'A'..'Z']
+    id = Array.new(6) { chars.sample }.join
+
+    self.id = id
+    id
+  end
+
+  def unique_id?(candidate_id)
+    !ActivityPubObject.exists?(id: candidate_id)
+  end
+
   def generate_ap_id
-    timestamp = Time.current.to_i
-    "#{Rails.application.config.base_url}/objects/#{timestamp}-#{SecureRandom.hex(8)}"
+    return unless local?
+
+    if six_digit_id?
+      generate_user_post_url
+    else
+      generate_fallback_url
+    end
   rescue StandardError
     "https://localhost:3000/objects/#{SecureRandom.uuid}"
+  end
+
+  def six_digit_id?
+    id.present? && id.length == 6
+  end
+
+  def generate_user_post_url
+    "#{base_url}/users/#{actor.username}/posts/#{id}"
+  end
+
+  def generate_fallback_url
+    timestamp = Time.current.to_i
+    "#{base_url}/objects/#{timestamp}-#{SecureRandom.hex(8)}"
+  end
+
+  def base_url
+    scheme = Rails.env.production? ? 'https' : 'http'
+    domain = Rails.application.config.activitypub.domain
+    "#{scheme}://#{domain}"
   end
 
   def extract_plaintext

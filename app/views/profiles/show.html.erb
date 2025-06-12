@@ -23,13 +23,6 @@
       </div>
     </div>
     
-    <!-- プロフィール説明 -->
-    <% if @actor.summary.present? %>
-      <div class="text-gray-700 leading-relaxed mb-4">
-        <%= simple_format(h(@actor.summary)) %>
-      </div>
-    <% end %>
-    
     <!-- 統計情報（シンプル表示） -->
     <div class="text-sm text-gray-600 mb-4">
       <span class="mr-4"><%= number_with_delimiter(@posts_count) %> 投稿</span>
@@ -38,9 +31,9 @@
     </div>
 
     <!-- 自己紹介 -->
-    <% if user_bio.present? %>
+    <% if @actor.summary.present? %>
       <div class="text-gray-700 leading-relaxed">
-        <%= auto_link_urls(user_bio).html_safe %>
+        <%= auto_link_urls(@actor.summary).html_safe %>
       </div>
     <% end %>
   </header>
@@ -62,29 +55,37 @@
   </div>
 </nav>
 
-<!-- 投稿一覧（ブログ記事風） -->
-<section class="prose prose-gray max-w-none posts-section-spacing">
-  <% if @posts.any? %>
-    <% @posts.each do |post| %>
-      <%= render 'shared/post_card', post: post %>
+<!-- 投稿一覧（無限スクロール対応） -->
+<div id="posts-container">
+  <section class="posts-section-spacing">
+    <% if @posts.any? %>
+      <% @posts.each do |post| %>
+        <%= render 'shared/post_card', post: post %>
+      <% end %>
+      
+      <% if @more_posts_available %>
+        <%= turbo_frame_tag "load_more", src: profile_path(@actor.username, tab: @current_tab, max_id: @older_max_id), loading: :lazy do %>
+          <div class="text-center py-8">
+            <div class="inline-block w-8 h-3">
+              <svg viewBox="0 0 32 12" class="w-full h-full">
+                <path d="M0,6 L6,6 L8,2 L10,10 L12,4 L14,8 L16,6 L32,6" 
+                      stroke="#6B7280" stroke-width="1" fill="none">
+                  <animate attributeName="stroke-dasharray" 
+                           values="0,80;40,40;0,80" 
+                           dur="1.5s" 
+                           repeatCount="indefinite"/>
+                  <animate attributeName="stroke-dashoffset" 
+                           values="0;-80" 
+                           dur="1.5s" 
+                           repeatCount="indefinite"/>
+                </path>
+              </svg>
+            </div>
+            <p class="mt-2 text-gray-600">通信中</p>
+          </div>
+        <% end %>
+      <% end %>
     <% end %>
-    
-    <!-- ページネーション -->
-    <% if @posts.count >= 30 %>
-      <div class="flex justify-between mt-12">
-        <div>
-          <!-- Newer posts link (左端) -->
-          <a href="#" class="text-gray-600 hover:text-gray-800 transition-colors">
-            ←
-          </a>
-        </div>
-        <div>
-          <!-- Older posts link (右端) -->
-          <a href="#" class="text-gray-600 hover:text-gray-800 transition-colors">
-            →
-          </a>
-        </div>
-      </div>
-    <% end %>
-  <% end %>
-</section>
+  </section>
+</div>
+
