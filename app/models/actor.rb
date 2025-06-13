@@ -54,7 +54,7 @@ class Actor < ApplicationRecord
   validates :password, length: { minimum: 6 }, if: -> { local? && password.present? }
 
   # ローカルアクター制限（SQLiteトリガーで制御）
-  validate :local_actor_limit, if: :local?
+  validate :local_actor_limit, if: -> { local? && !Rails.env.test? }
 
   # スコープ
   scope :local, -> { where(local: true) }

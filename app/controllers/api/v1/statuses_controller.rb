@@ -31,6 +31,104 @@ module Api
         end
       end
 
+      # POST /api/v1/statuses/:id/favourite
+      def favourite
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+
+        favourite = current_user.favourites.find_or_create_by(object: @status)
+
+        if favourite.persisted?
+          create_like_activity(@status)
+          render json: serialized_status(@status)
+        else
+          render json: { error: 'Failed to favourite status' }, status: :unprocessable_entity
+        end
+      end
+
+      # POST /api/v1/statuses/:id/unfavourite
+      def unfavourite
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+
+        favourite = current_user.favourites.find_by(object: @status)
+
+        if favourite
+          create_undo_like_activity(@status, favourite)
+          favourite.destroy
+        end
+
+        render json: serialized_status(@status)
+      end
+
+      # POST /api/v1/statuses/:id/reblog
+      def reblog
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render json: { error: 'Cannot reblog own status' }, status: :unprocessable_content if @status.actor == current_user
+
+        reblog = current_user.reblogs.find_or_create_by(object: @status)
+
+        if reblog.persisted?
+          create_announce_activity(@status)
+          render json: serialized_status(@status)
+        else
+          render json: { error: 'Failed to reblog status' }, status: :unprocessable_entity
+        end
+      end
+
+      # POST /api/v1/statuses/:id/unreblog
+      def unreblog
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+
+        reblog = current_user.reblogs.find_by(object: @status)
+
+        if reblog
+          create_undo_announce_activity(@status, reblog)
+          reblog.destroy
+        end
+
+        render json: serialized_status(@status)
+      end
+
+      # PUT /api/v1/statuses/:id
+      def update
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render json: { error: 'Not authorized' }, status: :forbidden unless @status.actor == current_user
+
+        if @status.update(status_params)
+          render json: serialized_status(@status)
+        else
+          render json: { error: 'Validation failed', details: @status.errors.full_messages },
+                 status: :unprocessable_entity
+        end
+      end
+
+      # DELETE /api/v1/statuses/:id
+      def destroy
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render json: { error: 'Not authorized' }, status: :forbidden unless @status.actor == current_user
+
+        # Create Delete activity
+        current_user.activities.create!(
+          ap_id: generate_delete_activity_ap_id(@status),
+          activity_type: 'Delete',
+          target_ap_id: @status.ap_id,
+          published_at: Time.current,
+          local: true,
+          processed: true
+        )
+
+        @status.destroy
+        render json: serialized_status(@status)
+      end
+
+      # GET /api/v1/statuses/:id/context
+      def context
+        # TODO: Implement conversation context (replies, ancestors)
+        render json: {
+          ancestors: [],
+          descendants: []
+        }
+      end
+
       private
 
       def build_status_object

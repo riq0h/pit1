@@ -2,6 +2,7 @@
 
 FactoryBot.define do
   factory :actor do
+    id { Letter::Snowflake.generate }
     sequence(:username) { |n| "user#{n}" }
     sequence(:ap_id) { |n| "https://example.com/users/user#{n}" }
     display_name { "Test User #{username.capitalize}" }

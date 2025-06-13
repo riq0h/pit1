@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :object, class: 'ActivityPubObject' do
-    sequence(:ap_id) { |_n| "https://example.com/objects/#{SecureRandom.alphanumeric(21)}" }
+  factory :object, class: 'ActivityPubObject', aliases: [:activity_pub_object] do
+    id { Letter::Snowflake.generate }
+    sequence(:ap_id) { |n| "https://example.com/objects/#{n}" }
     object_type { 'Note' }
     association :actor
 
     content { '<p>This is a test post for letter ActivityPub server! 🚀</p>' }
     content_plaintext { 'This is a test post for letter ActivityPub server! 🚀' }
     summary { nil }
-    url { ap_id }
     language { 'ja' }
 
     visibility { 'public' }
