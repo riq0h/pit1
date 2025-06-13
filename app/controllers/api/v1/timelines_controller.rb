@@ -35,11 +35,43 @@ module Api
       end
 
       def base_timeline_query
-        ActivityPubObject.joins(:actor)
-                         .where(object_type: 'Note')
-                         .where(local: true)
-                         .order('objects.id DESC')
-                         .limit(params[:limit]&.to_i || 20)
+        query = ActivityPubObject.joins(:actor)
+                                 .where(object_type: 'Note')
+                                 .where(local: true)
+                                 .order('objects.id DESC')
+                                 .limit(params[:limit]&.to_i || 20)
+
+        # Apply user-specific filters if authenticated
+        query = apply_user_filters(query) if current_user
+
+        query
+      end
+
+      def apply_user_filters(query)
+        query = exclude_blocked_users(query)
+        query = exclude_muted_users(query)
+        exclude_domain_blocked_users(query)
+      end
+
+      def exclude_blocked_users(query)
+        blocked_actor_ids = current_user.blocked_actors.pluck(:id)
+        return query unless blocked_actor_ids.any?
+
+        query.where.not(actors: { id: blocked_actor_ids })
+      end
+
+      def exclude_muted_users(query)
+        muted_actor_ids = current_user.muted_actors.pluck(:id)
+        return query unless muted_actor_ids.any?
+
+        query.where.not(actors: { id: muted_actor_ids })
+      end
+
+      def exclude_domain_blocked_users(query)
+        blocked_domains = current_user.domain_blocks.pluck(:domain)
+        return query unless blocked_domains.any?
+
+        query.where.not(actors: { domain: blocked_domains })
       end
 
       def apply_pagination_filters(query)

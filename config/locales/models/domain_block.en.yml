@@ -1,0 +1,8 @@
+en:
+  activerecord:
+    errors:
+      models:
+        domain_block:
+          attributes:
+            domain:
+              invalid: "must be a valid domain"

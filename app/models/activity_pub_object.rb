@@ -18,7 +18,13 @@ class ActivityPubObject < ApplicationRecord
   # === アソシエーション ===
   belongs_to :actor, inverse_of: :objects
   has_many :activities, dependent: :destroy, inverse_of: :object
+  has_many :favourites, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
+  has_many :reblogs, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
   has_many :media_attachments, dependent: :destroy, inverse_of: :object
+  has_many :object_tags, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
+  has_many :tags, through: :object_tags
+  has_many :mentions, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
+  has_many :mentioned_actors, through: :mentions, source: :actor
 
   # 返信関係
   belongs_to :in_reply_to, class_name: 'ActivityPubObject', optional: true
@@ -46,6 +52,8 @@ class ActivityPubObject < ApplicationRecord
   before_save :extract_plaintext
   before_save :set_conversation_id
   after_create :create_activity, if: :local?
+  after_create :process_text_content, if: -> { local? && content.present? }
+  after_update :process_text_content, if: -> { local? && saved_change_to_content? }
   after_destroy :create_delete_activity, if: :local?
 
   # === URL生成メソッド ===
@@ -375,5 +383,12 @@ class ActivityPubObject < ApplicationRecord
       local: true,
       processed: true
     )
+  end
+
+  def process_text_content
+    return if content.blank?
+
+    parser = TextParser.new(content)
+    parser.process_for_object(self)
   end
 end

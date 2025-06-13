@@ -146,7 +146,87 @@ CREATE TRIGGER letter_post_search_update
         INSERT INTO letter_post_search(object_id, content_plaintext, summary)
         VALUES (new.id, COALESCE(new.content_plaintext, ''), COALESCE(new.summary, ''));
       END;
+CREATE TABLE IF NOT EXISTS "favourites" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "actor_id" integer NOT NULL, "object_id" integer NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_757549d945"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+, CONSTRAINT "fk_rails_868448e3f7"
+FOREIGN KEY ("object_id")
+  REFERENCES "objects" ("id")
+);
+CREATE INDEX "index_favourites_on_actor_id" ON "favourites" ("actor_id") /*application='Letter'*/;
+CREATE INDEX "index_favourites_on_object_id" ON "favourites" ("object_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_favourites_on_actor_id_and_object_id" ON "favourites" ("actor_id", "object_id") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "reblogs" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "actor_id" integer NOT NULL, "object_id" integer NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_16704774d5"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+, CONSTRAINT "fk_rails_f85b673d2b"
+FOREIGN KEY ("object_id")
+  REFERENCES "objects" ("id")
+);
+CREATE INDEX "index_reblogs_on_actor_id" ON "reblogs" ("actor_id") /*application='Letter'*/;
+CREATE INDEX "index_reblogs_on_object_id" ON "reblogs" ("object_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_reblogs_on_actor_id_and_object_id" ON "reblogs" ("actor_id", "object_id") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "tags" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "name" varchar NOT NULL, "usages_count" integer DEFAULT 0 NOT NULL, "last_used_at" datetime(6), "trending" boolean DEFAULT 0, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
+CREATE UNIQUE INDEX "index_tags_on_name" ON "tags" ("name") /*application='Letter'*/;
+CREATE INDEX "index_tags_on_usages_count" ON "tags" ("usages_count") /*application='Letter'*/;
+CREATE INDEX "index_tags_on_trending" ON "tags" ("trending") /*application='Letter'*/;
+CREATE INDEX "index_tags_on_last_used_at" ON "tags" ("last_used_at") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "object_tags" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "object_id" integer NOT NULL, "tag_id" integer NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_11c6375210"
+FOREIGN KEY ("object_id")
+  REFERENCES "objects" ("id")
+, CONSTRAINT "fk_rails_8f6810534c"
+FOREIGN KEY ("tag_id")
+  REFERENCES "tags" ("id")
+);
+CREATE INDEX "index_object_tags_on_object_id" ON "object_tags" ("object_id") /*application='Letter'*/;
+CREATE INDEX "index_object_tags_on_tag_id" ON "object_tags" ("tag_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_object_tags_on_object_id_and_tag_id" ON "object_tags" ("object_id", "tag_id") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "mentions" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "object_id" integer NOT NULL, "actor_id" integer NOT NULL, "acct" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_6a4030f320"
+FOREIGN KEY ("object_id")
+  REFERENCES "objects" ("id")
+, CONSTRAINT "fk_rails_227016d488"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+);
+CREATE INDEX "index_mentions_on_object_id" ON "mentions" ("object_id") /*application='Letter'*/;
+CREATE INDEX "index_mentions_on_actor_id" ON "mentions" ("actor_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_mentions_on_object_id_and_actor_id" ON "mentions" ("object_id", "actor_id") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "blocks" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "actor_id" integer NOT NULL, "target_actor_id" integer NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_015885e298"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+, CONSTRAINT "fk_rails_5bd836e0fd"
+FOREIGN KEY ("target_actor_id")
+  REFERENCES "actors" ("id")
+);
+CREATE INDEX "index_blocks_on_actor_id" ON "blocks" ("actor_id") /*application='Letter'*/;
+CREATE INDEX "index_blocks_on_target_actor_id" ON "blocks" ("target_actor_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_blocks_on_actor_id_and_target_actor_id" ON "blocks" ("actor_id", "target_actor_id") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "mutes" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "actor_id" integer NOT NULL, "target_actor_id" integer NOT NULL, "notifications" boolean DEFAULT 1, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_bcd731dacd"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+, CONSTRAINT "fk_rails_caa1aeaa2a"
+FOREIGN KEY ("target_actor_id")
+  REFERENCES "actors" ("id")
+);
+CREATE INDEX "index_mutes_on_actor_id" ON "mutes" ("actor_id") /*application='Letter'*/;
+CREATE INDEX "index_mutes_on_target_actor_id" ON "mutes" ("target_actor_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_mutes_on_actor_id_and_target_actor_id" ON "mutes" ("actor_id", "target_actor_id") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "domain_blocks" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "actor_id" integer NOT NULL, "domain" varchar NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_ceda607ae5"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+);
+CREATE INDEX "index_domain_blocks_on_actor_id" ON "domain_blocks" ("actor_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_domain_blocks_on_actor_id_and_domain" ON "domain_blocks" ("actor_id", "domain") /*application='Letter'*/;
+CREATE INDEX "index_domain_blocks_on_domain" ON "domain_blocks" ("domain") /*application='Letter'*/;
 INSERT INTO "schema_migrations" (version) VALUES
+('20250613043627'),
+('20250613043207'),
+('20250613043143'),
+('20250613042612'),
+('20250613042552'),
+('20250613042426'),
+('20250613041713'),
+('20250613041405'),
 ('20250612234927'),
 ('20250612050913'),
 ('20250609134538'),

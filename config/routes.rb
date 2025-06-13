@@ -116,6 +116,8 @@ Rails.application.routes.draw do
 
       # Media
       post '/media', to: 'media#create'
+      get '/media/:id', to: 'media#show'
+      put '/media/:id', to: 'media#update'
 
       # Notifications
       get '/notifications', to: 'notifications#index'
@@ -125,6 +127,11 @@ Rails.application.routes.draw do
 
       # Search
       get '/search', to: 'search#index'
+
+      # Domain blocks
+      get '/domain_blocks', to: 'domain_blocks#index'
+      post '/domain_blocks', to: 'domain_blocks#create'
+      delete '/domain_blocks', to: 'domain_blocks#destroy'
     end
   end
 

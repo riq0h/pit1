@@ -79,25 +79,49 @@ module Api
 
       # POST /api/v1/accounts/:id/block
       def block
-        # TODO: Implement blocking functionality
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render json: { error: 'Cannot block yourself' }, status: :unprocessable_entity if @account == current_user
+
+        # Remove any existing follow relationship first
+        existing_follow = current_user.following.find_by(target_actor: @account)
+        existing_follow&.destroy
+
+        # Create block
+        current_user.blocks.find_or_create_by(target_actor: @account)
+
         render json: serialized_relationship(@account)
       end
 
       # POST /api/v1/accounts/:id/unblock
       def unblock
-        # TODO: Implement unblocking functionality
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+
+        block = current_user.blocks.find_by(target_actor: @account)
+        block&.destroy
+
         render json: serialized_relationship(@account)
       end
 
       # POST /api/v1/accounts/:id/mute
       def mute
-        # TODO: Implement muting functionality
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render json: { error: 'Cannot mute yourself' }, status: :unprocessable_entity if @account == current_user
+
+        notifications = params[:notifications] != false
+        mute = current_user.mutes.find_or_initialize_by(target_actor: @account)
+        mute.notifications = notifications
+        mute.save!
+
         render json: serialized_relationship(@account)
       end
 
       # POST /api/v1/accounts/:id/unmute
       def unmute
-        # TODO: Implement unmuting functionality
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+
+        mute = current_user.mutes.find_by(target_actor: @account)
+        mute&.destroy
+
         render json: serialized_relationship(@account)
       end
 
@@ -139,18 +163,45 @@ module Api
       end
 
       def serialized_relationship(account)
+        return {} unless current_user
+
         {
           id: account.id.to_s,
+          **follow_relationship_data(account),
+          **blocking_relationship_data(account),
+          **muting_relationship_data(account),
+          **additional_relationship_data(account)
+        }
+      end
+
+      def follow_relationship_data(account)
+        {
           following: current_user.followed_actors.include?(account),
+          followed_by: account.followers.include?(current_user),
           showing_reblogs: true,
           notifying: false,
-          followed_by: account.followers.include?(current_user),
-          blocking: false,
-          blocked_by: false,
-          muting: false,
-          muting_notifications: false,
-          requested: false,
-          domain_blocking: false,
+          requested: false
+        }
+      end
+
+      def blocking_relationship_data(account)
+        {
+          blocking: current_user.blocking?(account),
+          blocked_by: current_user.blocked_by?(account),
+          domain_blocking: account.domain.present? ? current_user.domain_blocking?(account.domain) : false
+        }
+      end
+
+      def muting_relationship_data(account)
+        mute = current_user.mutes.find_by(target_actor: account)
+        {
+          muting: current_user.muting?(account),
+          muting_notifications: mute&.notifications || false
+        }
+      end
+
+      def additional_relationship_data(_account)
+        {
           endorsed: false
         }
       end

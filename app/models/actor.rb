@@ -8,6 +8,23 @@ class Actor < ApplicationRecord
   has_many :objects, dependent: :destroy, class_name: 'ActivityPubObject'
   has_many :activities, dependent: :destroy
   has_many :media_attachments, dependent: :destroy
+  has_many :favourites, dependent: :destroy
+  has_many :reblogs, dependent: :destroy
+  has_many :mentions, dependent: :destroy
+
+  # Block/Mute relationships
+  has_many :blocks, dependent: :destroy
+  has_many :blocked_actors, through: :blocks, source: :target_actor
+  has_many :blocked_by, class_name: 'Block', foreign_key: :target_actor_id, dependent: :destroy, inverse_of: :target_actor
+  has_many :blocking_actors, through: :blocked_by, source: :actor
+
+  has_many :mutes, dependent: :destroy
+  has_many :muted_actors, through: :mutes, source: :target_actor
+  has_many :muted_by, class_name: 'Mute', foreign_key: :target_actor_id, dependent: :destroy, inverse_of: :target_actor
+  has_many :muting_actors, through: :muted_by, source: :actor
+
+  # Domain blocking
+  has_many :domain_blocks, dependent: :destroy
 
   # OAuth 2.0 associations (Doorkeeper)
   has_many :access_grants,
@@ -211,5 +228,44 @@ class Actor < ApplicationRecord
     return unless local_count >= 2
 
     errors.add(:local, 'This spaceship is a two-seater')
+  end
+
+  # Block/Mute helper methods
+  def blocking?(actor)
+    return false unless actor
+
+    blocks.exists?(target_actor: actor)
+  end
+
+  def blocked_by?(actor)
+    return false unless actor
+
+    blocked_by.exists?(actor: actor)
+  end
+
+  def muting?(actor)
+    return false unless actor
+
+    mutes.exists?(target_actor: actor)
+  end
+
+  def muted_by?(actor)
+    return false unless actor
+
+    muted_by.exists?(actor: actor)
+  end
+
+  def domain_blocking?(domain)
+    return false unless domain
+
+    domain_blocks.exists?(domain: domain)
+  end
+
+  def domain_blocked_by?(actor_domain)
+    return false unless actor_domain && domain.present?
+
+    # Check if any actor from actor_domain has blocked this actor's domain
+    DomainBlock.joins(:actor)
+               .exists?(actors: { domain: actor_domain }, domain_blocks: { domain: domain })
   end
 end
