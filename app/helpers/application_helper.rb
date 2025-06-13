@@ -6,10 +6,14 @@ module ApplicationHelper
   end
 
   def auto_link_urls(text)
-    return '' if text.blank?
+    return ''.html_safe if text.blank?
 
-    simple_format(h(text)).gsub(/(https?:\/\/[^\s]+)/,
-                                '<a href="\1" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline">\1</a>')
+    link_pattern = /(https?:\/\/[^\s]+)/
+    link_template = '<a href="\1" target="_blank" rel="noopener noreferrer" ' \
+                    'class="text-blue-600 hover:text-blue-800 underline">' \
+                    '\1</a>'
+
+    simple_format(h(text)).gsub(link_pattern, link_template).html_safe
   end
 
   private
