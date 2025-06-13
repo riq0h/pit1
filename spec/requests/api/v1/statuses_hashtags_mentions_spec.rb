@@ -43,7 +43,7 @@ RSpec.describe 'API V1 Statuses Hashtags and Mentions', type: :request do
           post '/api/v1/statuses',
                params: { status: '新しい #全く新しいタグ を使用' },
                headers: auth_headers
-        end.to change { Tag.count }.by(1)
+        end.to change(Tag, :count).by(1)
 
         new_tag = Tag.find_by(name: '全く新しいタグ')
         expect(new_tag.usage_count).to eq 1
@@ -54,7 +54,7 @@ RSpec.describe 'API V1 Statuses Hashtags and Mentions', type: :request do
              params: { status: '#テスト ハッシュタグ付き投稿' },
              headers: auth_headers
 
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['tags']).to be_present
         expect(json_response['tags'].first['name']).to eq 'テスト'
         expect(json_response['tags'].first['url']).to include('/tags/テスト')
@@ -125,7 +125,7 @@ RSpec.describe 'API V1 Statuses Hashtags and Mentions', type: :request do
              params: { status: content },
              headers: auth_headers
 
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['mentions']).to be_present
         expect(json_response['mentions'].first['username']).to eq mentioned_user.username
         expect(json_response['mentions'].first['acct']).to eq mentioned_user.username
@@ -158,7 +158,7 @@ RSpec.describe 'API V1 Statuses Hashtags and Mentions', type: :request do
       expect(status.mentions.count).to eq 1
       expect(status.tags.count).to eq 2
 
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['mentions'].first['username']).to eq mentioned_user.username
       expect(json_response['tags'].map { |t| t['name'] }).to contain_exactly('テスト', 'ActivityPub')
     end
@@ -176,7 +176,7 @@ RSpec.describe 'API V1 Statuses Hashtags and Mentions', type: :request do
       get "/api/v1/timelines/tag/#{tag.name}", headers: auth_headers
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response).to be_an(Array)
       # TODO: ハッシュタグタイムライン機能の実装後にテストを有効化
       # expect(json_response.first['id']).to eq status_with_tag.id.to_s

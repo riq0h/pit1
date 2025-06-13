@@ -4,6 +4,13 @@ class ProfilesController < ApplicationController
   before_action :find_actor
 
   def show
+    # ActivityPubリクエストの場合はJSONを返す
+    if activitypub_request?
+      render json: @actor.to_activitypub(request),
+             content_type: 'application/activity+json; charset=utf-8'
+      return
+    end
+
     # タブパラメータを取得（デフォルトは'posts'）
     @current_tab = params[:tab] || 'posts'
 

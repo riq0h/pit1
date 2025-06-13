@@ -20,7 +20,7 @@ RSpec.describe 'API V1 Statuses Favourite', type: :request do
         end.to change { user.favourites.count }.by(1)
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['favourited']).to be true
         expect(json_response['favourites_count']).to eq 1
       end
@@ -92,7 +92,7 @@ RSpec.describe 'API V1 Statuses Favourite', type: :request do
         end.to change { user.favourites.count }.by(-1)
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['favourited']).to be false
         expect(json_response['favourites_count']).to eq 0
       end

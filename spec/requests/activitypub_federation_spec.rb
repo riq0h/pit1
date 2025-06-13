@@ -170,7 +170,7 @@ RSpec.describe 'ActivityPub Federation', type: :request do
           post inbox_path,
                params: create_activity.to_json,
                headers: { 'Content-Type' => 'application/activity+json' }
-        end.to change { ActivityPubObject.count }.by(1)
+        end.to change(ActivityPubObject, :count).by(1)
 
         expect(response).to have_http_status(:ok)
 
@@ -198,7 +198,7 @@ RSpec.describe 'ActivityPub Federation', type: :request do
           post inbox_path,
                params: delete_activity.to_json,
                headers: { 'Content-Type' => 'application/activity+json' }
-        end.to change { ActivityPubObject.count }.by(-1)
+        end.to change(ActivityPubObject, :count).by(-1)
 
         expect(response).to have_http_status(:ok)
         expect(ActivityPubObject.find_by(id: remote_status.id)).to be_nil
@@ -267,7 +267,7 @@ RSpec.describe 'ActivityPub Federation', type: :request do
         expect(response).to have_http_status(:ok)
         expect(response.content_type).to include('application/activity+json')
 
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['type']).to eq 'OrderedCollection'
         expect(json_response['totalItems']).to be >= 1
       end
@@ -285,7 +285,7 @@ RSpec.describe 'ActivityPub Federation', type: :request do
 
         get outbox_path, headers: { 'Accept' => 'application/activity+json' }
 
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         # プライベート投稿のアクティビティは含まれないことを確認
         # 具体的な実装に応じて調整が必要
       end
@@ -301,7 +301,7 @@ RSpec.describe 'ActivityPub Federation', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.content_type).to include('application/activity+json')
 
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['type']).to eq 'Person'
       expect(json_response['id']).to eq local_user.ap_id
       expect(json_response['preferredUsername']).to eq local_user.username
@@ -408,7 +408,7 @@ RSpec.describe 'ActivityPub Federation', type: :request do
 
       expect(response).to have_http_status(:ok)
 
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       status_contents = json_response.map { |s| s['content'] }
       expect(status_contents).to include('リモート投稿')
     end
@@ -423,7 +423,7 @@ RSpec.describe 'ActivityPub Federation', type: :request do
 
       expect(response).to have_http_status(:ok)
 
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       status_contents = json_response.map { |s| s['content'] }
       expect(status_contents).to include('リモート投稿')
     end

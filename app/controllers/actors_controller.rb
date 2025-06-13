@@ -8,7 +8,7 @@ class ActorsController < ApplicationController
   # GET /users/:username
   # ActivityPub Actor endpoint
   def show
-    render json: @actor.to_activitypub,
+    render json: @actor.to_activitypub(request),
            content_type: 'application/activity+json; charset=utf-8'
   end
 

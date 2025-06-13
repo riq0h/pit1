@@ -37,7 +37,7 @@ RSpec.describe 'API V1 Media', type: :request do
 
         expect(response).to have_http_status(:created)
 
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['type']).to eq 'image'
         expect(json_response['description']).to eq 'テスト画像'
         expect(json_response['url']).to be_present
@@ -53,7 +53,7 @@ RSpec.describe 'API V1 Media', type: :request do
 
         expect(response).to have_http_status(:created)
 
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['type']).to eq 'video'
       end
 
@@ -77,7 +77,7 @@ RSpec.describe 'API V1 Media', type: :request do
              headers: auth_headers
 
         expect(response).to have_http_status(:unprocessable_entity)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq 'File parameter is required'
       end
 
@@ -109,7 +109,7 @@ RSpec.describe 'API V1 Media', type: :request do
              params: { file: test_image },
              headers: auth_headers
 
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['blurhash']).to be_present
 
         media = user.media_attachments.last
@@ -175,7 +175,7 @@ RSpec.describe 'API V1 Media', type: :request do
 
         expect(response).to have_http_status(:ok)
 
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['id']).to eq media.id.to_s
         expect(json_response['type']).to eq media.media_type
         expect(json_response['url']).to eq media.file_url
@@ -210,7 +210,7 @@ RSpec.describe 'API V1 Media', type: :request do
 
         expect(response).to have_http_status(:ok)
 
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['description']).to eq '更新された説明'
 
         media.reload
@@ -260,7 +260,7 @@ RSpec.describe 'API V1 Media', type: :request do
       expect(status.media_attachments.count).to eq 2
       expect(status.media_attachments).to include(media1, media2)
 
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['media_attachments'].length).to eq 2
     end
 
@@ -306,7 +306,7 @@ RSpec.describe 'API V1 Media', type: :request do
     it 'Mastodon API準拠のレスポンス形式' do
       get "/api/v1/media/#{image_media.id}", headers: auth_headers
 
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
 
       # 必須フィールドの確認
       expect(json_response).to have_key('id')

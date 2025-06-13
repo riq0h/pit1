@@ -19,7 +19,7 @@ RSpec.describe 'API V1 Accounts Moderation', type: :request do
         end.to change { user.blocks.count }.by(1)
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['blocking']).to be true
         expect(json_response['id']).to eq target_user.id.to_s
       end
@@ -39,7 +39,7 @@ RSpec.describe 'API V1 Accounts Moderation', type: :request do
         post "/api/v1/accounts/#{user.id}/block", headers: auth_headers
 
         expect(response).to have_http_status(:unprocessable_entity)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq 'Cannot block yourself'
       end
 
@@ -79,7 +79,7 @@ RSpec.describe 'API V1 Accounts Moderation', type: :request do
         end.to change { user.blocks.count }.by(-1)
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['blocking']).to be false
       end
 
@@ -103,7 +103,7 @@ RSpec.describe 'API V1 Accounts Moderation', type: :request do
         end.to change { user.mutes.count }.by(1)
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['muting']).to be true
         expect(json_response['muting_notifications']).to be true
       end
@@ -114,7 +114,7 @@ RSpec.describe 'API V1 Accounts Moderation', type: :request do
              headers: auth_headers
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['muting']).to be true
         expect(json_response['muting_notifications']).to be false
 
@@ -126,7 +126,7 @@ RSpec.describe 'API V1 Accounts Moderation', type: :request do
         post "/api/v1/accounts/#{user.id}/mute", headers: auth_headers
 
         expect(response).to have_http_status(:unprocessable_entity)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq 'Cannot mute yourself'
       end
 
@@ -153,7 +153,7 @@ RSpec.describe 'API V1 Accounts Moderation', type: :request do
         end.to change { user.mutes.count }.by(-1)
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['muting']).to be false
         expect(json_response['muting_notifications']).to be false
       end
@@ -178,7 +178,7 @@ RSpec.describe 'API V1 Accounts Moderation', type: :request do
       get '/api/v1/domain_blocks', headers: auth_headers
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response).to be_an(Array)
       expect(json_response).to contain_exactly('blocked1.example', 'blocked2.example')
     end
@@ -231,7 +231,7 @@ RSpec.describe 'API V1 Accounts Moderation', type: :request do
              headers: auth_headers
 
         expect(response).to have_http_status(:unprocessable_entity)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq 'Domain parameter is required'
       end
     end
@@ -257,7 +257,7 @@ RSpec.describe 'API V1 Accounts Moderation', type: :request do
                headers: auth_headers
 
         expect(response).to have_http_status(:not_found)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq 'Domain not found in blocks'
       end
     end
@@ -280,7 +280,7 @@ RSpec.describe 'API V1 Accounts Moderation', type: :request do
 
       get '/api/v1/timelines/public', headers: auth_headers
 
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       status_ids = json_response.map { |s| s['id'] }
       expect(status_ids).to include(normal_status.id.to_s)
       expect(status_ids).not_to include(blocked_status.id.to_s)
@@ -292,7 +292,7 @@ RSpec.describe 'API V1 Accounts Moderation', type: :request do
 
       get '/api/v1/timelines/public', headers: auth_headers
 
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       status_ids = json_response.map { |s| s['id'] }
       expect(status_ids).to include(normal_status.id.to_s)
       expect(status_ids).not_to include(muted_status.id.to_s)
@@ -304,7 +304,7 @@ RSpec.describe 'API V1 Accounts Moderation', type: :request do
 
       get '/api/v1/timelines/public', headers: auth_headers
 
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       status_ids = json_response.map { |s| s['id'] }
       expect(status_ids).to include(normal_status.id.to_s)
       expect(status_ids).not_to include(domain_blocked_status.id.to_s)

@@ -148,52 +148,76 @@ class Actor < ApplicationRecord
   end
 
   # ActivityPub JSON-LD representation
-  def to_activitypub
-    base_activitypub_data.merge(activitypub_links).merge(activitypub_images).compact
+  def to_activitypub(request = nil)
+    base_activitypub_data(request).merge(activitypub_links(request)).merge(activitypub_images(request)).compact
   end
 
   private
 
   # ActivityPub base data
-  def base_activitypub_data
+  def base_activitypub_data(request = nil)
+    base_url = get_base_url(request)
+    actor_url = "#{base_url}/users/#{username}"
+
     {
       '@context' => [
         'https://www.w3.org/ns/activitystreams',
         'https://w3id.org/security/v1'
       ],
       'type' => actor_type || 'Person',
-      'id' => ap_id,
+      'id' => actor_url,
       'preferredUsername' => username,
       'name' => display_name,
       'summary' => summary,
-      'url' => ap_id,
+      'url' => actor_url,
       'discoverable' => discoverable,
       'manuallyApprovesFollowers' => manually_approves_followers
     }
   end
 
   # ActivityPub URLs
-  def activitypub_links
+  def activitypub_links(request = nil)
+    base_url = get_base_url(request)
+    actor_url = "#{base_url}/users/#{username}"
+
     {
-      'inbox' => inbox_url,
-      'outbox' => outbox_url,
-      'followers' => followers_url,
-      'following' => following_url,
-      'featured' => featured_url,
+      'inbox' => "#{actor_url}/inbox",
+      'outbox' => "#{actor_url}/outbox",
+      'followers' => "#{actor_url}/followers",
+      'following' => "#{actor_url}/following",
+      'featured' => "#{actor_url}/collections/featured",
       'publicKey' => {
-        'id' => public_key_id,
-        'owner' => ap_id,
+        'id' => "#{actor_url}#main-key",
+        'owner' => actor_url,
         'publicKeyPem' => public_key
       }
     }
   end
 
   # ActivityPub images
-  def activitypub_images
+  def activitypub_images(_request = nil)
     {
       'icon' => icon_url ? { 'type' => 'Image', 'url' => icon_url } : nil,
       'image' => header_url ? { 'type' => 'Image', 'url' => header_url } : nil
     }
+  end
+
+  # Get base URL from request or fallback to config
+  def get_base_url(request = nil)
+    if request&.host
+      scheme = request.ssl? ? 'https' : 'http'
+      port = request.port
+      if (scheme == 'https' && port == 443) || (scheme == 'http' && port == 80)
+        "#{scheme}://#{request.host}"
+      else
+        "#{scheme}://#{request.host}:#{port}"
+      end
+    else
+      # Fallback to config
+      local_domain = Rails.application.config.activitypub.domain
+      scheme = Rails.env.production? ? 'https' : 'http'
+      "#{scheme}://#{local_domain}"
+    end
   end
 
   # RSA鍵ペア生成

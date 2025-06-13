@@ -19,7 +19,7 @@ RSpec.describe 'API V1 Statuses Reblog', type: :request do
         end.to change { user.reblogs.count }.by(1)
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['reblogged']).to be true
         expect(json_response['reblogs_count']).to eq 1
       end
@@ -37,7 +37,7 @@ RSpec.describe 'API V1 Statuses Reblog', type: :request do
         post "/api/v1/statuses/#{own_status.id}/reblog", headers: auth_headers
 
         expect(response).to have_http_status(:unprocessable_content)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq 'Cannot reblog own status'
       end
 
@@ -114,7 +114,7 @@ RSpec.describe 'API V1 Statuses Reblog', type: :request do
         end.to change { user.reblogs.count }.by(-1)
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['reblogged']).to be false
         expect(json_response['reblogs_count']).to eq 0
       end

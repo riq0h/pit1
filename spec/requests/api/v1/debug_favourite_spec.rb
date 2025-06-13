@@ -20,12 +20,12 @@ RSpec.describe 'Debug Favourite API', type: :request do
 
     puts "Response status: #{response.status}"
     puts "Response body: #{begin
-      JSON.parse(response.body)
+      response.parsed_body
     rescue StandardError
       response.body
     end}"
     puts "User favourites count: #{user.favourites.count}"
-    puts "Favourites in DB: #{Favourite.all.count}"
+    puts "Favourites in DB: #{Favourite.count}"
 
     expect(true).to be true # 常に成功するテスト
   end

@@ -29,9 +29,6 @@ Rails.application.routes.draw do
   get '/users/:username', to: 'actors#show', as: :user_actor,
                           constraints: { format: :json }
 
-  # WebFinger
-  get '/.well-known/webfinger', to: 'webfinger#show'
-
   # WebFinger discovery
   get '/.well-known/webfinger', to: 'well_known#webfinger'
   get '/.well-known/host-meta', to: 'well_known#host_meta'

@@ -40,34 +40,53 @@ class WellKnownController < ApplicationController
       account_identifier = resource.sub('acct:', '')
       username, domain = account_identifier.split('@')
 
-      # ローカルドメインかチェック
-      local_domain = Rails.application.config.activitypub.domain
-      return nil unless domain == local_domain
+      # リクエストドメインまたは設定ドメインと照合
+      request_domain = request&.host
+      config_domain = Rails.application.config.activitypub.domain
+
+      # リクエストドメインと一致するか、設定ドメインと一致する場合のみ処理
+      return nil unless domain == request_domain || domain == config_domain
 
       Actor.find_by(username: username, local: true)
     elsif resource.start_with?('http')
-      # HTTP(S) URL形式での検索
-      Actor.find_by(ap_id: resource, local: true)
+      # HTTP(S) URL形式での検索 - profile URL (@username) の場合
+      uri = URI.parse(resource)
+
+      # 現在のリクエストドメインと一致するかチェック
+      return nil unless uri.host == request&.host || uri.host == Rails.application.config.activitypub.domain.split(':').first
+
+      # /@username 形式のパスから username を抽出
+      if uri.path =~ /^\/@(\w+)$/
+        username = ::Regexp.last_match(1)
+        Actor.find_by(username: username, local: true)
+      else
+        # 従来のap_idでの検索もサポート
+        Actor.find_by(ap_id: resource, local: true)
+      end
     end
   end
 
   def build_webfinger_response(actor)
+    actor_url = "#{base_url}/users/#{actor.username}"
+    profile_url = "#{base_url}/@#{actor.username}"
+    subject = "acct:#{actor.username}@#{request&.host || Rails.application.config.activitypub.domain}"
+
     {
-      subject: actor.webfinger_subject,
+      subject: subject,
       aliases: [
-        actor.ap_id,
-        actor.public_url
+        actor_url,
+        profile_url
       ].compact,
       links: [
         {
           rel: 'self',
           type: 'application/activity+json',
-          href: actor.ap_id
+          href: actor_url
         },
         {
           rel: 'http://webfinger.net/rel/profile-page',
           type: 'text/html',
-          href: actor.public_url || actor.ap_id
+          href: profile_url
         },
         {
           rel: 'http://ostatus.org/schema/1.0/subscribe',
@@ -98,11 +117,19 @@ class WellKnownController < ApplicationController
   end
 
   def base_url
-    @base_url ||= begin
-      domain = Rails.application.config.activitypub.domain
-      scheme = Rails.env.production? ? 'https' : 'http'
-      "#{scheme}://#{domain}"
-    end
+    @base_url ||= if request&.host
+                    scheme = request.ssl? ? 'https' : 'http'
+                    port = request.port
+                    if (scheme == 'https' && port == 443) || (scheme == 'http' && port == 80)
+                      "#{scheme}://#{request.host}"
+                    else
+                      "#{scheme}://#{request.host}:#{port}"
+                    end
+                  else
+                    domain = Rails.application.config.activitypub.domain
+                    scheme = Rails.env.production? ? 'https' : 'http'
+                    "#{scheme}://#{domain}"
+                  end
   end
 
   def render_webfinger_error(message)
