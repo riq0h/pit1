@@ -12,6 +12,12 @@ class Actor < ApplicationRecord
   has_many :reblogs, dependent: :destroy
   has_many :mentions, dependent: :destroy
 
+  # Follow relationships
+  has_many :following_relationships, class_name: 'Follow', dependent: :destroy, inverse_of: :actor
+  has_many :following, through: :following_relationships, source: :target_actor
+  has_many :follower_relationships, class_name: 'Follow', foreign_key: :target_actor_id, dependent: :destroy, inverse_of: :target_actor
+  has_many :followers, through: :reverse_follows, source: :actor
+
   # Block/Mute relationships
   has_many :blocks, dependent: :destroy
   has_many :blocked_actors, through: :blocks, source: :target_actor
@@ -43,7 +49,6 @@ class Actor < ApplicationRecord
   has_many :follows, dependent: :destroy
   has_many :followed_actors, through: :follows, source: :target_actor
   has_many :reverse_follows, class_name: 'Follow', foreign_key: 'target_actor_id', dependent: :destroy, inverse_of: :target_actor
-  has_many :followers, through: :reverse_follows, source: :actor
 
   # バリデーション
   validates :username, presence: true, format: { with: /\A[a-zA-Z0-9_]+\z/ }
@@ -152,6 +157,23 @@ class Actor < ApplicationRecord
     base_activitypub_data(request).merge(activitypub_links(request)).merge(activitypub_images(request)).compact
   end
 
+  # フォロー・フォロワー数の更新
+  def update_following_count!
+    count = following_relationships.accepted.count
+    update_column(:following_count, count)
+  end
+
+  def update_followers_count!
+    count = follower_relationships.accepted.count
+    update_column(:followers_count, count)
+  end
+
+  # 投稿数の更新
+  def update_posts_count!
+    count = objects.where(object_type: 'Note', local: true).count
+    update_column(:posts_count, count)
+  end
+
   private
 
   # ActivityPub base data
@@ -183,8 +205,16 @@ class Actor < ApplicationRecord
     {
       'inbox' => "#{actor_url}/inbox",
       'outbox' => "#{actor_url}/outbox",
-      'followers' => "#{actor_url}/followers",
-      'following' => "#{actor_url}/following",
+      'followers' => {
+        'id' => "#{actor_url}/followers",
+        'type' => 'Collection',
+        'totalItems' => followers_count
+      },
+      'following' => {
+        'id' => "#{actor_url}/following",
+        'type' => 'Collection',
+        'totalItems' => following_count
+      },
       'featured' => "#{actor_url}/collections/featured",
       'publicKey' => {
         'id' => "#{actor_url}#main-key",
@@ -204,20 +234,29 @@ class Actor < ApplicationRecord
 
   # Get base URL from request or fallback to config
   def get_base_url(request = nil)
-    if request&.host
-      scheme = request.ssl? ? 'https' : 'http'
-      port = request.port
-      if (scheme == 'https' && port == 443) || (scheme == 'http' && port == 80)
-        "#{scheme}://#{request.host}"
-      else
-        "#{scheme}://#{request.host}:#{port}"
-      end
-    else
-      # Fallback to config
-      local_domain = Rails.application.config.activitypub.domain
-      scheme = Rails.env.production? ? 'https' : 'http'
-      "#{scheme}://#{local_domain}"
-    end
+    return build_url_from_request(request) if request&.host
+
+    build_url_from_config
+  end
+
+  def build_url_from_request(request)
+    scheme = request.ssl? ? 'https' : 'http'
+    port = request.port
+    host = request.host
+
+    return "#{scheme}://#{host}" if default_port?(scheme, port)
+
+    "#{scheme}://#{host}:#{port}"
+  end
+
+  def build_url_from_config
+    local_domain = Rails.application.config.activitypub.domain
+    scheme = Rails.env.production? ? 'https' : 'http'
+    "#{scheme}://#{local_domain}"
+  end
+
+  def default_port?(scheme, port)
+    (scheme == 'https' && port == 443) || (scheme == 'http' && port == 80)
   end
 
   # RSA鍵ペア生成

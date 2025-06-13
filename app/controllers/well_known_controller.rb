@@ -35,35 +35,50 @@ class WellKnownController < ApplicationController
   private
 
   def find_actor_by_resource(resource)
-    # acct:username@domain 形式の解析
-    if resource.start_with?('acct:')
-      account_identifier = resource.sub('acct:', '')
-      username, domain = account_identifier.split('@')
-
-      # リクエストドメインまたは設定ドメインと照合
-      request_domain = request&.host
-      config_domain = Rails.application.config.activitypub.domain
-
-      # リクエストドメインと一致するか、設定ドメインと一致する場合のみ処理
-      return nil unless domain == request_domain || domain == config_domain
-
-      Actor.find_by(username: username, local: true)
-    elsif resource.start_with?('http')
-      # HTTP(S) URL形式での検索 - profile URL (@username) の場合
-      uri = URI.parse(resource)
-
-      # 現在のリクエストドメインと一致するかチェック
-      return nil unless uri.host == request&.host || uri.host == Rails.application.config.activitypub.domain.split(':').first
-
-      # /@username 形式のパスから username を抽出
-      if uri.path =~ /^\/@(\w+)$/
-        username = ::Regexp.last_match(1)
-        Actor.find_by(username: username, local: true)
-      else
-        # 従来のap_idでの検索もサポート
-        Actor.find_by(ap_id: resource, local: true)
-      end
+    case resource
+    when /^acct:/
+      find_actor_by_acct(resource)
+    when /^http/
+      find_actor_by_url(resource)
     end
+  end
+
+  def find_actor_by_acct(resource)
+    username, domain = parse_acct_resource(resource)
+    return nil unless domain_matches?(domain)
+
+    Actor.find_by(username: username, local: true)
+  end
+
+  def parse_acct_resource(resource)
+    account_identifier = resource.sub('acct:', '')
+    account_identifier.split('@')
+  end
+
+  def find_actor_by_url(resource)
+    uri = URI.parse(resource)
+    return nil unless host_matches?(uri.host)
+
+    extract_actor_from_path(uri.path) || Actor.find_by(ap_id: resource, local: true)
+  end
+
+  def domain_matches?(domain)
+    request_domain = request&.host
+    config_domain = Rails.application.config.activitypub.domain
+    domain == request_domain || domain == config_domain
+  end
+
+  def host_matches?(host)
+    request_host = request&.host
+    config_host = Rails.application.config.activitypub.domain.split(':').first
+    host == request_host || host == config_host
+  end
+
+  def extract_actor_from_path(path)
+    return nil unless path =~ /^\/@(\w+)$/
+
+    username = ::Regexp.last_match(1)
+    Actor.find_by(username: username, local: true)
   end
 
   def build_webfinger_response(actor)
@@ -117,19 +132,27 @@ class WellKnownController < ApplicationController
   end
 
   def base_url
-    @base_url ||= if request&.host
-                    scheme = request.ssl? ? 'https' : 'http'
-                    port = request.port
-                    if (scheme == 'https' && port == 443) || (scheme == 'http' && port == 80)
-                      "#{scheme}://#{request.host}"
-                    else
-                      "#{scheme}://#{request.host}:#{port}"
-                    end
-                  else
-                    domain = Rails.application.config.activitypub.domain
-                    scheme = Rails.env.production? ? 'https' : 'http'
-                    "#{scheme}://#{domain}"
-                  end
+    @base_url ||= request&.host ? build_url_from_request : build_url_from_config
+  end
+
+  def build_url_from_request
+    scheme = request.ssl? ? 'https' : 'http'
+    port = request.port
+    host = request.host
+
+    return "#{scheme}://#{host}" if default_port?(scheme, port)
+
+    "#{scheme}://#{host}:#{port}"
+  end
+
+  def build_url_from_config
+    domain = Rails.application.config.activitypub.domain
+    scheme = Rails.env.production? ? 'https' : 'http'
+    "#{scheme}://#{domain}"
+  end
+
+  def default_port?(scheme, port)
+    (scheme == 'https' && port == 443) || (scheme == 'http' && port == 80)
   end
 
   def render_webfinger_error(message)

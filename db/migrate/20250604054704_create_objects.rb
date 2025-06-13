@@ -1,10 +1,11 @@
 class CreateObjects < ActiveRecord::Migration[8.0]
   def change
-    create_table :objects, id: :string do |t|
+    create_table :objects, id: false do |t|
+      t.string :id, null: false, primary_key: true
       # ActivityPub情報
       t.string :ap_id, null: false
       t.string :object_type, null: false, default: 'Note'
-      t.references :actor, null: false, foreign_key: true
+      t.string :actor_id, null: false
 
       # コンテンツ（HTMLとプレーンテキストの両方を保持）
       t.text :content                    # HTML版
@@ -51,5 +52,8 @@ class CreateObjects < ActiveRecord::Migration[8.0]
     add_index :objects, :conversation_ap_id unless index_exists?(:objects, :conversation_ap_id)
 
     # FTS5仮想テーブルは別のマイグレーションで作成
+    
+    # Add foreign key for actor_id
+    add_foreign_key :objects, :actors, column: :actor_id
   end
 end

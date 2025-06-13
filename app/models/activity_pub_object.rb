@@ -26,10 +26,10 @@ class ActivityPubObject < ApplicationRecord
   has_many :mentions, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
   has_many :mentioned_actors, through: :mentions, source: :actor
 
-  # 返信関係
-  belongs_to :in_reply_to, class_name: 'ActivityPubObject', optional: true
-  has_many :replies, class_name: 'ActivityPubObject', foreign_key: 'in_reply_to_id',
-                     dependent: :destroy, inverse_of: :in_reply_to
+  # 返信関係（AP ID使用）
+  # belongs_to :in_reply_to, class_name: 'ActivityPubObject', optional: true
+  # has_many :replies, class_name: 'ActivityPubObject', foreign_key: 'in_reply_to_id',
+  #                    dependent: :destroy, inverse_of: :in_reply_to
 
   # === スコープ ===
   scope :local, -> { where(local: true) }
@@ -53,8 +53,10 @@ class ActivityPubObject < ApplicationRecord
   before_save :set_conversation_id
   after_create :create_activity, if: :local?
   after_create :process_text_content, if: -> { local? && content.present? }
+  after_create :update_actor_posts_count, if: -> { local? && object_type == 'Note' }
   after_update :process_text_content, if: -> { local? && saved_change_to_content? }
   after_destroy :create_delete_activity, if: :local?
+  after_destroy :update_actor_posts_count, if: -> { local? && object_type == 'Note' }
 
   # === URL生成メソッド ===
   def public_url
@@ -390,5 +392,11 @@ class ActivityPubObject < ApplicationRecord
 
     parser = TextParser.new(content)
     parser.process_for_object(self)
+  end
+
+  def update_actor_posts_count
+    actor.update_posts_count! if actor.present?
+  rescue StandardError => e
+    Rails.logger.error "Failed to update actor posts count: #{e.message}"
   end
 end

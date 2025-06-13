@@ -4,24 +4,10 @@ class ProfilesController < ApplicationController
   before_action :find_actor
 
   def show
-    # ActivityPubリクエストの場合はJSONを返す
-    if activitypub_request?
-      render json: @actor.to_activitypub(request),
-             content_type: 'application/activity+json; charset=utf-8'
-      return
-    end
+    return render_activitypub_profile if activitypub_request?
 
-    # タブパラメータを取得（デフォルトは'posts'）
     @current_tab = params[:tab] || 'posts'
-
-    # 投稿一覧を取得（公開投稿のみ）
-    @posts = case @current_tab
-             when 'media'
-               load_user_media_posts
-             else
-               load_user_posts
-             end
-
+    @posts = load_posts_for_tab(@current_tab)
     setup_pagination
 
     if params[:max_id].present?
@@ -36,6 +22,20 @@ class ProfilesController < ApplicationController
   end
 
   private
+
+  def render_activitypub_profile
+    render json: @actor.to_activitypub(request),
+           content_type: 'application/activity+json; charset=utf-8'
+  end
+
+  def load_posts_for_tab(tab)
+    case tab
+    when 'media'
+      load_user_media_posts
+    else
+      load_user_posts
+    end
+  end
 
   def find_actor
     username = params[:username]
