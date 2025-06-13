@@ -117,7 +117,37 @@ CREATE INDEX "index_oauth_access_tokens_on_resource_owner_id" ON "oauth_access_t
 CREATE INDEX "index_oauth_access_tokens_on_application_id" ON "oauth_access_tokens" ("application_id") /*application='Letter'*/;
 CREATE UNIQUE INDEX "index_oauth_access_tokens_on_token" ON "oauth_access_tokens" ("token") /*application='Letter'*/;
 CREATE UNIQUE INDEX "index_oauth_access_tokens_on_refresh_token" ON "oauth_access_tokens" ("refresh_token") /*application='Letter'*/;
+CREATE VIRTUAL TABLE letter_post_search USING fts5(
+        object_id UNINDEXED,
+        content_plaintext,
+        summary
+      )
+/* letter_post_search(object_id,content_plaintext,summary) */;
+CREATE TABLE IF NOT EXISTS 'letter_post_search_data'(id INTEGER PRIMARY KEY, block BLOB);
+CREATE TABLE IF NOT EXISTS 'letter_post_search_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS 'letter_post_search_content'(id INTEGER PRIMARY KEY, c0, c1, c2);
+CREATE TABLE IF NOT EXISTS 'letter_post_search_docsize'(id INTEGER PRIMARY KEY, sz BLOB);
+CREATE TABLE IF NOT EXISTS 'letter_post_search_config'(k PRIMARY KEY, v) WITHOUT ROWID;
+CREATE TRIGGER letter_post_search_insert
+      AFTER INSERT ON objects
+      BEGIN
+        INSERT INTO letter_post_search(object_id, content_plaintext, summary)
+        VALUES (new.id, COALESCE(new.content_plaintext, ''), COALESCE(new.summary, ''));
+      END;
+CREATE TRIGGER letter_post_search_delete
+      AFTER DELETE ON objects
+      BEGIN
+        DELETE FROM letter_post_search WHERE object_id = old.id;
+      END;
+CREATE TRIGGER letter_post_search_update
+      AFTER UPDATE ON objects
+      BEGIN
+        DELETE FROM letter_post_search WHERE object_id = old.id;
+        INSERT INTO letter_post_search(object_id, content_plaintext, summary)
+        VALUES (new.id, COALESCE(new.content_plaintext, ''), COALESCE(new.summary, ''));
+      END;
 INSERT INTO "schema_migrations" (version) VALUES
+('20250612234927'),
 ('20250612050913'),
 ('20250609134538'),
 ('20250609133823'),

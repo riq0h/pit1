@@ -122,6 +122,9 @@ Rails.application.routes.draw do
 
       # Streaming (WebSocket)
       get '/streaming', to: 'streaming#index'
+
+      # Search
+      get '/search', to: 'search#index'
     end
   end
 
@@ -179,7 +182,7 @@ Rails.application.routes.draw do
   get '/privacy', to: 'pages#privacy'
 
   # Search
-  get '/search', to: 'search#index'
+  get '/search/index', to: 'search#index', as: :search_index
 
   # Error pages
   get '/404', to: 'errors#not_found'

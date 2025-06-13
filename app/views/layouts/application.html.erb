@@ -38,9 +38,23 @@
         
         <!-- 右上のログインリンク（ログイン画面では非表示） -->
         <% unless controller_name == 'sessions' %>
-          <div class="text-sm">
+          <div class="flex items-center space-x-4 text-sm">
+            <!-- 検索ボックス -->
+            <%= form_with url: search_index_path, method: :get, 
+                          data: { turbo_frame: "search_results" },
+                          class: "flex items-center" do |form| %>
+              <%= form.text_field :q, 
+                                  value: params[:q], 
+                                  placeholder: "検索", 
+                                  class: "px-2 py-1 border border-gray-300 text-sm h-6 w-20 focus:outline-none focus:border-gray-500",
+                                  data: { turbo_action: "advance" } %>
+              <% if controller_name == 'profiles' && @actor %>
+                <%= form.hidden_field :username, value: @actor.username %>
+              <% end %>
+            <% end %>
+            
             <% if user_signed_in? %>
-              <%= link_to config_path, class: "text-gray-500 hover:text-gray-700 mr-4" do %>
+              <%= link_to config_path, class: "text-gray-500 hover:text-gray-700" do %>
                 設定
               <% end %>
               <%= link_to logout_path, data: { "turbo-method": :delete }, class: "text-gray-500 hover:text-gray-700" do %>
