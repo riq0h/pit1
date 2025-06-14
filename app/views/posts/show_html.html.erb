@@ -128,7 +128,7 @@
           <!-- 記事本文 -->
           <div class="text-gray-800 leading-relaxed">
             <div class="whitespace-pre-wrap break-words">
-              <%= auto_link_urls(reply.content).html_safe %>
+              <%= sanitize(auto_link_urls(reply.content), tags: %w[a p br], attributes: %w[href target]) %>
             </div>
           </div>
 
