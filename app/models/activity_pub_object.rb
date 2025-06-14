@@ -253,11 +253,6 @@ class ActivityPubObject < ApplicationRecord
     end
   end
 
-  def build_direct_audience_list(_type)
-    # DMの場合は宛先を動的に設定（将来実装）
-    []
-  end
-
   def build_attachment_list
     media_attachments.map do |attachment|
       {
@@ -270,11 +265,6 @@ class ActivityPubObject < ApplicationRecord
         'blurhash' => attachment.blurhash
       }.compact
     end
-  end
-
-  def build_tag_list
-    # TODO: ハッシュタグ・メンション実装時に追加
-    []
   end
 
   # === バリデーション・コールバックヘルパー ===

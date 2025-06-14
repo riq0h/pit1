@@ -13,8 +13,8 @@ module MediaSerializer
     {
       id: media.id.to_s,
       type: media.media_type,
-      url: media.file_url,
-      preview_url: media.file_url,
+      url: media.remote_url,
+      preview_url: media.remote_url,
       remote_url: media.remote_url,
       meta: build_media_meta(media),
       description: media.description,

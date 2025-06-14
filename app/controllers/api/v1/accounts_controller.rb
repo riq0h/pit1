@@ -66,53 +66,10 @@ module Api
         create_new_follow
       end
 
-      private
-
-      def cannot_follow_self?
-        @account == current_user
-      end
-
-      def render_follow_error
-        render json: { error: 'Cannot follow yourself' }, status: :unprocessable_content
-      end
-
-      def find_existing_follow
-        current_user.follows.find_by(target_actor: @account)
-      end
-
-      def render_existing_follow_response(existing_follow)
-        log_existing_follow_status(existing_follow)
-        render json: serialized_relationship(@account)
-      end
-
-      def log_existing_follow_status(existing_follow)
-        if existing_follow.accepted?
-          Rails.logger.info "Already following #{@account.ap_id}"
-        else
-          Rails.logger.info "Follow request already sent to #{@account.ap_id}"
-        end
-      end
-
-      def create_new_follow
-        follow = current_user.follows.build(target_actor: @account)
-
-        if follow.save
-          Rails.logger.info "Follow request created for #{@account.ap_id}"
-          render json: serialized_relationship(@account)
-        else
-          render_follow_creation_error(follow)
-        end
-      end
-
-      def render_follow_creation_error(follow)
-        Rails.logger.error "Failed to create follow: #{follow.errors.full_messages}"
-        render json: { error: 'Follow failed', details: follow.errors.full_messages }, status: :unprocessable_entity
-      end
-
       # POST /api/v1/accounts/:id/unfollow
       def unfollow
         follow = current_user.follows.find_by(target_actor: @account)
-        follow&.destroy
+        follow&.unfollow!
 
         render json: serialized_relationship(@account)
       end
@@ -163,6 +120,49 @@ module Api
         mute&.destroy
 
         render json: serialized_relationship(@account)
+      end
+
+      private
+
+      def cannot_follow_self?
+        @account == current_user
+      end
+
+      def render_follow_error
+        render json: { error: 'Cannot follow yourself' }, status: :unprocessable_content
+      end
+
+      def find_existing_follow
+        current_user.follows.find_by(target_actor: @account)
+      end
+
+      def render_existing_follow_response(existing_follow)
+        log_existing_follow_status(existing_follow)
+        render json: serialized_relationship(@account)
+      end
+
+      def log_existing_follow_status(existing_follow)
+        if existing_follow.accepted?
+          Rails.logger.info "Already following #{@account.ap_id}"
+        else
+          Rails.logger.info "Follow request already sent to #{@account.ap_id}"
+        end
+      end
+
+      def create_new_follow
+        follow = current_user.follows.build(target_actor: @account)
+
+        if follow.save
+          Rails.logger.info "Follow request created for #{@account.ap_id}"
+          render json: serialized_relationship(@account)
+        else
+          render_follow_creation_error(follow)
+        end
+      end
+
+      def render_follow_creation_error(follow)
+        Rails.logger.error "Failed to create follow: #{follow.errors.full_messages}"
+        render json: { error: 'Follow failed', details: follow.errors.full_messages }, status: :unprocessable_entity
       end
 
       def set_account

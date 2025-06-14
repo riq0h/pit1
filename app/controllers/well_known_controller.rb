@@ -84,7 +84,7 @@ class WellKnownController < ApplicationController
   def build_webfinger_response(actor)
     actor_url = "#{base_url}/users/#{actor.username}"
     profile_url = "#{base_url}/@#{actor.username}"
-    subject = "acct:#{actor.username}@#{request&.host || Rails.application.config.activitypub.domain}"
+    subject = "acct:#{actor.username}@#{Rails.application.config.activitypub.domain}"
 
     {
       subject: subject,
@@ -132,7 +132,7 @@ class WellKnownController < ApplicationController
   end
 
   def base_url
-    @base_url ||= request&.host ? build_url_from_request : build_url_from_config
+    @base_url ||= build_url_from_config
   end
 
   def build_url_from_request

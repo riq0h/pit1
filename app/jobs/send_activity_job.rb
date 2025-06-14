@@ -236,28 +236,18 @@ class SendActivityJob < ApplicationJob
     end
   end
 
-  def build_direct_audience(_type)
-    # DMの場合は宛先を動的に設定（将来実装）
-    []
-  end
-
   def build_attachments(object)
     object.media_attachments.map do |attachment|
       {
         'type' => 'Document',
-        'mediaType' => attachment.mime_type,
-        'url' => attachment.file_url,
-        'name' => attachment.description || attachment.filename,
+        'mediaType' => attachment.content_type,
+        'url' => attachment.remote_url,
+        'name' => attachment.description || attachment.file_name,
         'width' => attachment.width,
         'height' => attachment.height,
         'blurhash' => attachment.blurhash
       }.compact
     end
-  end
-
-  def build_tags(_object)
-    # TODO: ハッシュタグ・メンション実装時に追加
-    []
   end
 
   def log_delivery_result(success, inbox_url)

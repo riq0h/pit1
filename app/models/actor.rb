@@ -99,9 +99,8 @@ class Actor < ApplicationRecord
   def public_url
     return nil unless local?
 
-    local_domain = Rails.application.config.activitypub.domain
-    scheme = Rails.env.production? ? 'https' : 'http'
-    "#{scheme}://#{local_domain}/@#{username}"
+    base_url = Rails.application.config.activitypub.base_url
+    "#{base_url}/@#{username}"
   end
 
   # Display methods
@@ -264,9 +263,8 @@ class Actor < ApplicationRecord
   end
 
   # Get base URL from request or fallback to config
-  def get_base_url(request = nil)
-    return build_url_from_request(request) if request&.host
-
+  def get_base_url(_request = nil)
+    # 常に設定からのドメインを使用（.envで設定されたACTIVITYPUB_DOMAINを優先）
     build_url_from_config
   end
 
@@ -281,9 +279,8 @@ class Actor < ApplicationRecord
   end
 
   def build_url_from_config
-    local_domain = Rails.application.config.activitypub.domain
-    scheme = Rails.env.production? ? 'https' : 'http'
-    "#{scheme}://#{local_domain}"
+    # .envで設定された値を使用
+    Rails.application.config.activitypub.base_url
   end
 
   def default_port?(scheme, port)
@@ -304,9 +301,7 @@ class Actor < ApplicationRecord
   def set_ap_urls
     return unless local?
 
-    local_domain = Rails.application.config.activitypub.domain
-    scheme = Rails.env.production? ? 'https' : 'http'
-    base_url = "#{scheme}://#{local_domain}"
+    base_url = Rails.application.config.activitypub.base_url
 
     self.ap_id ||= "#{base_url}/users/#{username}"
     self.inbox_url ||= "#{base_url}/users/#{username}/inbox"

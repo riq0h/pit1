@@ -4,6 +4,7 @@ module Api
   module V1
     class TimelinesController < Api::BaseController
       include AccountSerializer
+      include MediaSerializer
       before_action :doorkeeper_authorize!, only: [:home]
 
       # GET /api/v1/timelines/home
@@ -84,15 +85,6 @@ module Api
         params[:local].present? && params[:local] != 'false'
       end
 
-      # GET /api/v1/timelines/tag/:hashtag
-      def tag
-        params[:hashtag]
-
-        # TODO: Implement hashtag functionality
-        # For now, return empty array
-        render json: []
-      end
-
       def serialized_status(status)
         {
           id: status.id.to_s,
@@ -106,14 +98,10 @@ module Api
           uri: status.ap_id,
           url: status.public_url,
           replies_count: replies_count(status),
-          reblogs_count: 0, # TODO: Implement
-          favourites_count: 0, # TODO: Implement
           content: status.content || '',
           reblog: nil,
           account: serialized_account(status.actor),
-          media_attachments: [], # TODO: Implement
-          mentions: [], # TODO: Implement
-          tags: [], # TODO: Implement
+          media_attachments: serialized_media_attachments(status),
           emojis: [],
           card: nil,
           poll: nil

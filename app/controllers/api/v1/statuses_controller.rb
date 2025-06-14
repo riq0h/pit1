@@ -62,7 +62,6 @@ module Api
       # POST /api/v1/statuses/:id/reblog
       def reblog
         return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
-        return render json: { error: 'Cannot reblog own status' }, status: :unprocessable_content if @status.actor == current_user
 
         reblog = current_user.reblogs.find_or_create_by(object: @status)
 
@@ -118,15 +117,6 @@ module Api
 
         @status.destroy
         render json: serialized_status(@status)
-      end
-
-      # GET /api/v1/statuses/:id/context
-      def context
-        # TODO: Implement conversation context (replies, ancestors)
-        render json: {
-          ancestors: [],
-          descendants: []
-        }
       end
 
       private

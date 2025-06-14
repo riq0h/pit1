@@ -18,10 +18,10 @@ class MediaAttachment < ApplicationRecord
 
   # === バリデーション ===
   validates :media_type, presence: true, inclusion: { in: MEDIA_TYPES }
-  validates :file_url, presence: true
+  validates :remote_url, presence: true
   validates :file_size, presence: true, numericality: { greater_than: 0 }
-  validates :mime_type, presence: true
-  validates :filename, presence: true
+  validates :content_type, presence: true
+  validates :file_name, presence: true
 
   validate :validate_file_size_by_type
   validate :validate_mime_type_by_media_type
@@ -74,13 +74,13 @@ class MediaAttachment < ApplicationRecord
   # === 表示用メソッド ===
 
   def display_name
-    filename.presence || 'Untitled'
+    file_name.presence || 'Untitled'
   end
 
   def file_extension
-    return '' if filename.blank?
+    return '' if file_name.blank?
 
-    File.extname(filename).downcase.delete('.')
+    File.extname(file_name).downcase.delete('.')
   end
 
   def human_file_size
@@ -99,8 +99,7 @@ class MediaAttachment < ApplicationRecord
   end
 
   def preview_url
-    return thumbnail_url if thumbnail_url.present?
-    return file_url if image?
+    return remote_url if image?
 
     # デフォルトのプレビューアイコン
     default_preview_icon_url
@@ -136,9 +135,9 @@ class MediaAttachment < ApplicationRecord
   def activitypub_document
     {
       type: 'Document',
-      mediaType: mime_type,
-      url: file_url,
-      name: alt_text.presence || display_name,
+      mediaType: content_type,
+      url: remote_url,
+      name: description.presence || display_name,
       width: width,
       height: height
     }.tap do |doc|
@@ -154,7 +153,7 @@ class MediaAttachment < ApplicationRecord
   end
 
   def extract_metadata
-    return unless file_url.present? && !processed?
+    return unless remote_url.present? && !processed?
 
     # ファイル拡張子からmedia_typeを推測
     detect_media_type_from_filename if media_type.blank?
@@ -205,11 +204,11 @@ class MediaAttachment < ApplicationRecord
     return if valid_formats.empty?
 
     # MIME typeから拡張子を抽出してチェック
-    format_from_mime = mime_type.split('/').last
+    format_from_mime = content_type.split('/').last
 
     return if valid_formats.include?(format_from_mime)
 
-    errors.add(:mime_type, "#{mime_type} is not supported for #{media_type} files")
+    errors.add(:content_type, "#{content_type} is not supported for #{media_type} files")
   end
 
   def valid_formats_for_media_type

@@ -67,12 +67,17 @@ module Api
       end
 
       def build_media_attachment(file_info, storage_path, metadata)
-        current_user.media_attachments.create!(
-          filename: file_info[:filename],
+        media_attachment = create_media_attachment_record(file_info, storage_path, metadata)
+        save_and_update_remote_url(media_attachment)
+        media_attachment
+      end
+
+      def create_media_attachment_record(file_info, storage_path, metadata)
+        current_user.media_attachments.build(
+          file_name: file_info[:filename],
           content_type: file_info[:content_type],
           file_size: file_info[:file_size],
           storage_path: storage_path,
-          file_url: generate_file_url(storage_path),
           media_type: file_info[:media_type],
           width: metadata[:width],
           height: metadata[:height],
@@ -81,6 +86,15 @@ module Api
           metadata: metadata.to_json,
           processed: true
         )
+      end
+
+      def save_and_update_remote_url(media_attachment)
+        # 一時的にremote_urlを設定してバリデーションを通す
+        media_attachment.remote_url = 'temp'
+        media_attachment.save!
+
+        # IDが生成された後に正しいremote_urlを設定
+        media_attachment.update!(remote_url: generate_file_url(media_attachment.id))
       end
 
       def save_file_to_storage(file)
@@ -102,10 +116,11 @@ module Api
         unique_filename
       end
 
-      def generate_file_url(storage_path)
+      def generate_file_url(media_id)
         # 本来はCDNやS3のURLを生成
-        # 開発環境では相対パスを返す
-        "/media/#{storage_path}"
+        # .envから設定されたActivityPubドメインを使用
+        base_url = Rails.application.config.activitypub.base_url
+        "#{base_url}/media/#{media_id}"
       end
 
       def determine_media_type(content_type, _filename)
@@ -157,8 +172,8 @@ module Api
         {
           id: media.id.to_s,
           type: media.media_type,
-          url: media.file_url,
-          preview_url: media.file_url,
+          url: media.remote_url,
+          preview_url: media.remote_url,
           remote_url: media.remote_url,
           meta: build_media_metadata(media),
           description: media.description,

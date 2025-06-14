@@ -20,8 +20,12 @@ class ObjectsController < ApplicationController
     # ap_id の末尾部分（nanoid）から Object を検索
     id_param = params[:id]
 
-    # ap_id の末尾が id_param と一致するものを検索
-    @object = ActivityPubObject.find_by('ap_id LIKE ?', "%/objects/#{id_param}")
+    # まず直接IDで検索を試行
+    @object = ActivityPubObject.find_by(id: id_param) if id_param.match?(/^\d+$/)
+
+    # 見つからない場合は ap_id のパターンで検索
+    @object ||= ActivityPubObject.find_by('ap_id LIKE ?', "%/posts/#{id_param}") ||
+                ActivityPubObject.find_by('ap_id LIKE ?', "%/objects/#{id_param}")
 
     return if @object
 
@@ -135,22 +139,28 @@ class ObjectsController < ApplicationController
     end
   end
 
-  def build_direct_audience(_type)
-    # DMの場合は宛先を動的に設定（将来実装）
-    []
-  end
-
   def build_attachments(object)
     object.media_attachments.map do |attachment|
       {
         'type' => 'Document',
-        'mediaType' => attachment.mime_type,
-        'url' => attachment.file_url,
-        'name' => attachment.description || attachment.filename,
+        'mediaType' => attachment.content_type,
+        'url' => build_absolute_media_url(attachment),
+        'name' => attachment.description || attachment.file_name,
         'width' => attachment.width,
         'height' => attachment.height,
         'blurhash' => attachment.blurhash
       }.compact
+    end
+  end
+
+  def build_absolute_media_url(attachment)
+    # 相対URLを絶対URLに変換
+    if attachment.remote_url.start_with?('/')
+      # .envから設定されたActivityPubドメインを使用
+      base_url = Rails.application.config.activitypub.base_url
+      "#{base_url}#{attachment.remote_url}"
+    else
+      attachment.remote_url
     end
   end
 end

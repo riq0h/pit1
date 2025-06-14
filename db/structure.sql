@@ -68,18 +68,6 @@ CREATE UNIQUE INDEX "index_follows_on_ap_id" ON "follows" ("ap_id") /*applicatio
 CREATE UNIQUE INDEX "index_follows_on_actor_id_and_target_actor_id" ON "follows" ("actor_id", "target_actor_id") /*application='Letter'*/;
 CREATE INDEX "index_follows_on_accepted" ON "follows" ("accepted") /*application='Letter'*/;
 CREATE INDEX "index_follows_on_follow_activity_ap_id" ON "follows" ("follow_activity_ap_id") /*application='Letter'*/;
-CREATE TABLE IF NOT EXISTS "media_attachments" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "object_id" varchar, "actor_id" varchar, "file_name" varchar, "content_type" varchar, "file_size" bigint, "storage_path" varchar, "remote_url" varchar, "width" integer, "height" integer, "blurhash" varchar, "description" text, "attachment_type" varchar DEFAULT 'image', "processed" boolean DEFAULT 0, "metadata" json, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_7631462b85"
-FOREIGN KEY ("object_id")
-  REFERENCES "objects" ("id")
-, CONSTRAINT "fk_rails_6612e6f1ee"
-FOREIGN KEY ("actor_id")
-  REFERENCES "actors" ("id")
-);
-CREATE INDEX "index_media_attachments_on_object_id" ON "media_attachments" ("object_id") /*application='Letter'*/;
-CREATE INDEX "index_media_attachments_on_actor_id" ON "media_attachments" ("actor_id") /*application='Letter'*/;
-CREATE INDEX "index_media_attachments_on_attachment_type" ON "media_attachments" ("attachment_type") /*application='Letter'*/;
-CREATE INDEX "index_media_attachments_on_processed" ON "media_attachments" ("processed") /*application='Letter'*/;
-CREATE INDEX "index_media_attachments_on_blurhash" ON "media_attachments" ("blurhash") /*application='Letter'*/;
 CREATE TABLE IF NOT EXISTS "oauth_applications" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "name" varchar NOT NULL, "uid" varchar NOT NULL, "secret" varchar NOT NULL, "redirect_uri" text NOT NULL, "scopes" varchar DEFAULT '' NOT NULL, "confidential" boolean DEFAULT 1 NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
 CREATE UNIQUE INDEX "index_oauth_applications_on_uid" ON "oauth_applications" ("uid") /*application='Letter'*/;
 CREATE TABLE IF NOT EXISTS "oauth_access_grants" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "resource_owner_id" integer NOT NULL, "application_id" integer NOT NULL, "token" varchar NOT NULL, "expires_in" integer NOT NULL, "redirect_uri" text NOT NULL, "scopes" varchar DEFAULT '' NOT NULL, "created_at" datetime(6) NOT NULL, "revoked_at" datetime(6), CONSTRAINT "fk_rails_b4b53e07b8"
@@ -247,7 +235,20 @@ FOREIGN KEY ("job_id")
  ON DELETE CASCADE);
 CREATE UNIQUE INDEX "index_solid_queue_scheduled_executions_on_job_id" ON "solid_queue_scheduled_executions" ("job_id") /*application='Letter'*/;
 CREATE INDEX "index_solid_queue_dispatch_all" ON "solid_queue_scheduled_executions" ("scheduled_at", "priority", "job_id") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "media_attachments" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "object_id" varchar, "actor_id" varchar, "file_name" varchar, "content_type" varchar, "file_size" bigint, "storage_path" varchar, "remote_url" varchar, "width" integer, "height" integer, "blurhash" varchar, "description" text, "media_type" varchar DEFAULT 'image', "processed" boolean DEFAULT 0, "metadata" json, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_6612e6f1ee"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+, CONSTRAINT "fk_rails_7631462b85"
+FOREIGN KEY ("object_id")
+  REFERENCES "objects" ("id")
+);
+CREATE INDEX "index_media_attachments_on_object_id" ON "media_attachments" ("object_id") /*application='Letter'*/;
+CREATE INDEX "index_media_attachments_on_actor_id" ON "media_attachments" ("actor_id") /*application='Letter'*/;
+CREATE INDEX "index_media_attachments_on_processed" ON "media_attachments" ("processed") /*application='Letter'*/;
+CREATE INDEX "index_media_attachments_on_blurhash" ON "media_attachments" ("blurhash") /*application='Letter'*/;
+CREATE INDEX "index_media_attachments_on_media_type" ON "media_attachments" ("media_type") /*application='Letter'*/;
 INSERT INTO "schema_migrations" (version) VALUES
+('20250614113541'),
 ('20250614074817'),
 ('20250613125130'),
 ('20250613124359'),

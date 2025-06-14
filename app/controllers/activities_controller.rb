@@ -37,7 +37,6 @@ class ActivitiesController < ApplicationController
   def ensure_activitypub_request
     return if activitypub_request?
 
-    # HTML表示にリダイレクト（将来実装）
     redirect_to root_path
   end
 
@@ -178,10 +177,5 @@ class ActivitiesController < ApplicationController
     when :cc
       []
     end
-  end
-
-  def build_direct_audience(_type)
-    # DMの場合は宛先を動的に設定（将来実装）
-    []
   end
 end

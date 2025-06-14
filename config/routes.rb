@@ -145,7 +145,7 @@ Rails.application.routes.draw do
   end
 
   # ================================
-  # Admin Routes (将来拡張用)
+  # Admin Routes
   # ================================
 
   namespace :admin do

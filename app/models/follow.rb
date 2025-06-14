@@ -189,7 +189,7 @@ class Follow < ApplicationRecord
   end
 
   def create_undo_activity
-    Activity.create!(
+    activity = Activity.create!(
       ap_id: generate_undo_activity_id,
       activity_type: 'Undo',
       actor: actor,
@@ -198,6 +198,11 @@ class Follow < ApplicationRecord
       local: true,
       processed: true
     )
+
+    # Undo アクティビティを外部に送信
+    SendActivityJob.perform_later(activity.id, [target_actor.inbox_url]) if target_actor && !target_actor.local?
+
+    activity
   end
 
   def generate_accept_activity_id

@@ -14,15 +14,6 @@ class OutboxController < ApplicationController
            content_type: 'application/activity+json; charset=utf-8'
   end
 
-  # POST /users/:username/outbox
-  # Activity作成・配信（将来実装予定）
-  def create
-    # TODO: 認証が実装されたら有効化
-    # ローカルユーザのActivity作成・配信
-
-    render json: { error: 'Not implemented yet' }, status: :not_implemented
-  end
-
   private
 
   def set_actor
@@ -38,7 +29,6 @@ class OutboxController < ApplicationController
     # ActivityPubリクエストかチェック
     return if activitypub_request?
 
-    # HTML表示にリダイレクト（将来実装）
     redirect_to profile_path(@actor.username)
   end
 
@@ -202,27 +192,17 @@ class OutboxController < ApplicationController
     end
   end
 
-  def build_direct_audience(_type)
-    # DMの場合は宛先を動的に設定（将来実装）
-    []
-  end
-
   def build_object_attachments(object)
     object.media_attachments.map do |attachment|
       {
         'type' => 'Document',
-        'mediaType' => attachment.mime_type,
-        'url' => attachment.file_url,
-        'name' => attachment.description || attachment.filename,
+        'mediaType' => attachment.content_type,
+        'url' => attachment.remote_url,
+        'name' => attachment.description || attachment.file_name,
         'width' => attachment.width,
         'height' => attachment.height,
         'blurhash' => attachment.blurhash
       }.compact
     end
-  end
-
-  def build_object_tags(_object)
-    # TODO: ハッシュタグ・メンション実装時に追加
-    []
   end
 end
