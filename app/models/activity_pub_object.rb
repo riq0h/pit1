@@ -48,7 +48,7 @@ class ActivityPubObject < ApplicationRecord
 
   # === コールバック ===
   before_validation :set_defaults, on: :create
-  before_validation :generate_snowflake_id, on: :create, if: :local?
+  before_validation :generate_snowflake_id, on: :create
   before_save :extract_plaintext
   before_save :set_conversation_id
   after_create :create_activity, if: :local?
@@ -142,7 +142,7 @@ class ActivityPubObject < ApplicationRecord
 
   def base_activitypub_data
     {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
+      '@context' => Rails.application.config.activitypub.context_url,
       'id' => ap_id,
       'type' => object_type,
       'attributedTo' => actor.ap_id,
@@ -229,7 +229,7 @@ class ActivityPubObject < ApplicationRecord
   def build_public_audience_list(type)
     case type
     when :to
-      ['https://www.w3.org/ns/activitystreams#Public']
+      [Rails.application.config.activitypub.public_collection_url]
     when :cc
       [actor.followers_url]
     end
@@ -240,7 +240,7 @@ class ActivityPubObject < ApplicationRecord
     when :to
       [actor.followers_url]
     when :cc
-      ['https://www.w3.org/ns/activitystreams#Public']
+      [Rails.application.config.activitypub.public_collection_url]
     end
   end
 
@@ -314,7 +314,7 @@ class ActivityPubObject < ApplicationRecord
   end
 
   def generate_snowflake_id
-    return if id.present? || !local?
+    return if id.present?
 
     self.id = Letter::Snowflake.generate
   end

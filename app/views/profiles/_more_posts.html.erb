@@ -1,6 +1,15 @@
 <%= turbo_frame_tag "load_more" do %>
-  <% @posts.each do |post| %>
-    <%= render 'shared/post_card', post: post %>
+  <% @posts.each do |timeline_item| %>
+    <% if timeline_item.is_a?(Hash) %>
+      <% if timeline_item[:type] == :post %>
+        <%= render 'shared/post_card', post: timeline_item[:item] %>
+      <% elsif timeline_item[:type] == :reblog %>
+        <%= render 'shared/reblog_card', reblog: timeline_item[:item] %>
+      <% end %>
+    <% else %>
+      <!-- 後方互換性のため（メディアタブなど） -->
+      <%= render 'shared/post_card', post: timeline_item %>
+    <% end %>
   <% end %>
 
   <% if @more_posts_available %>

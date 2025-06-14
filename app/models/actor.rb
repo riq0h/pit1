@@ -16,7 +16,7 @@ class Actor < ApplicationRecord
   has_many :following_relationships, class_name: 'Follow', dependent: :destroy, inverse_of: :actor
   has_many :following, through: :following_relationships, source: :target_actor
   has_many :follower_relationships, class_name: 'Follow', foreign_key: :target_actor_id, dependent: :destroy, inverse_of: :target_actor
-  has_many :followers, through: :reverse_follows, source: :actor
+  has_many :followers, through: :follower_relationships, source: :actor
 
   # Block/Mute relationships
   has_many :blocks, dependent: :destroy
@@ -129,7 +129,7 @@ class Actor < ApplicationRecord
   # Activity generation
   def generate_follow_activity(target_actor)
     {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
+      '@context' => Rails.application.config.activitypub.context_url,
       'type' => 'Follow',
       'id' => "#{ap_id}#follows/#{SecureRandom.uuid}",
       'actor' => ap_id,
@@ -139,7 +139,7 @@ class Actor < ApplicationRecord
 
   def generate_accept_activity(follow)
     {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
+      '@context' => Rails.application.config.activitypub.context_url,
       'type' => 'Accept',
       'id' => "#{ap_id}#accepts/follows/#{follow.id}",
       'actor' => ap_id,
@@ -174,6 +174,45 @@ class Actor < ApplicationRecord
     update_column(:posts_count, count)
   end
 
+  # Block/Mute helper methods
+  def blocking?(actor)
+    return false unless actor
+
+    blocks.exists?(target_actor: actor)
+  end
+
+  def blocked_by?(actor)
+    return false unless actor
+
+    blocked_by.exists?(actor: actor)
+  end
+
+  def muting?(actor)
+    return false unless actor
+
+    mutes.exists?(target_actor: actor)
+  end
+
+  def muted_by?(actor)
+    return false unless actor
+
+    muted_by.exists?(actor: actor)
+  end
+
+  def domain_blocking?(domain)
+    return false unless domain
+
+    domain_blocks.exists?(domain: domain)
+  end
+
+  def domain_blocked_by?(actor_domain)
+    return false unless actor_domain && domain.present?
+
+    # Check if any actor from actor_domain has blocked this actor's domain
+    DomainBlock.joins(:actor)
+               .exists?(actors: { domain: actor_domain }, domain_blocks: { domain: domain })
+  end
+
   private
 
   # ActivityPub base data
@@ -183,7 +222,7 @@ class Actor < ApplicationRecord
 
     {
       '@context' => [
-        'https://www.w3.org/ns/activitystreams',
+        Rails.application.config.activitypub.context_url,
         'https://w3id.org/security/v1'
       ],
       'type' => actor_type || 'Person',
@@ -205,16 +244,8 @@ class Actor < ApplicationRecord
     {
       'inbox' => "#{actor_url}/inbox",
       'outbox' => "#{actor_url}/outbox",
-      'followers' => {
-        'id' => "#{actor_url}/followers",
-        'type' => 'Collection',
-        'totalItems' => followers_count
-      },
-      'following' => {
-        'id' => "#{actor_url}/following",
-        'type' => 'Collection',
-        'totalItems' => following_count
-      },
+      'followers' => "#{actor_url}/followers",
+      'following' => "#{actor_url}/following",
       'featured' => "#{actor_url}/collections/featured",
       'publicKey' => {
         'id' => "#{actor_url}#main-key",
@@ -291,44 +322,5 @@ class Actor < ApplicationRecord
     return unless local_count >= 2
 
     errors.add(:local, 'This spaceship is a two-seater')
-  end
-
-  # Block/Mute helper methods
-  def blocking?(actor)
-    return false unless actor
-
-    blocks.exists?(target_actor: actor)
-  end
-
-  def blocked_by?(actor)
-    return false unless actor
-
-    blocked_by.exists?(actor: actor)
-  end
-
-  def muting?(actor)
-    return false unless actor
-
-    mutes.exists?(target_actor: actor)
-  end
-
-  def muted_by?(actor)
-    return false unless actor
-
-    muted_by.exists?(actor: actor)
-  end
-
-  def domain_blocking?(domain)
-    return false unless domain
-
-    domain_blocks.exists?(domain: domain)
-  end
-
-  def domain_blocked_by?(actor_domain)
-    return false unless actor_domain && domain.present?
-
-    # Check if any actor from actor_domain has blocked this actor's domain
-    DomainBlock.joins(:actor)
-               .exists?(actors: { domain: actor_domain }, domain_blocks: { domain: domain })
   end
 end

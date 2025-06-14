@@ -83,4 +83,9 @@ class ApplicationController < ActionController::Base
   def activitypub_content_type
     'application/activity+json; charset=utf-8'
   end
+
+  # 一貫したbase_url取得（環境変数制御下）
+  def activitypub_base_url
+    Rails.application.config.activitypub.base_url
+  end
 end

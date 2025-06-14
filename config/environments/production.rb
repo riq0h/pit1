@@ -58,7 +58,10 @@ Rails.application.configure do
   # config.action_mailer.raise_delivery_errors = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "example.com" }
+  # Note: ACTIVITYPUB_DOMAIN environment variable is required in production
+  domain = ENV.fetch('ACTIVITYPUB_DOMAIN')
+  host, port = domain.split(':')
+  config.action_mailer.default_url_options = { host: host, port: port&.to_i }
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via rails credentials:edit.
   # config.action_mailer.smtp_settings = {

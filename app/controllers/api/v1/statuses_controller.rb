@@ -145,7 +145,7 @@ module Api
       end
 
       def create_activity_for_status
-        current_user.activities.create!(
+        create_activity = current_user.activities.create!(
           ap_id: generate_activity_ap_id(@status),
           activity_type: 'Create',
           object: @status,
@@ -153,6 +153,19 @@ module Api
           local: true,
           processed: true
         )
+
+        # Queue for federation delivery to followers
+        deliver_create_activity(create_activity)
+      end
+
+      def deliver_create_activity(create_activity)
+        # Get follower inboxes for public posts
+        return unless @status.visibility == 'public'
+
+        follower_inboxes = current_user.followers.where(local: false).pluck(:inbox_url)
+        return unless follower_inboxes.any?
+
+        SendActivityJob.perform_later(create_activity.id, follower_inboxes.uniq)
       end
 
       def attach_media_to_status
@@ -169,7 +182,6 @@ module Api
 
       def set_status
         @status = ActivityPubObject.where(object_type: 'Note')
-                                   .where(local: true)
                                    .find(params[:id])
       end
 
@@ -248,11 +260,18 @@ module Api
         "#{status.ap_id}#delete-#{Time.current.to_i}"
       end
 
+      def generate_status_ap_id
+        local_domain = Rails.application.config.activitypub.domain
+        scheme = Rails.env.production? ? 'https' : 'http'
+        "#{scheme}://#{local_domain}/users/#{current_user.username}/posts/#{Letter::Snowflake.generate}"
+      end
+
       def create_like_activity(status)
         like_activity = current_user.activities.create!(
           ap_id: generate_like_activity_ap_id(status),
           activity_type: 'Like',
           object: status,
+          target_ap_id: status.ap_id,
           published_at: Time.current,
           local: true,
           processed: true

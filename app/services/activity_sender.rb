@@ -15,9 +15,6 @@ class ActivitySender
     response = perform_request(target_inbox, body, headers)
 
     handle_response(response)
-  rescue Net::TimeoutError => e
-    Rails.logger.error "⏰ Activity sending timeout: #{e.message}"
-    false
   rescue StandardError => e
     Rails.logger.error "💥 Activity sending error: #{e.message}"
     false

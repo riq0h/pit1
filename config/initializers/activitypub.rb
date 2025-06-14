@@ -13,6 +13,22 @@ Rails.application.configure do
     end
   end
 
+  # プロトコル設定
+  config.activitypub.protocol = ENV.fetch('ACTIVITYPUB_PROTOCOL') do
+    if Rails.env.development?
+      'http'
+    else
+      'https'
+    end
+  end
+
+  # ベースURL構築
+  config.activitypub.base_url = "#{config.activitypub.protocol}://#{config.activitypub.domain}"
+
+  # ActivityPub標準URL
+  config.activitypub.context_url = 'https://www.w3.org/ns/activitystreams'
+  config.activitypub.public_collection_url = 'https://www.w3.org/ns/activitystreams#Public'
+
   # 投稿制限
   config.activitypub.character_limit = 9999
   config.activitypub.max_accounts = 2

@@ -25,6 +25,7 @@ class Follow < ApplicationRecord
 
   # === コールバック ===
   before_validation :set_defaults, on: :create
+  after_create :send_follow_activity, if: :should_send_follow_activity?
   after_create :update_follower_counts, if: :accepted?
   after_update :update_follower_counts, if: :saved_change_to_accepted?
   after_destroy :update_follower_counts_on_destroy
@@ -92,13 +93,29 @@ class Follow < ApplicationRecord
   private
 
   def set_defaults
-    self.accepted = false if accepted.nil?
+    set_activity_ids
+    set_default_accepted_status
+    auto_accept_local_follows
+  end
 
-    # ローカルアクター同士のフォローは即座に承認
-    return unless actor&.local? && target_actor&.local?
+  def set_activity_ids
+    self.ap_id = generate_follow_ap_id if ap_id.blank?
+    self.follow_activity_ap_id = ap_id if follow_activity_ap_id.blank?
+  end
+
+  def set_default_accepted_status
+    self.accepted = false if accepted.nil?
+  end
+
+  def auto_accept_local_follows
+    return unless should_auto_accept?
 
     self.accepted = true
     self.accepted_at = Time.current
+  end
+
+  def should_auto_accept?
+    actor&.local? && target_actor&.local?
   end
 
   def cannot_follow_self
@@ -121,19 +138,29 @@ class Follow < ApplicationRecord
   def update_follower_counts_on_destroy
     return unless accepted?
 
-    UpdateFollowerCountsJob.perform_later(actor.id, target_actor.id)
+    # 削除処理中のfrozenオブジェクトを避けるため、IDを保存
+    actor_id = actor.id
+    target_actor_id = target_actor.id
+
+    UpdateFollowerCountsJob.perform_later(actor_id, target_actor_id)
   rescue StandardError => e
     Rails.logger.error "Failed to update follower counts: #{e.message}"
     update_follower_counts_sync
   end
 
   def update_follower_counts_sync
-    actor.update_following_count!
-    target_actor.update_followers_count!
+    # 削除処理中のfrozenオブジェクトを避けるため、IDから再取得
+    actor_record = Actor.find(actor_id)
+    target_actor_record = Actor.find(target_actor_id)
+
+    actor_record.update_following_count!
+    target_actor_record.update_followers_count!
+  rescue StandardError => e
+    Rails.logger.error "Failed to sync follower counts: #{e.message}"
   end
 
   def create_accept_activity
-    Activity.create!(
+    activity = Activity.create!(
       ap_id: generate_accept_activity_id,
       activity_type: 'Accept',
       actor: target_actor,
@@ -142,6 +169,11 @@ class Follow < ApplicationRecord
       local: true,
       processed: true
     )
+
+    # Accept アクティビティを外部に送信
+    SendAcceptJob.perform_later(self)
+
+    activity
   end
 
   def create_reject_activity
@@ -178,5 +210,22 @@ class Follow < ApplicationRecord
 
   def generate_undo_activity_id
     "#{actor.ap_id}#undos/follows/#{id}"
+  end
+
+  def generate_follow_ap_id
+    return "#{actor.ap_id}#follows/#{SecureRandom.uuid}" if actor&.local?
+
+    # 外部からのフォローの場合はap_idを保持（通常は受信時に設定済み）
+    nil
+  end
+
+  def should_send_follow_activity?
+    # ローカルユーザが外部ユーザをフォローする場合のみ送信
+    actor&.local? && target_actor && !target_actor.local?
+  end
+
+  def send_follow_activity
+    Rails.logger.info "📤 Queuing Follow activity for follow #{id}"
+    SendFollowJob.perform_later(self)
   end
 end

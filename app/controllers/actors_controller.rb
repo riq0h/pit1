@@ -28,8 +28,8 @@ class ActorsController < ApplicationController
   def ensure_activitypub_request
     return if activitypub_request?
 
-    # HTML表示にリダイレクト（将来実装）
-    redirect_to profile_path(@actor.username)
+    # HTML表示にリダイレクト
+    redirect_to profile_path(@actor.username), status: :moved_permanently
   end
 
   def activitypub_request?
@@ -39,7 +39,7 @@ class ActorsController < ApplicationController
     return true if activitypub_format?
     return false if html_request?
 
-    # デフォルトではActivityPubとして扱う
+    # デフォルトではActivityPubとして扱う（HEAD~2の動作に戻す）
     true
   end
 

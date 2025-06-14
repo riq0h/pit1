@@ -28,6 +28,9 @@ Rails.application.configure do
   # Change to :null_store to avoid any caching.
   config.cache_store = :memory_store
 
+  # Use Solid Queue for background jobs in development
+  config.active_job.queue_adapter = :solid_queue
+
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
@@ -37,11 +40,14 @@ Rails.application.configure do
   # Make template changes take effect immediately.
   config.action_mailer.perform_caching = false
 
-  # Set localhost to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "localhost", port: 3000 }
+  # Set domain to be used by links generated in mailer templates.
+  # Note: ActivityPub config is set in initializers, use ENV fallback
+  domain = ENV.fetch('ACTIVITYPUB_DOMAIN', 'localhost:3000')
+  host, port = domain.split(':')
+  config.action_mailer.default_url_options = { host: host, port: port&.to_i }
   
   # Local domain setting for letter instance
-  config.x.local_domain = "localhost:3000"
+  config.x.local_domain = domain
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log

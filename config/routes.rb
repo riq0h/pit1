@@ -25,9 +25,8 @@ Rails.application.routes.draw do
   get '/users/:username/outbox', to: 'outbox#show', as: :user_outbox
   post '/users/:username/outbox', to: 'outbox#create'
 
-  # ActivityPub Actor Profile
-  get '/users/:username', to: 'actors#show', as: :user_actor,
-                          constraints: { format: :json }
+  # ActivityPub Actor Profile  
+  get '/users/:username', to: 'actors#show', as: :user_actor
 
   # WebFinger discovery
   get '/.well-known/webfinger', to: 'well_known#webfinger'
@@ -37,15 +36,13 @@ Rails.application.routes.draw do
   # NodeInfo (https://nodeinfo.diaspora.software/)
   get '/nodeinfo/2.1', to: 'nodeinfo#show'
 
-  # ActivityPub Actor endpoints
-  get '/users/:username', to: 'actors#show', constraints: { format: /(json|activitypub)/ }
-
   # ActivityPub Activity endpoints
   get '/users/:username/inbox', to: 'inboxes#show'
   post '/users/:username/inbox', to: 'inboxes#create'
   get '/users/:username/outbox', to: 'outboxes#show'
   get '/users/:username/followers', to: 'followers#show'
   get '/users/:username/following', to: 'following#show'
+  get '/users/:username/collections/featured', to: 'featured#show'
 
   # ActivityPub Object endpoints
   # ap_id の末尾部分 (nanoid) を使用
@@ -92,6 +89,10 @@ Rails.application.routes.draw do
       get '/accounts/:id/following', to: 'accounts#following'
       post '/accounts/:id/follow', to: 'accounts#follow'
       post '/accounts/:id/unfollow', to: 'accounts#unfollow'
+      post '/accounts/:id/block', to: 'accounts#block'
+      post '/accounts/:id/unblock', to: 'accounts#unblock'
+      post '/accounts/:id/mute', to: 'accounts#mute'
+      post '/accounts/:id/unmute', to: 'accounts#unmute'
 
       # Statuses
       get '/statuses/:id', to: 'statuses#show'

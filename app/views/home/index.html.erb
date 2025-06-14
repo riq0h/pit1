@@ -6,8 +6,12 @@
 
 <!-- 無限スクロール対応タイムライン -->
 <div id="posts-container">
-  <% @posts.each do |post| %>
-    <%= render 'shared/post_card', post: post %>
+  <% @posts.each do |timeline_item| %>
+    <% if timeline_item[:type] == :post %>
+      <%= render 'shared/post_card', post: timeline_item[:item] %>
+    <% elsif timeline_item[:type] == :reblog %>
+      <%= render 'shared/reblog_card', reblog: timeline_item[:item] %>
+    <% end %>
   <% end %>
   
   <% if @more_posts_available %>

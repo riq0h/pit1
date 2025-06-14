@@ -18,7 +18,7 @@ class SendAcceptJob < ApplicationJob
 
   def build_accept_activity(follow)
     {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
+      '@context' => Rails.application.config.activitypub.context_url,
       'type' => 'Accept',
       'id' => "#{follow.target_actor.ap_id}#accepts/follows/#{follow.id}",
       'actor' => follow.target_actor.ap_id,

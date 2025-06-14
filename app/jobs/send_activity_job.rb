@@ -77,7 +77,7 @@ class SendActivityJob < ApplicationJob
 
   def build_create_base_data(activity)
     {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
+      '@context' => Rails.application.config.activitypub.context_url,
       'id' => activity.ap_id,
       'type' => 'Create',
       'actor' => activity.actor.ap_id,
@@ -107,7 +107,7 @@ class SendActivityJob < ApplicationJob
 
   def build_follow_activity_data(activity)
     {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
+      '@context' => Rails.application.config.activitypub.context_url,
       'id' => activity.ap_id,
       'type' => 'Follow',
       'actor' => activity.actor.ap_id,
@@ -118,7 +118,7 @@ class SendActivityJob < ApplicationJob
 
   def build_accept_activity_data(activity)
     {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
+      '@context' => Rails.application.config.activitypub.context_url,
       'id' => activity.ap_id,
       'type' => 'Accept',
       'actor' => activity.actor.ap_id,
@@ -129,7 +129,7 @@ class SendActivityJob < ApplicationJob
 
   def build_reject_activity_data(activity)
     {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
+      '@context' => Rails.application.config.activitypub.context_url,
       'id' => activity.ap_id,
       'type' => 'Reject',
       'actor' => activity.actor.ap_id,
@@ -140,7 +140,7 @@ class SendActivityJob < ApplicationJob
 
   def build_undo_activity_data(activity)
     {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
+      '@context' => Rails.application.config.activitypub.context_url,
       'id' => activity.ap_id,
       'type' => 'Undo',
       'actor' => activity.actor.ap_id,
@@ -151,20 +151,20 @@ class SendActivityJob < ApplicationJob
 
   def build_announce_activity_data(activity)
     {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
+      '@context' => Rails.application.config.activitypub.context_url,
       'id' => activity.ap_id,
       'type' => 'Announce',
       'actor' => activity.actor.ap_id,
       'object' => activity.target_ap_id,
       'published' => activity.published_at.iso8601,
-      'to' => ['https://www.w3.org/ns/activitystreams#Public'],
+      'to' => [Rails.application.config.activitypub.public_collection_url],
       'cc' => [activity.actor.followers_url]
     }
   end
 
   def build_like_activity_data(activity)
     {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
+      '@context' => Rails.application.config.activitypub.context_url,
       'id' => activity.ap_id,
       'type' => 'Like',
       'actor' => activity.actor.ap_id,
@@ -175,7 +175,7 @@ class SendActivityJob < ApplicationJob
 
   def build_delete_activity_data(activity)
     {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
+      '@context' => Rails.application.config.activitypub.context_url,
       'id' => activity.ap_id,
       'type' => 'Delete',
       'actor' => activity.actor.ap_id,
@@ -186,7 +186,7 @@ class SendActivityJob < ApplicationJob
 
   def build_generic_activity_data(activity)
     {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
+      '@context' => Rails.application.config.activitypub.context_url,
       'id' => activity.ap_id,
       'type' => activity.activity_type,
       'actor' => activity.actor.ap_id,
@@ -212,7 +212,7 @@ class SendActivityJob < ApplicationJob
   def build_public_audience(type)
     case type
     when :to
-      ['https://www.w3.org/ns/activitystreams#Public']
+      [Rails.application.config.activitypub.public_collection_url]
     when :cc
       [@activity.actor.followers_url]
     end
@@ -223,7 +223,7 @@ class SendActivityJob < ApplicationJob
     when :to
       [object.actor.followers_url]
     when :cc
-      ['https://www.w3.org/ns/activitystreams#Public']
+      [Rails.application.config.activitypub.public_collection_url]
     end
   end
 

@@ -146,9 +146,7 @@ class WellKnownController < ApplicationController
   end
 
   def build_url_from_config
-    domain = Rails.application.config.activitypub.domain
-    scheme = Rails.env.production? ? 'https' : 'http'
-    "#{scheme}://#{domain}"
+    Rails.application.config.activitypub.base_url
   end
 
   def default_port?(scheme, port)

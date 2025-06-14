@@ -20,10 +20,6 @@ class InboxController < ApplicationController
     Rails.logger.info "📥 Inbox: Received #{@activity['type']} from #{@sender&.ap_id}"
 
     process_activity
-  rescue ActivityPub::ValidationError => e
-    handle_validation_error(e)
-  rescue ActivityPub::SignatureError => e
-    handle_signature_error(e)
   rescue StandardError => e
     handle_general_error(e)
   end

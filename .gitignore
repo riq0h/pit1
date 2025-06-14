@@ -17,6 +17,9 @@
 !/tmp/tmp/
 !/tmp/.keep
 
+# Development server logs
+server.log
+
 # Ignore pidfiles, but keep the directory.
 /tmp/pids/*
 !/tmp/pids/

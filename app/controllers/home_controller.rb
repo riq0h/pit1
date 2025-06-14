@@ -16,14 +16,63 @@ class HomeController < ApplicationController
   private
 
   def load_public_timeline
-    query = ActivityPubObject.joins(:actor)
-                             .where(actors: { local: true })
-                             .where(visibility: %w[public unlisted])
-                             .where(local: true)
-                             .includes(:actor, :media_attachments)
-                             .order(published_at: :desc)
+    posts = load_public_posts
+    reblogs = load_public_reblogs
+    timeline_items = build_timeline_items(posts, reblogs)
+    apply_timeline_sorting_and_pagination(timeline_items)
+  end
 
-    apply_pagination_filters(query).limit(30)
+  def load_public_posts
+    ActivityPubObject.joins(:actor)
+                     .where(actors: { local: true })
+                     .where(visibility: %w[public unlisted])
+                     .where(local: true)
+                     .includes(:actor, :media_attachments)
+  end
+
+  def load_public_reblogs
+    Reblog.joins(:actor, :object)
+          .where(actors: { local: true })
+          .where(objects: { visibility: %w[public unlisted] })
+          .includes(:actor, object: %i[actor media_attachments])
+  end
+
+  def build_timeline_items(posts, reblogs)
+    timeline_items = []
+
+    posts.find_each do |post|
+      timeline_items << build_post_timeline_item(post)
+    end
+
+    reblogs.find_each do |reblog|
+      timeline_items << build_reblog_timeline_item(reblog)
+    end
+
+    timeline_items
+  end
+
+  def build_post_timeline_item(post)
+    {
+      type: :post,
+      item: post,
+      published_at: post.published_at,
+      id: "post_#{post.id}"
+    }
+  end
+
+  def build_reblog_timeline_item(reblog)
+    {
+      type: :reblog,
+      item: reblog,
+      published_at: reblog.created_at,
+      id: "reblog_#{reblog.id}"
+    }
+  end
+
+  def apply_timeline_sorting_and_pagination(timeline_items)
+    timeline_items.sort_by! { |item| -item[:published_at].to_i }
+    timeline_items = apply_timeline_pagination_filters(timeline_items)
+    timeline_items.take(30)
   end
 
   def apply_pagination_filters(query)
@@ -34,12 +83,47 @@ class HomeController < ApplicationController
     query
   end
 
+  def apply_timeline_pagination_filters(timeline_items)
+    return timeline_items if params[:max_id].blank?
+
+    reference_time = extract_reference_time_from_max_id
+    return timeline_items unless reference_time
+
+    filter_timeline_items_by_time(timeline_items, reference_time)
+  end
+
+  def extract_reference_time_from_max_id
+    max_id = params[:max_id]
+
+    if max_id.start_with?('post_')
+      extract_post_reference_time(max_id)
+    elsif max_id.start_with?('reblog_')
+      extract_reblog_reference_time(max_id)
+    end
+  end
+
+  def extract_post_reference_time(max_id)
+    post_id = max_id.sub('post_', '')
+    reference_post = ActivityPubObject.find_by(id: post_id)
+    reference_post&.published_at
+  end
+
+  def extract_reblog_reference_time(max_id)
+    reblog_id = max_id.sub('reblog_', '')
+    reference_reblog = Reblog.find_by(id: reblog_id)
+    reference_reblog&.created_at
+  end
+
+  def filter_timeline_items_by_time(timeline_items, reference_time)
+    timeline_items.select { |item| item[:published_at] < reference_time }
+  end
+
   def find_post_by_id(id)
     ActivityPubObject.find_by(id: id)
   end
 
-  def get_post_display_id(post)
-    post.id
+  def get_post_display_id(timeline_item)
+    timeline_item[:id]
   end
 
   def setup_pagination
@@ -50,7 +134,18 @@ class HomeController < ApplicationController
   end
 
   def check_older_posts_available
-    base_query.exists?(['published_at < ?', @posts.last.published_at])
+    return false unless @posts.any?
+
+    last_item_time = @posts.last[:published_at]
+
+    # より古い投稿またはリポストがあるかチェック
+    older_posts_exist = base_query.exists?(['published_at < ?', last_item_time])
+    older_reblogs_exist = Reblog.joins(:actor, :object)
+                                .where(actors: { local: true })
+                                .where(objects: { visibility: %w[public unlisted] })
+                                .exists?(['reblogs.created_at < ?', last_item_time])
+
+    older_posts_exist || older_reblogs_exist
   end
 
   def base_query

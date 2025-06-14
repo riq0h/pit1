@@ -8,12 +8,15 @@ module ApplicationHelper
   def auto_link_urls(text)
     return ''.html_safe if text.blank?
 
+    # HTMLタグを除去してプレーンテキストに変換
+    plain_text = strip_tags(text).strip
+
     link_pattern = /(https?:\/\/[^\s]+)/
     link_template = '<a href="\1" target="_blank" rel="noopener noreferrer" ' \
                     'class="text-blue-600 hover:text-blue-800 underline">' \
                     '\1</a>'
 
-    simple_format(h(text)).gsub(link_pattern, link_template).html_safe
+    ERB::Util.html_escape(plain_text).gsub("\n", '<br>').gsub(link_pattern, link_template).html_safe
   end
 
   private

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative '../../services/html_stripper'
+
 module ActivityPubCreateHandlers
   extend ActiveSupport::Concern
 
@@ -37,6 +39,10 @@ module ActivityPubCreateHandlers
 
   def create_new_object(object_data)
     object = ActivityPubObject.create!(build_object_attributes(object_data))
+
+    # リプライの場合、親投稿のリプライ数を更新
+    update_reply_count_if_needed(object)
+
     Rails.logger.info "📝 Object created: #{object.id}"
     head :accepted
   end
@@ -76,5 +82,15 @@ module ActivityPubCreateHandlers
     return 'private' if to.include?(@target_actor.followers_url)
 
     'direct'
+  end
+
+  def update_reply_count_if_needed(object)
+    return unless object.in_reply_to_ap_id
+
+    parent_object = ActivityPubObject.find_by(ap_id: object.in_reply_to_ap_id)
+    return unless parent_object
+
+    parent_object.increment!(:replies_count)
+    Rails.logger.info "💬 Reply count updated for #{parent_object.ap_id}: #{parent_object.replies_count}"
   end
 end
