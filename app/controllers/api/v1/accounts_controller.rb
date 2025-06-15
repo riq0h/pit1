@@ -23,14 +23,10 @@ module Api
 
       # PATCH /api/v1/accounts/update_credentials
       def update_credentials
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_unauthorized unless current_user
 
-        if current_user.update(account_params)
-          render json: serialized_account(current_user, is_self: true)
-        else
-          render json: { error: 'Validation failed', details: current_user.errors.full_messages },
-                 status: :unprocessable_entity
-        end
+        process_file_uploads
+        update_account_attributes
       end
 
       # GET /api/v1/accounts/:id/statuses
@@ -170,7 +166,85 @@ module Api
       end
 
       def account_params
-        params.permit(:display_name, :summary, :locked, :bot, :discoverable)
+        params.permit(:display_name, :summary, :locked, :bot, :discoverable, :avatar, :header)
+      end
+
+      def handle_avatar_upload
+        return unless valid_upload?(params[:avatar])
+
+        process_image_upload(params[:avatar], 'avatars', :icon_url)
+      end
+
+      def handle_header_upload
+        return unless valid_upload?(params[:header])
+
+        process_image_upload(params[:header], 'headers', :header_url)
+      end
+
+      def file_extension(filename)
+        File.extname(filename).downcase.delete('.')
+      end
+
+      def render_unauthorized
+        render json: { error: 'This action requires authentication' }, status: :unauthorized
+      end
+
+      def process_file_uploads
+        handle_avatar_upload if params[:avatar].present?
+        handle_header_upload if params[:header].present?
+      end
+
+      def update_account_attributes
+        if current_user.update(account_params.except(:avatar, :header))
+          render json: serialized_account(current_user, is_self: true)
+        else
+          render_validation_error
+        end
+      end
+
+      def render_validation_error
+        render json: {
+          error: 'Validation failed',
+          details: current_user.errors.full_messages
+        }, status: :unprocessable_entity
+      end
+
+      def valid_upload?(file)
+        file&.respond_to?(:tempfile)
+      end
+
+      def process_image_upload(uploaded_file, folder, url_attribute)
+        filename = generate_filename(uploaded_file.original_filename, folder)
+        file_path = build_file_path(folder, filename)
+
+        save_uploaded_file(uploaded_file, file_path)
+        update_user_url(url_attribute, folder, filename)
+        log_upload_success(folder, filename)
+      end
+
+      def generate_filename(original_filename, folder_type)
+        timestamp = Time.current.to_i
+        extension = file_extension(original_filename)
+        "#{current_user.username}_#{folder_type.singularize}_#{timestamp}.#{extension}"
+      end
+
+      def build_file_path(folder, filename)
+        Rails.public_path.join('system', 'accounts', folder, filename)
+      end
+
+      def save_uploaded_file(uploaded_file, file_path)
+        FileUtils.mkdir_p(File.dirname(file_path))
+        FileUtils.cp(uploaded_file.tempfile.path, file_path)
+      end
+
+      def update_user_url(url_attribute, folder, filename)
+        base_url = Rails.application.config.activitypub.base_url
+        file_url = "#{base_url}/system/accounts/#{folder}/#{filename}"
+        current_user.update_column(url_attribute, file_url)
+      end
+
+      def log_upload_success(folder, filename)
+        Rails.logger.info "#{folder.capitalize.singularize} uploaded for #{current_user.username}: #{filename}"
       end
 
       def serialized_status(status)

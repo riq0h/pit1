@@ -1,5 +1,11 @@
 require_relative 'boot'
 
+# 環境変数の明示的な読み込み（dotenv-railsより前に実行）
+if File.exist?(File.expand_path('../.env', __dir__))
+  require 'dotenv'
+  Dotenv.load(File.expand_path('../.env', __dir__))
+end
+
 require 'rails'
 # Pick the frameworks you want:
 require 'active_model/railtie'
@@ -46,6 +52,8 @@ module Letter
     config.instance_contact_email = ""
     config.instance_maintainer = ""
     config.blog_footer = "General Letter Intercommunication System based on ActivityPub"
-    config.x.local_domain = "localhost:3000"
+    
+    # カスタムエラーページを使用
+    config.exceptions_app = self.routes
   end
 end

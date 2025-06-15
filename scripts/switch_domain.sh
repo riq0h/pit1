@@ -87,31 +87,30 @@ print_status "Step 3/5: Updating Actor URLs in database..."
 
 # Create Ruby script for database update
 cat > /tmp/update_actor_for_domain_switch.rb << 'EOF'
-# Update testuser Actor URLs to new domain
-testuser = Actor.find_by(username: "testuser", local: true)
+# Update all local Actor URLs to new domain
+local_actors = Actor.where(local: true)
 
-if testuser
+if local_actors.any?
   new_base_url = Rails.application.config.activitypub.base_url
+  puts "Updating #{local_actors.count} local actors to new domain: #{new_base_url}"
   
-  old_ap_id = testuser.ap_id
+  local_actors.each do |actor|
+    old_ap_id = actor.ap_id
+    
+    actor.update!(
+      ap_id: "#{new_base_url}/users/#{actor.username}",
+      inbox_url: "#{new_base_url}/users/#{actor.username}/inbox",
+      outbox_url: "#{new_base_url}/users/#{actor.username}/outbox",
+      followers_url: "#{new_base_url}/users/#{actor.username}/followers",
+      following_url: "#{new_base_url}/users/#{actor.username}/following"
+    )
+    
+    puts "  ✓ Updated #{actor.username}: #{old_ap_id} -> #{actor.ap_id}"
+  end
   
-  testuser.update!(
-    ap_id: "#{new_base_url}/users/#{testuser.username}",
-    inbox_url: "#{new_base_url}/users/#{testuser.username}/inbox",
-    outbox_url: "#{new_base_url}/users/#{testuser.username}/outbox",
-    followers_url: "#{new_base_url}/users/#{testuser.username}/followers",
-    following_url: "#{new_base_url}/users/#{testuser.username}/following"
-  )
-  
-  puts "Updated testuser URLs:"
-  puts "  Old ap_id: #{old_ap_id}"
-  puts "  New ap_id: #{testuser.ap_id}"
-  puts "  inbox_url: #{testuser.inbox_url}"
-  puts "  outbox_url: #{testuser.outbox_url}"
-  puts "  followers_url: #{testuser.followers_url}"
-  puts "  following_url: #{testuser.following_url}"
+  puts "All local actors updated successfully!"
 else
-  puts "testuser not found"
+  puts "No local actors found"
 end
 EOF
 
@@ -143,13 +142,20 @@ print_status "Verification:"
 echo "  Server: http://localhost:3000"
 echo "  Domain: $NEW_DOMAIN"
 echo "  Protocol: $NEW_PROTOCOL"
-echo "  Actor URL: $NEW_PROTOCOL://$NEW_DOMAIN/users/testuser"
-echo "  WebFinger: http://localhost:3000/.well-known/webfinger?resource=acct:testuser@$NEW_DOMAIN"
-
-print_success "Domain switch completed successfully!"
-print_warning "You may need to wait a few minutes for external instances to recognize the new domain."
-
-echo ""
-print_status "Test commands:"
-echo "  curl -H \"Accept: application/activity+json\" http://localhost:3000/users/testuser | jq '.id'"
-echo "  curl \"http://localhost:3000/.well-known/webfinger?resource=acct:testuser@$NEW_DOMAIN\" | jq '.subject'"
+# Check which users exist and show examples
+FIRST_USER=$(rails runner "puts Actor.where(local: true).first&.username" 2>/dev/null)
+if [ -n "$FIRST_USER" ]; then
+  echo "  Example Actor URL: $NEW_PROTOCOL://$NEW_DOMAIN/users/$FIRST_USER"
+  echo "  Example WebFinger: http://localhost:3000/.well-known/webfinger?resource=acct:$FIRST_USER@$NEW_DOMAIN"
+  
+  print_success "Domain switch completed successfully!"
+  print_warning "You may need to wait a few minutes for external instances to recognize the new domain."
+  
+  echo ""
+  print_status "Test commands:"
+  echo "  curl -H \"Accept: application/activity+json\" http://localhost:3000/users/$FIRST_USER | jq '.id'"
+  echo "  curl \"http://localhost:3000/.well-known/webfinger?resource=acct:$FIRST_USER@$NEW_DOMAIN\" | jq '.subject'"
+else
+  print_success "Domain switch completed successfully!"
+  print_warning "No local users found. Create a user with: ./create_user_interactive.sh"
+fi

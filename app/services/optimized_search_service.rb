@@ -7,7 +7,7 @@ class OptimizedSearchService
 
   def initialize(attributes = {})
     super
-    @limit ||= 20
+    @limit ||= 30
     @offset ||= 0
   end
 
@@ -107,21 +107,97 @@ class OptimizedSearchService
   end
 
   def matching_object_ids
-    # FTS5が日本語で機能しない場合はLIKE検索にフォールバック
+    # まずFTS5での検索を試行
+    fts_results = try_fts5_search
+    return fts_results if fts_results.any?
+
+    # FTS5が機能しない場合はLIKE検索にフォールバック
+    try_like_search
+  end
+
+  def try_fts5_search
+    return [] unless fts5_table?
+
+    # 日本語と英語の両方に対応したFTS5クエリ
+    fts_query = build_japanese_friendly_fts_query
+
     sql = <<~SQL.squish
-      SELECT object_id, content_plaintext, summary
-      FROM letter_post_search#{' '}
-      WHERE content_plaintext LIKE ?
+      SELECT object_id
+      FROM ap_object_search
+      WHERE ap_object_search MATCH ?
+      ORDER BY object_id DESC
+      LIMIT ? OFFSET ?
+    SQL
+
+    results = ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([sql, fts_query, limit, offset])
+    )
+
+    results.pluck('object_id')
+  rescue SQLite3::SQLException => e
+    Rails.logger.warn "FTS5 search failed: #{e.message}"
+    []
+  end
+
+  def try_like_search
+    sql = <<~SQL.squish
+      SELECT object_id
+      FROM ap_object_search
+      WHERE content_plaintext LIKE ? OR summary LIKE ?
       ORDER BY object_id DESC
       LIMIT ? OFFSET ?
     SQL
 
     like_query = "%#{query}%"
     results = ActiveRecord::Base.connection.execute(
-      ActiveRecord::Base.sanitize_sql([sql, like_query, limit, offset])
+      ActiveRecord::Base.sanitize_sql([sql, like_query, like_query, limit, offset])
     )
 
     results.pluck('object_id')
+  rescue SQLite3::SQLException => e
+    Rails.logger.warn "Like search failed: #{e.message}"
+    []
+  end
+
+  def build_japanese_friendly_fts_query
+    if contains_japanese_characters?
+      build_japanese_query
+    elsif query.include?(' ')
+      build_english_multi_word_query
+    else
+      build_single_word_query
+    end
+  end
+
+  def contains_japanese_characters?
+    query.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+  end
+
+  def build_japanese_query
+    keywords = query.split(/\s+/).compact_blank
+    if keywords.length > 1
+      keywords.map { |word| "\"#{word}\"" }.join(' OR ')
+    else
+      build_single_word_query
+    end
+  end
+
+  def build_english_multi_word_query
+    keywords = query.split(/\s+/).map { |word| "\"#{word}\"" }
+    keywords.join(' AND ')
+  end
+
+  def build_single_word_query
+    "\"#{query}\""
+  end
+
+  def fts5_table?
+    result = ActiveRecord::Base.connection.execute(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='ap_object_search'"
+    )
+    result.any?
+  rescue StandardError
+    false
   end
 
   def time_to_snowflake_id(time)

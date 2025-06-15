@@ -198,4 +198,7 @@ Rails.application.routes.draw do
   # Error pages
   get '/404', to: 'errors#not_found'
   get '/500', to: 'errors#internal_server_error'
+  
+  # Catch-all route for 404 errors (must be last)
+  match '*path', to: 'errors#not_found', via: :all
 end

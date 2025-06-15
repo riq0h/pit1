@@ -9,13 +9,6 @@ CREATE INDEX "index_actors_on_suspended" ON "actors" ("suspended") /*application
 CREATE INDEX "index_actors_on_actor_type" ON "actors" ("actor_type") /*application='Letter'*/;
 CREATE INDEX "index_actors_on_discoverable" ON "actors" ("discoverable") /*application='Letter'*/;
 CREATE INDEX "index_actors_on_manually_approves_followers" ON "actors" ("manually_approves_followers") /*application='Letter'*/;
-CREATE VIRTUAL TABLE post_search USING fts5(object_id UNINDEXED, content_plaintext, summary)
-/* post_search(object_id,content_plaintext,summary) */;
-CREATE TABLE IF NOT EXISTS 'post_search_data'(id INTEGER PRIMARY KEY, block BLOB);
-CREATE TABLE IF NOT EXISTS 'post_search_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS 'post_search_content'(id INTEGER PRIMARY KEY, c0, c1, c2);
-CREATE TABLE IF NOT EXISTS 'post_search_docsize'(id INTEGER PRIMARY KEY, sz BLOB);
-CREATE TABLE IF NOT EXISTS 'post_search_config'(k PRIMARY KEY, v) WITHOUT ROWID;
 CREATE TABLE IF NOT EXISTS "user_limits" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "actor_id" integer, "limit_type" varchar(50) NOT NULL, "limit_value" integer NOT NULL, "current_usage" integer DEFAULT 0 NOT NULL, "enabled" boolean DEFAULT 1 NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_1c7d473965"
 FOREIGN KEY ("actor_id")
   REFERENCES "actors" ("id")
@@ -73,17 +66,6 @@ CREATE INDEX "index_oauth_access_tokens_on_resource_owner_id" ON "oauth_access_t
 CREATE INDEX "index_oauth_access_tokens_on_application_id" ON "oauth_access_tokens" ("application_id") /*application='Letter'*/;
 CREATE UNIQUE INDEX "index_oauth_access_tokens_on_token" ON "oauth_access_tokens" ("token") /*application='Letter'*/;
 CREATE UNIQUE INDEX "index_oauth_access_tokens_on_refresh_token" ON "oauth_access_tokens" ("refresh_token") /*application='Letter'*/;
-CREATE VIRTUAL TABLE letter_post_search USING fts5(
-        object_id UNINDEXED,
-        content_plaintext,
-        summary
-      )
-/* letter_post_search(object_id,content_plaintext,summary) */;
-CREATE TABLE IF NOT EXISTS 'letter_post_search_data'(id INTEGER PRIMARY KEY, block BLOB);
-CREATE TABLE IF NOT EXISTS 'letter_post_search_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS 'letter_post_search_content'(id INTEGER PRIMARY KEY, c0, c1, c2);
-CREATE TABLE IF NOT EXISTS 'letter_post_search_docsize'(id INTEGER PRIMARY KEY, sz BLOB);
-CREATE TABLE IF NOT EXISTS 'letter_post_search_config'(k PRIMARY KEY, v) WITHOUT ROWID;
 CREATE TABLE IF NOT EXISTS "tags" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "name" varchar NOT NULL, "usages_count" integer DEFAULT 0 NOT NULL, "last_used_at" datetime(6), "trending" boolean DEFAULT 0, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
 CREATE UNIQUE INDEX "index_tags_on_name" ON "tags" ("name") /*application='Letter'*/;
 CREATE INDEX "index_tags_on_usages_count" ON "tags" ("usages_count") /*application='Letter'*/;
@@ -253,7 +235,41 @@ CREATE INDEX "index_objects_on_local" ON "objects" ("local") /*application='Lett
 CREATE INDEX "index_objects_on_in_reply_to_ap_id" ON "objects" ("in_reply_to_ap_id") /*application='Letter'*/;
 CREATE INDEX "index_objects_on_conversation_ap_id" ON "objects" ("conversation_ap_id") /*application='Letter'*/;
 CREATE INDEX "index_objects_on_conversation_id" ON "objects" ("conversation_id") /*application='Letter'*/;
+CREATE VIRTUAL TABLE ap_object_search USING fts5(
+        object_id UNINDEXED,
+        content_plaintext,
+        summary,
+        tokenize='porter unicode61'
+      )
+/* ap_object_search(object_id,content_plaintext,summary) */;
+CREATE TABLE IF NOT EXISTS 'ap_object_search_data'(id INTEGER PRIMARY KEY, block BLOB);
+CREATE TABLE IF NOT EXISTS 'ap_object_search_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS 'ap_object_search_content'(id INTEGER PRIMARY KEY, c0, c1, c2);
+CREATE TABLE IF NOT EXISTS 'ap_object_search_docsize'(id INTEGER PRIMARY KEY, sz BLOB);
+CREATE TABLE IF NOT EXISTS 'ap_object_search_config'(k PRIMARY KEY, v) WITHOUT ROWID;
+CREATE TRIGGER ap_object_search_insert
+      AFTER INSERT ON objects
+      WHEN new.object_type = 'Note'
+      BEGIN
+        INSERT INTO ap_object_search(object_id, content_plaintext, summary)
+        VALUES (new.id, COALESCE(new.content_plaintext, ''), COALESCE(new.summary, ''));
+      END;
+CREATE TRIGGER ap_object_search_delete
+      AFTER DELETE ON objects
+      WHEN old.object_type = 'Note'
+      BEGIN
+        DELETE FROM ap_object_search WHERE object_id = old.id;
+      END;
+CREATE TRIGGER ap_object_search_update
+      AFTER UPDATE ON objects
+      WHEN new.object_type = 'Note'
+      BEGIN
+        DELETE FROM ap_object_search WHERE object_id = old.id;
+        INSERT INTO ap_object_search(object_id, content_plaintext, summary)
+        VALUES (new.id, COALESCE(new.content_plaintext, ''), COALESCE(new.summary, ''));
+      END;
 INSERT INTO "schema_migrations" (version) VALUES
+('20250615000001'),
 ('20250614231407'),
 ('20250614230829'),
 ('20250614230821'),

@@ -327,4 +327,16 @@ class Actor < ApplicationRecord
 
     errors.add(:local, 'This spaceship is a two-seater')
   end
+
+  # Add method to follow another actor using FollowService
+  def follow!(target_actor_or_uri)
+    follow_service = FollowService.new(self)
+    follow_service.follow!(target_actor_or_uri)
+  end
+
+  # Add method to unfollow another actor using FollowService
+  def unfollow!(target_actor_or_uri)
+    follow_service = FollowService.new(self)
+    follow_service.unfollow!(target_actor_or_uri)
+  end
 end
