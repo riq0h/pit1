@@ -1,13 +1,56 @@
 #!/bin/bash
 
+# Letter ActivityPub Instance - Complete Cleanup & Restart Script
 # 完全クリーンアップ＆再起動スクリプト
+
 set -e
 
-echo "=== Letter Server Complete Cleanup & Restart ==="
-echo "Timestamp: $(date)"
+# Get the directory of this script and the project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Change to project root to ensure relative paths work
+cd "$PROJECT_ROOT"
+
+# Load environment variables
+source scripts/load_env.sh
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Function to print colored output
+print_header() {
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}$1${NC}"
+    echo -e "${BLUE}========================================${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠️${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}❌${NC} $1"
+}
+
+print_info() {
+    echo -e "${CYAN}ℹ️${NC} $1"
+}
+
+print_header "Letter ActivityPub 完全クリーンアップ＆再起動"
+print_info "実行時刻: $(date)"
 
 # 1. 強制的なプロセスクリーンアップ
-echo "1. Force cleaning all related processes..."
+print_info "1. 関連プロセスの強制終了..."
 sudo pkill -9 -f "solid.queue" 2>/dev/null || true
 sudo pkill -9 -f "rails server" 2>/dev/null || true
 sudo pkill -9 -f "puma.*pit1" 2>/dev/null || true
@@ -16,35 +59,36 @@ sudo pkill -9 -f "bin/jobs" 2>/dev/null || true
 # 少し待つ
 sleep 3
 
-# 2. 環境変数の読み込み
-echo "2. Loading environment variables..."
+print_success "関連プロセスを強制終了しました"
+
+# 2. 環境変数の読み込み確認
+print_info "2. 環境変数の読み込み確認..."
 if [ ! -f .env ]; then
-    echo "ERROR: .env file not found"
+    print_error ".envファイルが見つかりません"
     exit 1
 fi
 
-set -a
-source .env
-set +a
-
-echo "   ACTIVITYPUB_DOMAIN: $ACTIVITYPUB_DOMAIN"
-echo "   ACTIVITYPUB_PROTOCOL: $ACTIVITYPUB_PROTOCOL"
+print_success "環境変数を読み込みました"
+print_info "ACTIVITYPUB_DOMAIN: $ACTIVITYPUB_DOMAIN"
+print_info "ACTIVITYPUB_PROTOCOL: $ACTIVITYPUB_PROTOCOL"
 
 # 3. PIDファイルのクリーンアップ
-echo "3. Cleaning PID files..."
+print_info "3. PIDファイルのクリーンアップ..."
 rm -f tmp/pids/server.pid
 rm -f tmp/pids/solid_queue*.pid
+print_success "PIDファイルをクリーンアップしました"
 
 # 4. データベースの健全性チェックと修正
-echo "4. Database maintenance..."
-rails db:migrate 2>/dev/null || echo "   Migrations already up to date"
+print_info "4. データベースのメンテナンス..."
+rails db:migrate 2>/dev/null || print_info "マイグレーションは既に最新です"
 
+print_info "Actor URLの修正を実行中..."
 # Actor URLの修正
 rails runner "
 begin
   incorrect_actors = Actor.where('ap_id LIKE ?', '%/actors/%')
   if incorrect_actors.any?
-    puts '   Fixing #{incorrect_actors.count} actor URLs...'
+    puts '   #{incorrect_actors.count}個のActor URLを修正中...'
     incorrect_actors.each do |actor|
       domain = ENV['ACTIVITYPUB_DOMAIN']
       protocol = ENV['ACTIVITYPUB_PROTOCOL'] || 'https'
@@ -58,74 +102,76 @@ begin
         following_url: \"#{base_url}/users/#{actor.username}/following\"
       )
     end
-    puts '   Actor URLs fixed'
+    puts '   Actor URLを修正しました'
   else
-    puts '   Actor URLs are correct'
+    puts '   Actor URLは正常です'
   end
 rescue => e
-  puts \"   Error fixing actors: #{e.message}\"
+  puts \"   Actor修正エラー: #{e.message}\"
 end
 "
+print_success "データベースのメンテナンスが完了しました"
 
 # 5. Rails サーバー起動（デーモンモード）
-echo "5. Starting Rails server..."
+print_info "5. Railsサーバーを起動中..."
 RAILS_ENV=development \
 ACTIVITYPUB_DOMAIN="$ACTIVITYPUB_DOMAIN" \
 ACTIVITYPUB_PROTOCOL="$ACTIVITYPUB_PROTOCOL" \
 rails server -b 0.0.0.0 -p 3000 -d
 
-echo "   Rails server started in daemon mode"
+print_success "Railsサーバーをデーモンモードで起動しました"
 
 # 6. Solid Queue 起動（1つだけ）
-echo "6. Starting single Solid Queue worker..."
+print_info "6. Solid Queueワーカーを起動中..."
 RAILS_ENV=development \
 ACTIVITYPUB_DOMAIN="$ACTIVITYPUB_DOMAIN" \
 ACTIVITYPUB_PROTOCOL="$ACTIVITYPUB_PROTOCOL" \
 nohup bin/jobs > log/solid_queue.log 2>&1 &
 
 JOBS_PID=$!
-echo "   Solid Queue started (PID: $JOBS_PID)"
+print_success "Solid Queueワーカーを起動しました (PID: $JOBS_PID)"
 
 # 7. 起動確認
-echo "7. Verifying startup..."
+print_info "7. 起動確認を実行中..."
 sleep 5
 
 # サーバー確認
 if curl -s http://localhost:3000 >/dev/null 2>&1; then
-    echo "   ✓ Rails server is responding"
+    print_success "Railsサーバーが応答しています"
 else
-    echo "   ✗ Rails server is not responding"
+    print_error "Railsサーバーが応答していません"
 fi
 
 # プロセス確認
 RAILS_PROCS=$(ps aux | grep -c "[r]ails server" || true)
 QUEUE_PROCS=$(ps aux | grep -c "[s]olid.*queue" || true)
 
-echo "   Rails processes: $RAILS_PROCS"
-echo "   Solid Queue processes: $QUEUE_PROCS"
+print_info "Railsプロセス数: $RAILS_PROCS"
+print_info "Solid Queueプロセス数: $QUEUE_PROCS"
 
 # 8. 最終設定確認
-echo "8. Final configuration check..."
+print_info "8. 最終設定確認..."
 timeout 10 rails runner "
 begin
-  puts '   Base URL: ' + Rails.application.config.activitypub.base_url
-  puts '   Local actors: ' + Actor.where(local: true).count.to_s
-  puts '   Total posts: ' + ActivityPubObject.count.to_s
-  puts '   Follows: ' + Follow.count.to_s
+  puts '   ベースURL: ' + Rails.application.config.activitypub.base_url
+  puts '   ローカルアクター数: ' + Actor.where(local: true).count.to_s
+  puts '   投稿総数: ' + ActivityPubObject.count.to_s
+  puts '   フォロー関係数: ' + Follow.count.to_s
 rescue => e
-  puts '   Config check failed: ' + e.message
+  puts '   設定確認失敗: ' + e.message
 end
-" 2>/dev/null || echo "   Configuration check timed out"
+" 2>/dev/null || print_warning "設定確認がタイムアウトしました"
 
 echo ""
-echo "=== Startup Complete ==="
-echo "Server URL: ${ACTIVITYPUB_PROTOCOL}://${ACTIVITYPUB_DOMAIN}"
-echo "Local URL: http://localhost:3000"
+print_header "起動完了"
+print_info "サーバー情報:"
+echo "  サーバーURL: ${ACTIVITYPUB_PROTOCOL}://${ACTIVITYPUB_DOMAIN}"
+echo "  ローカルURL: http://localhost:3000"
 echo ""
-echo "Monitoring commands:"
+print_info "監視コマンド:"
 echo "  tail -f log/development.log"
 echo "  tail -f log/solid_queue.log"
 echo "  ps aux | grep -E 'rails|solid'"
 echo ""
-echo "To stop all:"
+print_info "全停止コマンド:"
 echo "  sudo pkill -f 'rails server|solid.*queue'"

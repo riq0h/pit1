@@ -10,7 +10,8 @@ cd /path/to/letter
 
 ### 2. 最初のユーザー作成
 ```bash
-./scripts/create_user_interactive.sh
+# アカウント管理スクリプト（2個制限を自動考慮）
+./scripts/manage_accounts.sh
 # 入力例:
 # Username: admin
 # Password: mypassword123
@@ -29,7 +30,7 @@ cd /path/to/letter
 
 ### 4. テストデータ生成（オプション）
 ```bash
-./scripts/create_test_posts_multilang.sh
+./scripts/create_test_posts.sh
 # 入力例:
 # Username: admin
 # 
@@ -38,7 +39,7 @@ cd /path/to/letter
 
 ### 5. フォローシステムのテスト
 ```bash
-./scripts/test_new_follow_system.sh
+./scripts/test_follow.sh
 # 入力例:
 # Username: admin
 # 
@@ -97,10 +98,8 @@ run_with_env "puts Rails.application.config.activitypub.base_url"
 
 ### 新機能テスト用ユーザー作成
 ```bash
-./scripts/create_user_interactive.sh
-# Username: testuser001
-# Password: testpass123
-# Display name: Test User 001
+./scripts/manage_accounts.sh
+# 既存のアカウント状況に応じた作成・削除
 
 ./scripts/create_oauth_token.sh
 # Username: testuser001
