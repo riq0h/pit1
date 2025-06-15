@@ -117,6 +117,12 @@ Rails.application.routes.draw do
       get '/media/:id', to: 'media#show'
       put '/media/:id', to: 'media#update'
 
+      # Conversations (Direct Messages)
+      get '/conversations', to: 'conversations#index'
+      get '/conversations/:id', to: 'conversations#show'
+      delete '/conversations/:id', to: 'conversations#destroy'
+      post '/conversations/:id/read', to: 'conversations#read'
+
       # Notifications
       get '/notifications', to: 'notifications#index'
 

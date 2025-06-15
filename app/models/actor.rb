@@ -32,6 +32,10 @@ class Actor < ApplicationRecord
   # Domain blocking
   has_many :domain_blocks, dependent: :destroy
 
+  # Conversations
+  has_many :conversation_participants, dependent: :destroy
+  has_many :conversations, through: :conversation_participants
+
   # OAuth 2.0 associations (Doorkeeper)
   has_many :access_grants,
            class_name: 'Doorkeeper::AccessGrant',
@@ -210,6 +214,11 @@ class Actor < ApplicationRecord
     # Check if any actor from actor_domain has blocked this actor's domain
     DomainBlock.joins(:actor)
                .exists?(actors: { domain: actor_domain }, domain_blocks: { domain: domain })
+  end
+
+  # Mastodon互換のacctメソッド
+  def acct
+    local? ? username : "#{username}@#{domain}"
   end
 
   private

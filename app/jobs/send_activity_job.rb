@@ -236,6 +236,17 @@ class SendActivityJob < ApplicationJob
     end
   end
 
+  def build_direct_audience(type)
+    case type
+    when :to
+      # DMの場合、メンションされたアクターのap_idを取得
+      @activity.object&.mentioned_actors&.pluck(:ap_id) || []
+
+    when :cc
+      []
+    end
+  end
+
   def build_attachments(object)
     object.media_attachments.map do |attachment|
       {
@@ -248,6 +259,28 @@ class SendActivityJob < ApplicationJob
         'blurhash' => attachment.blurhash
       }.compact
     end
+  end
+
+  def build_tags(object)
+    # メンション用タグを追加
+    tags = object.mentions.includes(:actor).map do |mention|
+      {
+        'type' => 'Mention',
+        'href' => mention.actor.ap_id,
+        'name' => "@#{mention.acct}"
+      }
+    end
+
+    # ハッシュタグ用タグを追加
+    object.tags.each do |tag|
+      tags << {
+        'type' => 'Hashtag',
+        'href' => "#{Rails.application.config.activitypub.base_url}/tags/#{tag.name}",
+        'name' => "##{tag.name}"
+      }
+    end
+
+    tags
   end
 
   def log_delivery_result(success, inbox_url)

@@ -1,17 +1,5 @@
 CREATE TABLE IF NOT EXISTS "ar_internal_metadata" ("key" varchar NOT NULL PRIMARY KEY, "value" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
 CREATE TABLE IF NOT EXISTS "schema_migrations" ("version" varchar NOT NULL PRIMARY KEY);
-CREATE TABLE IF NOT EXISTS "objects" ("id" varchar NOT NULL PRIMARY KEY, "ap_id" varchar NOT NULL, "object_type" varchar DEFAULT 'Note' NOT NULL, "actor_id" integer NOT NULL, "content" text, "content_plaintext" text, "summary" text, "url" varchar, "language" varchar DEFAULT 'ja', "in_reply_to_ap_id" varchar, "conversation_ap_id" varchar, "media_type" varchar, "blurhash" varchar, "width" integer, "height" integer, "sensitive" boolean DEFAULT 0, "visibility" varchar DEFAULT 'public', "raw_data" json, "published_at" datetime(6), "local" boolean DEFAULT 0, "replies_count" integer DEFAULT 0, "reblogs_count" integer DEFAULT 0, "favourites_count" integer DEFAULT 0, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_1377a551fa"
-FOREIGN KEY ("actor_id")
-  REFERENCES "actors" ("id")
-);
-CREATE INDEX "index_objects_on_actor_id" ON "objects" ("actor_id") /*application='Letter'*/;
-CREATE UNIQUE INDEX "index_objects_on_ap_id" ON "objects" ("ap_id") /*application='Letter'*/;
-CREATE INDEX "index_objects_on_object_type" ON "objects" ("object_type") /*application='Letter'*/;
-CREATE INDEX "index_objects_on_published_at" ON "objects" ("published_at") /*application='Letter'*/;
-CREATE INDEX "index_objects_on_visibility" ON "objects" ("visibility") /*application='Letter'*/;
-CREATE INDEX "index_objects_on_local" ON "objects" ("local") /*application='Letter'*/;
-CREATE INDEX "index_objects_on_in_reply_to_ap_id" ON "objects" ("in_reply_to_ap_id") /*application='Letter'*/;
-CREATE INDEX "index_objects_on_conversation_ap_id" ON "objects" ("conversation_ap_id") /*application='Letter'*/;
 CREATE TABLE IF NOT EXISTS "actors" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "username" varchar(20) NOT NULL, "domain" varchar(255), "display_name" varchar(100), "summary" text, "ap_id" varchar NOT NULL, "inbox_url" varchar NOT NULL, "outbox_url" varchar NOT NULL, "followers_url" varchar NOT NULL, "following_url" varchar NOT NULL, "public_key" text NOT NULL, "private_key" text, "avatar_url" varchar, "header_url" varchar, "local" boolean DEFAULT 0 NOT NULL, "locked" boolean DEFAULT 0 NOT NULL, "bot" boolean DEFAULT 0 NOT NULL, "suspended" boolean DEFAULT 0 NOT NULL, "followers_count" integer DEFAULT 0 NOT NULL, "following_count" integer DEFAULT 0 NOT NULL, "posts_count" integer DEFAULT 0 NOT NULL, "raw_data" json, "last_fetched_at" datetime(6), "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, "actor_type" varchar DEFAULT 'Person', "discoverable" boolean DEFAULT 1, "manually_approves_followers" boolean DEFAULT 0, "featured_url" varchar, "icon_url" varchar, "password_digest" varchar /*application='Letter'*/);
 CREATE UNIQUE INDEX "index_actors_on_ap_id" ON "actors" ("ap_id") /*application='Letter'*/;
 CREATE UNIQUE INDEX "index_actors_on_username_and_domain" ON "actors" ("username", "domain") /*application='Letter'*/;
@@ -96,17 +84,6 @@ CREATE TABLE IF NOT EXISTS 'letter_post_search_idx'(segid, term, pgno, PRIMARY K
 CREATE TABLE IF NOT EXISTS 'letter_post_search_content'(id INTEGER PRIMARY KEY, c0, c1, c2);
 CREATE TABLE IF NOT EXISTS 'letter_post_search_docsize'(id INTEGER PRIMARY KEY, sz BLOB);
 CREATE TABLE IF NOT EXISTS 'letter_post_search_config'(k PRIMARY KEY, v) WITHOUT ROWID;
-CREATE TRIGGER letter_post_search_insert
-      AFTER INSERT ON objects
-      BEGIN
-        INSERT INTO letter_post_search(object_id, content_plaintext, summary)
-        VALUES (new.id, COALESCE(new.content_plaintext, ''), COALESCE(new.summary, ''));
-      END;
-CREATE TRIGGER letter_post_search_delete
-      AFTER DELETE ON objects
-      BEGIN
-        DELETE FROM letter_post_search WHERE object_id = old.id;
-      END;
 CREATE TABLE IF NOT EXISTS "tags" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "name" varchar NOT NULL, "usages_count" integer DEFAULT 0 NOT NULL, "last_used_at" datetime(6), "trending" boolean DEFAULT 0, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
 CREATE UNIQUE INDEX "index_tags_on_name" ON "tags" ("name") /*application='Letter'*/;
 CREATE INDEX "index_tags_on_usages_count" ON "tags" ("usages_count") /*application='Letter'*/;
@@ -247,7 +224,39 @@ CREATE INDEX "index_media_attachments_on_actor_id" ON "media_attachments" ("acto
 CREATE INDEX "index_media_attachments_on_processed" ON "media_attachments" ("processed") /*application='Letter'*/;
 CREATE INDEX "index_media_attachments_on_blurhash" ON "media_attachments" ("blurhash") /*application='Letter'*/;
 CREATE INDEX "index_media_attachments_on_media_type" ON "media_attachments" ("media_type") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "conversations" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "last_status_id" integer, "unread" boolean DEFAULT 0 NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
+CREATE INDEX "index_conversations_on_last_status_id" ON "conversations" ("last_status_id") /*application='Letter'*/;
+CREATE INDEX "index_conversations_on_unread" ON "conversations" ("unread") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "conversation_participants" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "conversation_id" integer NOT NULL, "actor_id" integer NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_d4fdd4cae0"
+FOREIGN KEY ("conversation_id")
+  REFERENCES "conversations" ("id")
+, CONSTRAINT "fk_rails_883f0f1aba"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+);
+CREATE INDEX "index_conversation_participants_on_conversation_id" ON "conversation_participants" ("conversation_id") /*application='Letter'*/;
+CREATE INDEX "index_conversation_participants_on_actor_id" ON "conversation_participants" ("actor_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_conversation_participants_unique" ON "conversation_participants" ("conversation_id", "actor_id") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "objects" ("id" varchar NOT NULL PRIMARY KEY, "ap_id" varchar NOT NULL, "object_type" varchar DEFAULT 'Note' NOT NULL, "actor_id" integer NOT NULL, "content" text, "content_plaintext" text, "summary" text, "url" varchar, "language" varchar DEFAULT 'ja', "in_reply_to_ap_id" varchar, "conversation_ap_id" varchar, "media_type" varchar, "blurhash" varchar, "width" integer, "height" integer, "sensitive" boolean DEFAULT 0, "visibility" varchar DEFAULT 'public', "raw_data" json, "published_at" datetime(6), "local" boolean DEFAULT 0, "replies_count" integer DEFAULT 0, "reblogs_count" integer DEFAULT 0, "favourites_count" integer DEFAULT 0, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, "conversation_id" integer, CONSTRAINT "fk_rails_1377a551fa"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+, CONSTRAINT "fk_rails_eb0aea9dca"
+FOREIGN KEY ("conversation_id")
+  REFERENCES "conversations" ("id")
+);
+CREATE INDEX "index_objects_on_actor_id" ON "objects" ("actor_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_objects_on_ap_id" ON "objects" ("ap_id") /*application='Letter'*/;
+CREATE INDEX "index_objects_on_object_type" ON "objects" ("object_type") /*application='Letter'*/;
+CREATE INDEX "index_objects_on_published_at" ON "objects" ("published_at") /*application='Letter'*/;
+CREATE INDEX "index_objects_on_visibility" ON "objects" ("visibility") /*application='Letter'*/;
+CREATE INDEX "index_objects_on_local" ON "objects" ("local") /*application='Letter'*/;
+CREATE INDEX "index_objects_on_in_reply_to_ap_id" ON "objects" ("in_reply_to_ap_id") /*application='Letter'*/;
+CREATE INDEX "index_objects_on_conversation_ap_id" ON "objects" ("conversation_ap_id") /*application='Letter'*/;
+CREATE INDEX "index_objects_on_conversation_id" ON "objects" ("conversation_id") /*application='Letter'*/;
 INSERT INTO "schema_migrations" (version) VALUES
+('20250614231407'),
+('20250614230829'),
+('20250614230821'),
 ('20250614113541'),
 ('20250614074817'),
 ('20250613125130'),

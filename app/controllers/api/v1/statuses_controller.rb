@@ -23,7 +23,9 @@ module Api
         @status = build_status_object
 
         if @status.save
+          process_mentions_and_tags
           attach_media_to_status if @media_ids&.any?
+          handle_direct_message_conversation if @status.visibility == 'direct'
           create_activity_for_status
           render json: serialized_status(@status), status: :created
         else
@@ -149,13 +151,16 @@ module Api
       end
 
       def deliver_create_activity(create_activity)
-        # Get follower inboxes for public posts
-        return unless @status.visibility == 'public'
-
-        follower_inboxes = current_user.followers.where(local: false).pluck(:inbox_url)
-        return unless follower_inboxes.any?
-
-        SendActivityJob.perform_later(create_activity.id, follower_inboxes.uniq)
+        case @status.visibility
+        when 'public'
+          # Get follower inboxes for public posts
+          follower_inboxes = current_user.followers.where(local: false).pluck(:inbox_url)
+          SendActivityJob.perform_later(create_activity.id, follower_inboxes.uniq) if follower_inboxes.any?
+        when 'direct'
+          # Get mentioned actor inboxes for direct messages
+          mentioned_inboxes = @status.mentioned_actors.where(local: false).pluck(:inbox_url)
+          SendActivityJob.perform_later(create_activity.id, mentioned_inboxes.uniq) if mentioned_inboxes.any?
+        end
       end
 
       def attach_media_to_status
@@ -200,6 +205,34 @@ module Api
         @media_ids = transformed_params.delete('media_ids')
 
         transformed_params
+      end
+
+      def handle_direct_message_conversation
+        return unless @status.visibility == 'direct'
+
+        # メンションされたアクターを取得（現在はメンション機能未実装のため後で対応）
+        mentioned_actors = extract_mentioned_actors_from_content
+        participants = [current_user] + mentioned_actors
+
+        # 会話を作成または取得
+        conversation = Conversation.find_or_create_for_actors(participants)
+
+        # ステータスを会話に関連付け
+        @status.update!(conversation: conversation)
+
+        # 会話の最新ステータスを更新
+        conversation.update_last_status!(@status)
+      end
+
+      def process_mentions_and_tags
+        return unless @status.content
+
+        parser = TextParser.new(@status.content)
+        parser.process_for_object(@status)
+      end
+
+      def extract_mentioned_actors_from_content
+        @status.mentioned_actors
       end
 
       def serialized_status(status)

@@ -26,6 +26,9 @@ class ActivityPubObject < ApplicationRecord
   has_many :mentions, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
   has_many :mentioned_actors, through: :mentions, source: :actor
 
+  # Conversations (for direct messages)
+  belongs_to :conversation, optional: true
+
   # 返信関係（AP ID使用）
   # belongs_to :in_reply_to, class_name: 'ActivityPubObject', optional: true
   # has_many :replies, class_name: 'ActivityPubObject', foreign_key: 'in_reply_to_id',
