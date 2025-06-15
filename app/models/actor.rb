@@ -73,6 +73,7 @@ class Actor < ApplicationRecord
   # コールバック
   before_create :generate_key_pair, if: :local?
   before_create :set_ap_urls, if: :local?
+  before_create :set_admin_for_local_users, if: :local?
 
   # ActivityPub URLs
   def followers_url
@@ -326,6 +327,11 @@ class Actor < ApplicationRecord
     return unless local_count >= 2
 
     errors.add(:local, 'This spaceship is a two-seater')
+  end
+
+  # すべてのローカルユーザーを自動的にadminにする
+  def set_admin_for_local_users
+    self.admin = true if local?
   end
 
   # Add method to follow another actor using FollowService

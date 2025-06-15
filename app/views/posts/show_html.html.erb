@@ -34,7 +34,13 @@
   <!-- 記事本文 -->
   <div class="text-gray-800 leading-relaxed mb-4">
     <div class="whitespace-pre-wrap break-words">
-      <%= auto_link_urls(@post.content) %>
+      <% 
+        # 絵文字をパースしてHTMLに変換
+        parsed_content = EmojiParser.new(@post.content).parse
+        # その後でURLを自動リンク化（絵文字HTML対応）
+        final_content = auto_link_urls(parsed_content)
+      %>
+      <%= final_content.html_safe %>
     </div>
   </div>
 
@@ -128,7 +134,14 @@
           <!-- 記事本文 -->
           <div class="text-gray-800 leading-relaxed">
             <div class="whitespace-pre-wrap break-words">
-              <%= sanitize(auto_link_urls(reply.content), tags: %w[a p br], attributes: %w[href target]) %>
+              <% 
+                # 絵文字をパースしてHTMLに変換
+                parsed_reply_content = EmojiParser.new(reply.content).parse
+                # その後でURLを自動リンク化（絵文字HTML対応）
+                final_reply_content = auto_link_urls(parsed_reply_content)
+                # サニタイズして安全なHTMLタグのみ許可
+              %>
+              <%= sanitize(final_reply_content, tags: %w[a p br img], attributes: %w[href target src alt title class draggable]) %>
             </div>
           </div>
 

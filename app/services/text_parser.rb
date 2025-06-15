@@ -4,12 +4,13 @@ class TextParser
   HASHTAG_REGEX = /#([a-zA-Z0-9_\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]+)/
   MENTION_REGEX = /@([a-zA-Z0-9_.-]+)(?:@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,}))?/
 
-  attr_reader :text, :hashtags, :mentions
+  attr_reader :text, :hashtags, :mentions, :custom_emojis
 
   def initialize(text)
     @text = text.to_s
     @hashtags = []
     @mentions = []
+    @custom_emojis = {}
     parse
   end
 
@@ -28,6 +29,10 @@ class TextParser
     @mentions = mention_data.uniq { |m| m[:acct] }
   end
 
+  def extract_custom_emojis
+    @custom_emojis = CustomEmoji.from_text(text)
+  end
+
   def process_for_object(object)
     create_hashtags_for_object(object)
     create_mentions_for_object(object)
@@ -38,6 +43,7 @@ class TextParser
   def parse
     extract_hashtags
     extract_mentions
+    extract_custom_emojis
   end
 
   def create_hashtags_for_object(object)

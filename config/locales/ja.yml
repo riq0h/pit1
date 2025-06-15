@@ -74,3 +74,13 @@ ja:
   media:
     video_not_supported: "このブラウザーではビデオがサポートされていません"
     original_filename: "ファイル名"
+  custom_emojis:
+    created: "絵文字が正常に作成されました。"
+    updated: "絵文字が正常に更新されました。"
+    deleted: "絵文字が削除されました。"
+    enabled: "絵文字が有効化されました。"
+    disabled: "絵文字が無効化されました。"
+    bulk_enabled: "選択された絵文字が有効化されました。"
+    bulk_disabled: "選択された絵文字が無効化されました。"
+    bulk_deleted: "選択された絵文字が削除されました。"
+    invalid_action: "無効な操作です。"

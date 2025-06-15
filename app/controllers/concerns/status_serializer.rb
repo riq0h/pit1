@@ -26,8 +26,10 @@ module StatusSerializer
   end
 
   def content_data(status)
+    parsed_content = parse_content_with_emojis(status.content || '')
+
     {
-      content: status.content || '',
+      content: parsed_content,
       sensitive: status.sensitive || false,
       spoiler_text: status.summary || '',
       visibility: status.visibility || 'public',
@@ -43,9 +45,22 @@ module StatusSerializer
       mentions: serialized_mentions(status),
       tags: serialized_tags(status),
       reblog: nil,
-      emojis: [],
+      emojis: serialized_emojis(status),
       card: nil,
       poll: nil
     }
+  end
+
+  def parse_content_with_emojis(content)
+    return content if content.blank?
+
+    EmojiParser.parse_text(content)
+  end
+
+  def serialized_emojis(status)
+    return [] if status.content.blank?
+
+    emojis = EmojiParser.extract_emojis(status.content)
+    emojis.map(&:to_activitypub)
   end
 end

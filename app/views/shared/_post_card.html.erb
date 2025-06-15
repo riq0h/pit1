@@ -48,7 +48,13 @@
   <!-- 記事本文 -->
   <div class="text-gray-800 leading-relaxed">
     <div class="whitespace-pre-wrap break-words">
-      <%= auto_link_urls(post.content).html_safe %>
+      <% 
+        # 絵文字をパースしてHTMLに変換
+        parsed_content = EmojiParser.new(post.content).parse
+        # その後でURLを自動リンク化（絵文字HTML対応）
+        final_content = auto_link_urls(parsed_content)
+      %>
+      <%= final_content.html_safe %>
     </div>
   </div>
 

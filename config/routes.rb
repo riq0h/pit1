@@ -70,6 +70,17 @@ Rails.application.routes.draw do
   delete '/logout', to: 'sessions#destroy', as: :logout
   get '/config', to: 'config#show', as: :config
   patch '/config', to: 'config#update'
+  
+  # カスタム絵文字管理
+  get '/config/custom_emojis', to: 'config#custom_emojis', as: :config_custom_emojis
+  get '/config/custom_emojis/new', to: 'config#new_custom_emoji', as: :new_config_custom_emoji
+  post '/config/custom_emojis', to: 'config#create_custom_emoji'
+  get '/config/custom_emojis/:id/edit', to: 'config#edit_custom_emoji', as: :edit_config_custom_emoji
+  patch '/config/custom_emojis/:id', to: 'config#update_custom_emoji', as: :config_custom_emoji
+  delete '/config/custom_emojis/:id', to: 'config#destroy_custom_emoji'
+  patch '/config/custom_emojis/:id/enable', to: 'config#enable_custom_emoji', as: :enable_config_custom_emoji
+  patch '/config/custom_emojis/:id/disable', to: 'config#disable_custom_emoji', as: :disable_config_custom_emoji
+  post '/config/custom_emojis/bulk_action', to: 'config#bulk_action_custom_emojis', as: :bulk_action_config_custom_emojis
 
   # ================================
   # Mastodon API (サードパーティクライアント用)
@@ -136,6 +147,9 @@ Rails.application.routes.draw do
       get '/domain_blocks', to: 'domain_blocks#index'
       post '/domain_blocks', to: 'domain_blocks#create'
       delete '/domain_blocks', to: 'domain_blocks#destroy'
+
+      # Custom emojis
+      get '/custom_emojis', to: 'custom_emojis#index'
     end
   end
 
@@ -199,6 +213,8 @@ Rails.application.routes.draw do
   get '/404', to: 'errors#not_found'
   get '/500', to: 'errors#internal_server_error'
   
-  # Catch-all route for 404 errors (must be last)
-  match '*path', to: 'errors#not_found', via: :all
+  # Catch-all route for 404 errors (must be last, but exclude Active Storage paths)
+  match '*path', to: 'errors#not_found', via: :all, constraints: ->(req) { 
+    !req.path.start_with?('/rails/active_storage') 
+  }
 end

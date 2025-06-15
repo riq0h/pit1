@@ -19,7 +19,99 @@ class ConfigController < ApplicationController
     end
   end
 
+  # GET /config/custom_emojis
+  def custom_emojis
+    @custom_emojis = base_emoji_scope
+    @custom_emojis = apply_emoji_filters(@custom_emojis)
+  end
+
+  # GET /config/custom_emojis/new
+  def new_custom_emoji
+    @custom_emoji = CustomEmoji.new
+  end
+
+  # POST /config/custom_emojis
+  def create_custom_emoji
+    @custom_emoji = CustomEmoji.new(custom_emoji_params)
+
+    if @custom_emoji.save
+      redirect_to config_custom_emojis_path, notice: t('custom_emojis.created')
+    else
+      render :new_custom_emoji, status: :unprocessable_entity
+    end
+  end
+
+  # GET /config/custom_emojis/:id/edit
+  def edit_custom_emoji
+    @custom_emoji = CustomEmoji.find(params[:id])
+  end
+
+  # PATCH /config/custom_emojis/:id
+  def update_custom_emoji
+    @custom_emoji = CustomEmoji.find(params[:id])
+
+    if @custom_emoji.update(custom_emoji_params)
+      redirect_to config_custom_emojis_path, notice: t('custom_emojis.updated')
+    else
+      render :edit_custom_emoji, status: :unprocessable_entity
+    end
+  end
+
+  # DELETE /config/custom_emojis/:id
+  def destroy_custom_emoji
+    @custom_emoji = CustomEmoji.find(params[:id])
+    @custom_emoji.destroy
+    redirect_to config_custom_emojis_path, notice: t('custom_emojis.deleted')
+  end
+
+  # PATCH /config/custom_emojis/:id/enable
+  def enable_custom_emoji
+    @custom_emoji = CustomEmoji.find(params[:id])
+    @custom_emoji.update(disabled: false)
+    redirect_to config_custom_emojis_path, notice: t('custom_emojis.enabled')
+  end
+
+  # PATCH /config/custom_emojis/:id/disable
+  def disable_custom_emoji
+    @custom_emoji = CustomEmoji.find(params[:id])
+    @custom_emoji.update(disabled: true)
+    redirect_to config_custom_emojis_path, notice: t('custom_emojis.disabled')
+  end
+
+  # POST /config/custom_emojis/bulk_action
+  def bulk_action_custom_emojis
+    message = process_bulk_emoji_action(params[:action_type], params[:emoji_ids])
+    redirect_to config_custom_emojis_path, **message
+  end
+
   private
+
+  def base_emoji_scope
+    CustomEmoji.local.includes(:image_attachment).alphabetical.limit(50)
+  end
+
+  def apply_emoji_filters(scope)
+    scope = scope.where('shortcode LIKE ?', "%#{params[:q]}%") if params[:q].present?
+    scope = scope.where(disabled: false) if params[:enabled] == 'true'
+    scope = scope.where(disabled: true) if params[:enabled] == 'false'
+    scope
+  end
+
+  def process_bulk_emoji_action(action_type, emoji_ids)
+    case action_type
+    when 'enable'
+      CustomEmoji.where(id: emoji_ids).update_all(disabled: false)
+      { notice: t('custom_emojis.bulk_enabled') }
+    when 'disable'
+      CustomEmoji.where(id: emoji_ids).update_all(disabled: true)
+      { notice: t('custom_emojis.bulk_disabled') }
+    when 'delete'
+      CustomEmoji.where(id: emoji_ids).destroy_all
+      { notice: t('custom_emojis.bulk_deleted') }
+    else
+      { alert: t('custom_emojis.invalid_action') }
+    end
+  end
 
   def current_instance_config
     build_base_config.merge(build_activitypub_config)
@@ -127,5 +219,9 @@ class ConfigController < ApplicationController
     end
 
     permitted_params
+  end
+
+  def custom_emoji_params
+    params.expect(custom_emoji: %i[shortcode image visible_in_picker category_id])
   end
 end

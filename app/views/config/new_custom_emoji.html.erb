@@ -1,0 +1,273 @@
+<% content_for :title, "新しい絵文字を追加 - #{blog_title}" %>
+
+<!-- 新しい絵文字追加ページ -->
+<div class="max-w-2xl mx-auto">
+  <!-- ヘッダー -->
+  <header class="mb-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-xl sm:text-2xl text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+          新しい絵文字を追加
+        </h1>
+        <p class="text-sm text-gray-500 mt-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+          インスタンス独自の絵文字を追加します
+        </p>
+      </div>
+      
+      <%= link_to config_custom_emojis_path, 
+          class: "text-gray-600 hover:text-gray-900 transition-colors text-sm",
+          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
+        ← 絵文字管理に戻る
+      <% end %>
+    </div>
+  </header>
+
+  <!-- 絵文字追加フォーム -->
+  <%= form_with model: @custom_emoji, url: config_custom_emojis_path, local: true, multipart: true, class: "space-y-6" do |form| %>
+    
+    <!-- 基本情報 -->
+    <section class="bg-white border border-gray-200 rounded-lg p-6">
+      <h2 class="text-lg text-gray-900 mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+        基本情報
+      </h2>
+      
+      <div class="space-y-4">
+        <div>
+          <%= form.label :shortcode, "絵文字名（ショートコード）", 
+              class: "block text-sm text-gray-700 mb-2", 
+              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+          <%= form.text_field :shortcode, 
+              placeholder: "例: custom_heart",
+              pattern: "[a-zA-Z0-9_]+",
+              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors font-mono",
+              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;",
+              required: true %>
+          <p class="text-xs text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+            英数字とアンダースコアのみ使用可能。投稿では :custom_heart: のように使います
+          </p>
+          <% if @custom_emoji.errors[:shortcode].any? %>
+            <p class="text-xs text-red-600 mt-1">
+              <%= @custom_emoji.errors[:shortcode].first %>
+            </p>
+          <% end %>
+        </div>
+
+        <div>
+          <%= form.label :image, "画像ファイル", 
+              class: "block text-sm text-gray-700 mb-2", 
+              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+          <div class="border-2 border-gray-300 border-dashed rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+            <%= form.file_field :image, 
+                accept: "image/*",
+                class: "hidden",
+                id: "emoji_image_input",
+                onchange: "previewImage(this)" %>
+            <label for="emoji_image_input" class="cursor-pointer">
+              <div id="image_preview_container" class="hidden">
+                <img id="image_preview" class="mx-auto max-w-16 max-h-16 object-contain mb-2">
+                <p class="text-sm text-gray-600" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                  クリックして変更
+                </p>
+              </div>
+              <div id="upload_placeholder">
+                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <p class="mt-2 text-sm text-gray-600" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                  <span class="font-medium">クリックしてファイルを選択</span> またはドラッグ&ドロップ
+                </p>
+                <p class="text-xs text-gray-500" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+                  PNG, JPG, GIF対応（推奨サイズ: 64x64px）
+                </p>
+              </div>
+            </label>
+          </div>
+          <% if @custom_emoji.errors[:image].any? %>
+            <p class="text-xs text-red-600 mt-1">
+              <%= @custom_emoji.errors[:image].first %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+    </section>
+
+    <!-- 表示設定 -->
+    <section class="bg-white border border-gray-200 rounded-lg p-6">
+      <h2 class="text-lg text-gray-900 mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+        表示設定
+      </h2>
+      
+      <div class="space-y-4">
+        <div class="flex items-center">
+          <%= form.check_box :visible_in_picker, 
+              checked: true,
+              class: "form-checkbox h-4 w-4 text-gray-600" %>
+          <%= form.label :visible_in_picker, "絵文字ピッカーに表示", 
+              class: "ml-2 text-sm text-gray-700", 
+              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+          <p class="text-xs text-gray-500 mt-1 ml-6" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+            チェックを外すと絵文字ピッカーには表示されませんが、ショートコードで直接入力できます
+          </p>
+        </div>
+
+        <div>
+          <%= form.label :category_id, "カテゴリ", 
+              class: "block text-sm text-gray-700 mb-2", 
+              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+          <%= form.text_field :category_id, 
+              placeholder: "例: カスタム",
+              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
+              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+          <p class="text-xs text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+            絵文字ピッカーでのグループ分けに使用（省略可能）
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- プレビュー -->
+    <section class="bg-white border border-gray-200 rounded-lg p-6">
+      <h2 class="text-lg text-gray-900 mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+        プレビュー
+      </h2>
+      
+      <div class="bg-gray-50 rounded-lg p-4">
+        <p class="text-sm text-gray-600 mb-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+          投稿での表示例:
+        </p>
+        <div class="bg-white border rounded p-3 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+          今日は良い天気ですね <span id="emoji_preview">:custom_heart:</span> 楽しい一日になりそうです！
+        </div>
+      </div>
+    </section>
+
+    <!-- エラーメッセージ -->
+    <% if @custom_emoji.errors.any? %>
+      <div class="bg-red-50 border border-red-200 rounded-md p-4">
+        <div class="flex">
+          <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+          </svg>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+              エラーが発生しました
+            </h3>
+            <div class="mt-2 text-sm text-red-700">
+              <ul class="list-disc pl-5 space-y-1">
+                <% @custom_emoji.errors.full_messages.each do |message| %>
+                  <li><%= message %></li>
+                <% end %>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- 送信ボタン -->
+    <div class="flex justify-end space-x-4">
+      <%= link_to config_custom_emojis_path, 
+          class: "px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors",
+          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
+        キャンセル
+      <% end %>
+      
+      <%= form.submit "絵文字を追加", 
+          class: "px-6 py-2 bg-gray-900 text-white hover:bg-gray-700 transition-colors",
+          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+    </div>
+  <% end %>
+</div>
+
+<!-- JavaScript -->
+<script>
+function previewImage(input) {
+  const file = input.files[0];
+  const preview = document.getElementById('image_preview');
+  const previewContainer = document.getElementById('image_preview_container');
+  const placeholder = document.getElementById('upload_placeholder');
+  const emojiPreview = document.getElementById('emoji_preview');
+  
+  if (file) {
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+      preview.src = e.target.result;
+      previewContainer.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+      
+      // プレビューテキストを更新
+      updateEmojiPreview();
+    };
+    
+    reader.readAsDataURL(file);
+  }
+}
+
+function updateEmojiPreview() {
+  const shortcodeInput = document.querySelector('input[name="custom_emoji[shortcode]"]');
+  const emojiPreview = document.getElementById('emoji_preview');
+  const imagePreview = document.getElementById('image_preview');
+  
+  if (shortcodeInput && emojiPreview) {
+    const shortcode = shortcodeInput.value || 'custom_heart';
+    
+    if (imagePreview && imagePreview.src && !imagePreview.src.includes('placeholder')) {
+      emojiPreview.innerHTML = `<img src="${imagePreview.src}" alt=":${shortcode}:" class="inline-block w-4 h-4 object-contain align-text-bottom" style="margin: 0 2px;">`;
+    } else {
+      emojiPreview.textContent = `:${shortcode}:`;
+    }
+  }
+}
+
+// ショートコード入力時にプレビューを更新
+document.addEventListener('DOMContentLoaded', function() {
+  const shortcodeInput = document.querySelector('input[name="custom_emoji[shortcode]"]');
+  if (shortcodeInput) {
+    shortcodeInput.addEventListener('input', updateEmojiPreview);
+  }
+});
+
+// ドラッグ&ドロップ対応
+document.addEventListener('DOMContentLoaded', function() {
+  const dropZone = document.querySelector('.border-dashed');
+  const fileInput = document.getElementById('emoji_image_input');
+  
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+  });
+  
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, highlight, false);
+  });
+  
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, unhighlight, false);
+  });
+  
+  function highlight(e) {
+    dropZone.classList.add('border-gray-500', 'bg-gray-50');
+  }
+  
+  function unhighlight(e) {
+    dropZone.classList.remove('border-gray-500', 'bg-gray-50');
+  }
+  
+  dropZone.addEventListener('drop', handleDrop, false);
+  
+  function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    
+    if (files.length > 0) {
+      fileInput.files = files;
+      previewImage(fileInput);
+    }
+  }
+});
+</script>

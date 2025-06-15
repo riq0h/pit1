@@ -43,8 +43,20 @@ Rails.application.configure do
   # Set domain to be used by links generated in mailer templates.
   # Note: ActivityPub config is set in initializers, use ENV fallback
   domain = ENV.fetch('ACTIVITYPUB_DOMAIN', 'localhost:3000')
+  protocol = ENV.fetch('ACTIVITYPUB_PROTOCOL', 'http')
   host, port = domain.split(':')
-  config.action_mailer.default_url_options = { host: host, port: port&.to_i }
+  
+  # Configure URL options for both Action Mailer and Active Storage
+  url_options = if port && port != '80' && port != '443'
+    { host: host, port: port.to_i }
+  else
+    { host: domain }
+  end
+  
+  config.action_mailer.default_url_options = url_options
+  
+  # Configure Active Storage host for URL generation
+  Rails.application.routes.default_url_options = url_options.merge(protocol: protocol)
   
   # Local domain setting for letter instance
   config.x.local_domain = domain

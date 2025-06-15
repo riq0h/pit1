@@ -66,6 +66,7 @@ end
 # バリデーション
 Rails.application.config.after_initialize do
   domain = Rails.application.config.activitypub.domain
+  protocol = Rails.application.config.activitypub.protocol
 
   if Rails.env.production?
     unless domain.present? && domain.include?('.')
@@ -78,6 +79,12 @@ Rails.application.config.after_initialize do
       raise 'ActivityPub domain cannot be localhost in production'
     end
   end
+
+  # URL設定を確実に適用
+  Rails.application.routes.default_url_options = {
+    host: domain,
+    protocol: protocol
+  }
 
   Rails.logger.info "ActivityPub configured for domain: #{domain}"
 end

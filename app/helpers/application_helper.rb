@@ -8,10 +8,17 @@ module ApplicationHelper
   def auto_link_urls(text)
     return ''.html_safe if text.blank?
 
-    escaped_text = escape_and_format_text(text)
-    linked_text = apply_url_links(escaped_text)
-    mention_linked_text = apply_mention_links(linked_text)
-
+    # 既にHTMLが含まれているかどうかをチェック
+    if text.include?('<img') && text.include?('custom-emoji')
+      # 既に絵文字がHTMLに変換されている場合は、HTMLエスケープをスキップ
+      linked_text = apply_url_links_to_html(text)
+      mention_linked_text = apply_mention_links_to_html(linked_text)
+    else
+      # 通常のテキストの場合
+      escaped_text = escape_and_format_text(text)
+      linked_text = apply_url_links(escaped_text)
+      mention_linked_text = apply_mention_links(linked_text)
+    end
     mention_linked_text.html_safe
   end
 
@@ -33,6 +40,26 @@ module ApplicationHelper
   def apply_mention_links(text)
     mention_pattern = /@([a-zA-Z0-9_.-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
     text.gsub(mention_pattern) do
+      username = ::Regexp.last_match(1)
+      domain = ::Regexp.last_match(2)
+      mention_url = build_mention_url(username, domain)
+      "<a href=\"#{mention_url}\" target=\"_blank\" rel=\"noopener noreferrer\" " \
+        'class="text-purple-600 hover:text-purple-800 underline font-medium">' \
+        "@#{username}@#{domain}</a>"
+    end
+  end
+
+  # HTMLが含まれているテキストに対するURL リンク処理
+  def apply_url_links_to_html(html_text)
+    # HTMLタグ外のURLのみを対象にリンク化（HTMLタグ内のURL（src, href等）は除外）
+    # より安全なアプローチ：HTMLタグが含まれている場合はURL リンク化をスキップ
+    html_text
+  end
+
+  # HTMLが含まれているテキストに対するメンション処理
+  def apply_mention_links_to_html(html_text)
+    mention_pattern = /@([a-zA-Z0-9_.-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
+    html_text.gsub(mention_pattern) do
       username = ::Regexp.last_match(1)
       domain = ::Regexp.last_match(2)
       mention_url = build_mention_url(username, domain)
