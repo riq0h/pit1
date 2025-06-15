@@ -49,3 +49,15 @@
 # Ignore Docker-related files
 /.dockerignore
 /Dockerfile*
+
+# ActivityPub/Letter specific
+/db/*.sqlite3
+/db/*.sqlite3-*
+/public/system/
+/scripts/*.log
+
+# Development documentation
+DOCKER.md
+
+# Local environment files
+.env.docker.local

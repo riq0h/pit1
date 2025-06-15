@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      # ActivityPub Configuration
+      ACTIVITYPUB_DOMAIN: ${ACTIVITYPUB_DOMAIN:-localhost:3000}
+      ACTIVITYPUB_PROTOCOL: ${ACTIVITYPUB_PROTOCOL:-http}
+      
+      # Instance Configuration
+      INSTANCE_NAME: ${INSTANCE_NAME:-letter}
+      INSTANCE_DESCRIPTION: ${INSTANCE_DESCRIPTION:-General Letter Intercommunication System based on ActivityPub}
+      CONTACT_EMAIL: ${CONTACT_EMAIL:-admin@localhost}
+      MAINTAINER_NAME: ${MAINTAINER_NAME:-letter Administrator}
+      
+      # Feature flags
+      FEDERATION_ENABLED: ${FEDERATION_ENABLED:-true}
+      
+      # Rails Configuration
+      RAILS_ENV: ${RAILS_ENV:-development}
+      RAILS_LOG_LEVEL: ${RAILS_LOG_LEVEL:-info}
+      
+    volumes:
+      # Database persistence
+      - ./db:/app/db
+      
+      # Logs persistence
+      - ./log:/app/log
+      
+      # Media files persistence
+      - ./public/system:/app/public/system
+      
+      # Optional: Mount .env file if it exists
+      - ./.env:/app/.env:ro
+      
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Optional: Add volumes for explicit persistence
+volumes:
+  letter_db:
+    driver: local
+  letter_media:
+    driver: local
+  letter_logs:
+    driver: local
