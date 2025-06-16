@@ -1,4 +1,39 @@
-<% content_for :title, "カスタム絵文字管理 - #{blog_title}" %>
+<% content_for :title, "カスタム絵文字管理 | #{blog_title}" %>
+<% content_for :description, "General Letter Publication System based on ActivityPub" %>
+<% content_for :head do %>
+  <style>
+    body { overflow-y: scroll !important; }
+    /* チェックボックスのカスタムスタイル */
+    .custom-checkbox {
+      appearance: none;
+      width: 1rem;
+      height: 1rem;
+      border: 1px solid #d1d5db;
+      background-color: white;
+      position: relative;
+      cursor: pointer;
+    }
+    .custom-checkbox:checked {
+      border-color: #6b7280;
+    }
+    .custom-checkbox:checked::after {
+      content: '';
+      position: absolute;
+      left: 3px;
+      top: 1px;
+      width: 6px;
+      height: 10px;
+      border: solid #6b7280;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+    .custom-checkbox:hover {
+      border-color: #9ca3af;
+    }
+  </style>
+<% end %>
+
+<h1 class="sr-only">カスタム絵文字管理</h1>
 
 <!-- カスタム絵文字管理ページ -->
 <div class="max-w-4xl mx-auto">
@@ -9,26 +44,12 @@
         <h1 class="text-xl sm:text-2xl text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
           カスタム絵文字管理
         </h1>
-        <p class="text-sm text-gray-500 mt-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
-          インスタンス独自の絵文字を追加・管理できます
-        </p>
       </div>
       
       <div class="flex items-center space-x-4">
-        <%= link_to new_config_custom_emoji_path, 
-            class: "inline-flex items-center px-4 py-2 bg-gray-900 text-white text-sm hover:bg-gray-700 transition-colors",
-            style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
-          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-          新しい絵文字を追加
-        <% end %>
-        
-        <%= link_to config_path, 
+        <%= link_to "新しい絵文字を追加", new_config_custom_emoji_path, 
             class: "text-gray-600 hover:text-gray-900 transition-colors text-sm",
-            style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
-          ← 設定に戻る
-        <% end %>
+            style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400; text-decoration: underline; text-underline-offset: 4px;" %>
       </div>
     </div>
   </header>
@@ -57,21 +78,21 @@
       </div>
       
       <%= form.submit "検索", 
-          class: "px-4 py-2 bg-gray-900 text-white text-sm hover:bg-gray-700 transition-colors",
+          class: "px-3 py-2 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer",
           style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
     <% end %>
   </div>
 
   <!-- 絵文字一覧 -->
   <% if @custom_emojis.any? %>
-    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+    <div class="border border-gray-300 overflow-hidden">
       <!-- 一括操作バー -->
-      <div class="border-b border-gray-200 px-6 py-3 bg-gray-50">
+      <div class="border-b border-gray-300 px-6 py-3">
         <%= form_with url: bulk_action_config_custom_emojis_path, method: :post, local: true, id: "bulk_form" do |form| %>
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-4">
               <label class="inline-flex items-center">
-                <input type="checkbox" id="select_all" class="form-checkbox">
+                <input type="checkbox" id="select_all" class="custom-checkbox">
                 <span class="ml-2 text-sm text-gray-600" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">すべて選択</span>
               </label>
               
@@ -88,7 +109,7 @@
                     style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
                 
                 <%= form.submit "実行", 
-                    class: "px-3 py-1 bg-gray-900 text-white text-sm hover:bg-gray-700 transition-colors",
+                    class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
                     style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;",
                     onclick: "return confirmBulkAction()" %>
               </div>
@@ -107,16 +128,17 @@
           <div class="px-6 py-4 flex items-center justify-between">
             <div class="flex items-center space-x-4">
               <input type="checkbox" name="emoji_ids[]" value="<%= emoji.id %>" 
-                     class="emoji-checkbox form-checkbox"
+                     class="emoji-checkbox custom-checkbox"
                      form="bulk_form">
               
               <div class="flex items-center space-x-3">
                 <% if emoji.image.attached? %>
-                  <%= image_tag emoji.image, 
+                  <%= image_tag emoji.url, 
                       alt: ":#{emoji.shortcode}:",
-                      class: "w-8 h-8 object-contain" %>
+                      class: "w-8 h-8 object-contain",
+                      onerror: "this.parentElement.innerHTML='<div class=\"w-8 h-8 bg-gray-200 flex items-center justify-center\"><span class=\"text-xs text-gray-500\">?</span></div>'" %>
                 <% else %>
-                  <div class="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
+                  <div class="w-8 h-8 bg-gray-200 flex items-center justify-center">
                     <span class="text-xs text-gray-500">?</span>
                   </div>
                 <% end %>
@@ -125,50 +147,55 @@
                   <div class="flex items-center space-x-2">
                     <span class="font-mono text-sm">:<%= emoji.shortcode %>:</span>
                     <% unless emoji.disabled %>
-                      <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">有効</span>
+                      <span class="text-gray-600 text-xs">有効</span>
                     <% else %>
-                      <span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded">無効</span>
+                      <span class="text-gray-600 text-xs">無効</span>
                     <% end %>
-                    <% unless emoji.visible_in_picker %>
-                      <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">非表示</span>
-                    <% end %>
-                  </div>
-                  <div class="text-xs text-gray-500 mt-1">
-                    作成日: <%= emoji.created_at.strftime('%Y年%m月%d日') %>
                   </div>
                 </div>
               </div>
             </div>
             
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-3">
+              <!-- 編集アイコン -->
               <%= link_to edit_config_custom_emoji_path(emoji), 
-                  class: "text-gray-600 hover:text-gray-900 transition-colors text-sm",
-                  style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
-                編集
+                  class: "text-gray-600 hover:text-gray-900 transition-colors",
+                  title: "編集" do %>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
               <% end %>
               
+              <!-- 有効化/無効化アイコン -->
               <% if emoji.disabled %>
                 <%= link_to enable_config_custom_emoji_path(emoji), 
                     method: :patch,
-                    class: "text-green-600 hover:text-green-900 transition-colors text-sm",
-                    style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
-                  有効化
+                    class: "text-gray-600 hover:text-gray-900 transition-colors",
+                    title: "有効化" do %>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
                 <% end %>
               <% else %>
                 <%= link_to disable_config_custom_emoji_path(emoji), 
                     method: :patch,
-                    class: "text-yellow-600 hover:text-yellow-900 transition-colors text-sm",
-                    style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
-                  無効化
+                    class: "text-gray-600 hover:text-gray-900 transition-colors",
+                    title: "無効化" do %>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
                 <% end %>
               <% end %>
               
+              <!-- 削除アイコン -->
               <%= link_to config_custom_emoji_path(emoji), 
                   method: :delete,
                   data: { confirm: "絵文字「:#{emoji.shortcode}:」を削除しますか？この操作は取り消せません。" },
-                  class: "text-red-600 hover:text-red-900 transition-colors text-sm",
-                  style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
-                削除
+                  class: "text-gray-600 hover:text-gray-900 transition-colors",
+                  title: "削除" do %>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
               <% end %>
             </div>
           </div>
@@ -178,25 +205,9 @@
   <% else %>
     <!-- 空状態 -->
     <div class="text-center py-12">
-      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.01M15 10h1.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-      </svg>
-      <h3 class="mt-2 text-sm font-medium text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
-        絵文字がありません
-      </h3>
-      <p class="mt-1 text-sm text-gray-500" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
-        最初のカスタム絵文字を追加してみましょう
+      <p class="text-sm text-gray-500" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+        該当なし
       </p>
-      <div class="mt-6">
-        <%= link_to new_config_custom_emoji_path, 
-            class: "inline-flex items-center px-4 py-2 bg-gray-900 text-white text-sm hover:bg-gray-700 transition-colors",
-            style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
-          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-          絵文字を追加
-        <% end %>
-      </div>
     </div>
   <% end %>
 </div>

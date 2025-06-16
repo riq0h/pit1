@@ -1,4 +1,8 @@
-<% content_for :title, "絵文字を編集 - #{blog_title}" %>
+<% content_for :title, "絵文字を編集 | #{blog_title}" %>
+<% content_for :description, "General Letter Publication System based on ActivityPub" %>
+<% content_for :head do %>
+  <style>body { overflow-y: scroll !important; }</style>
+<% end %>
 
 <!-- 絵文字編集ページ -->
 <div class="max-w-2xl mx-auto">
@@ -9,21 +13,12 @@
         <h1 class="text-xl sm:text-2xl text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
           絵文字を編集
         </h1>
-        <p class="text-sm text-gray-500 mt-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
-          :<%= @custom_emoji.shortcode %>: の設定を変更します
-        </p>
       </div>
-      
-      <%= link_to config_custom_emojis_path, 
-          class: "text-gray-600 hover:text-gray-900 transition-colors text-sm",
-          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
-        ← 絵文字管理に戻る
-      <% end %>
     </div>
   </header>
 
   <!-- 現在の絵文字表示 -->
-  <section class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+  <section class="border border-gray-300 p-6 mb-6">
     <h2 class="text-lg text-gray-900 mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
       現在の絵文字
     </h2>
@@ -32,9 +27,9 @@
       <% if @custom_emoji.image.attached? %>
         <%= image_tag @custom_emoji.image, 
             alt: ":#{@custom_emoji.shortcode}:",
-            class: "w-16 h-16 object-contain border border-gray-200 rounded p-2" %>
+            class: "w-16 h-16 object-contain border border-gray-300 p-2" %>
       <% else %>
-        <div class="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
+        <div class="w-16 h-16 bg-gray-200 flex items-center justify-center">
           <span class="text-gray-500">?</span>
         </div>
       <% end %>
@@ -43,12 +38,9 @@
         <div class="font-mono text-lg">:<%= @custom_emoji.shortcode %>:</div>
         <div class="text-sm text-gray-500 space-x-2">
           <% if @custom_emoji.disabled %>
-            <span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded">無効</span>
+            <span class="text-gray-600 text-xs">無効</span>
           <% else %>
-            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">有効</span>
-          <% end %>
-          <% unless @custom_emoji.visible_in_picker %>
-            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">非表示</span>
+            <span class="text-gray-600 text-xs">有効</span>
           <% end %>
         </div>
       </div>
@@ -59,7 +51,7 @@
   <%= form_with model: @custom_emoji, url: config_custom_emoji_path(@custom_emoji), method: :patch, local: true, multipart: true, class: "space-y-6" do |form| %>
     
     <!-- 基本情報 -->
-    <section class="bg-white border border-gray-200 rounded-lg p-6">
+    <section class="border border-gray-300 p-6">
       <h2 class="text-lg text-gray-900 mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
         基本情報
       </h2>
@@ -88,7 +80,7 @@
           <%= form.label :image, "画像ファイル", 
               class: "block text-sm text-gray-700 mb-2", 
               style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-          <div class="border-2 border-gray-300 border-dashed rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+          <div class="border border-gray-300 border-dashed p-6 text-center hover:border-gray-400 transition-colors">
             <%= form.file_field :image, 
                 accept: "image/*",
                 class: "hidden",
@@ -129,22 +121,12 @@
     </section>
 
     <!-- 表示設定 -->
-    <section class="bg-white border border-gray-200 rounded-lg p-6">
+    <section class="border border-gray-300 p-6">
       <h2 class="text-lg text-gray-900 mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
         表示設定
       </h2>
       
       <div class="space-y-4">
-        <div class="flex items-center">
-          <%= form.check_box :visible_in_picker, 
-              class: "form-checkbox h-4 w-4 text-gray-600" %>
-          <%= form.label :visible_in_picker, "絵文字ピッカーに表示", 
-              class: "ml-2 text-sm text-gray-700", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-          <p class="text-xs text-gray-500 mt-1 ml-6" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
-            チェックを外すと絵文字ピッカーには表示されませんが、ショートコードで直接入力できます
-          </p>
-        </div>
 
         <div>
           <%= form.label :category_id, "カテゴリ", 
@@ -162,17 +144,17 @@
     </section>
 
     <!-- プレビュー -->
-    <section class="bg-white border border-gray-200 rounded-lg p-6">
+    <section class="border border-gray-300 p-6">
       <h2 class="text-lg text-gray-900 mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
         プレビュー
       </h2>
       
-      <div class="bg-gray-50 rounded-lg p-4">
+      <div class="p-4">
         <p class="text-sm text-gray-600 mb-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
           投稿での表示例:
         </p>
-        <div class="bg-white border rounded p-3 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
-          今日は良い天気ですね <span id="emoji_preview">:<%= @custom_emoji.shortcode %>:</span> 楽しい一日になりそうです！
+        <div class="border border-gray-300 p-3 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+          テスト送信 <span id="emoji_preview">:<%= @custom_emoji.shortcode %>:</span>
         </div>
       </div>
     </section>
@@ -201,16 +183,11 @@
     <% end %>
 
     <!-- 送信ボタン -->
-    <div class="flex justify-end space-x-4">
-      <%= link_to config_custom_emojis_path, 
-          class: "px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors",
-          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
-        キャンセル
-      <% end %>
-      
+    <div class="flex justify-between">
+      <%= link_to "キャンセル", config_custom_emojis_path %>
       <%= form.submit "変更を保存", 
-          class: "px-6 py-2 bg-gray-900 text-white hover:bg-gray-700 transition-colors",
-          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+          class: "text-gray-900 hover:text-gray-600 transition-colors cursor-pointer bg-transparent border-none",
+          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400; text-decoration: underline; text-underline-offset: 4px;" %>
     </div>
   <% end %>
 </div>

@@ -89,7 +89,7 @@ module Admin
     end
 
     def custom_emoji_params
-      params.expect(custom_emoji: %i[shortcode image visible_in_picker category_id])
+      params.expect(custom_emoji: %i[shortcode image category_id])
     end
   end
 end

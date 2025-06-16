@@ -1,4 +1,5 @@
-<% content_for :title, "設定 - #{blog_title}" %>
+<% content_for :title, "設定 | #{blog_title}" %>
+<% content_for :description, "General Letter Publication System based on ActivityPub" %>
 
 <!-- ブログ風設定ページ -->
 <div class="max-w-2xl mx-auto">
@@ -114,9 +115,6 @@
               class: "inline-flex items-center text-gray-900 hover:text-gray-600 transition-colors",
               style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400; text-decoration: underline; text-underline-offset: 4px;" do %>
             <span>カスタム絵文字の管理</span>
-            <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
           <% end %>
           <p class="text-sm text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
             インスタンス独自の絵文字を追加・管理できます

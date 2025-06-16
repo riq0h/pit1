@@ -25,7 +25,7 @@ module EmojiHelper
         shortcode: emoji.shortcode,
         static_url: emoji.static_url,
         url: emoji.url,
-        visible_in_picker: emoji.visible_in_picker
+        visible_in_picker: true
       }
     end
   end

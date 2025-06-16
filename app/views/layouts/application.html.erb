@@ -2,9 +2,25 @@
 <html>
   <head>
     <title><%= content_for(:title) || "letter" %></title>
+    <meta name="description" content="<%= content_for(:description) || "General Letter Publication System based on ActivityPub" %>">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- OGP tags -->
+    <meta property="og:title" content="<%= content_for(:title) || "letter" %>">
+    <meta property="og:description" content="<%= content_for(:description) || "General Letter Publication System based on ActivityPub" %>">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="<%= request.original_url %>">
+    <meta property="og:image" content="<%= content_for(:og_image) || "#{request.base_url}/icon.png" %>">
+    <meta property="og:site_name" content="letter">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="<%= content_for(:title) || "letter" %>">
+    <meta name="twitter:description" content="<%= content_for(:description) || "General Letter Publication System based on ActivityPub" %>">
+    <meta name="twitter:image" content="<%= content_for(:og_image) || "#{request.base_url}/icon.png" %>">
+    
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
@@ -39,17 +55,19 @@
         <!-- 右上のログインリンク（ログイン画面では非表示） -->
         <% unless controller_name == 'sessions' %>
           <div class="flex items-center space-x-4 text-sm">
-            <!-- 検索ボックス -->
-            <%= form_with url: search_index_path, method: :get, 
-                          data: { turbo_frame: "search_results" },
-                          class: "flex items-center" do |form| %>
-              <%= form.text_field :q, 
-                                  value: params[:q], 
-                                  placeholder: "検索", 
-                                  class: "px-2 py-1 border border-gray-300 text-sm h-6 w-20 focus:outline-none focus:border-gray-500",
-                                  data: { turbo_action: "advance" } %>
-              <% if controller_name == 'profiles' && @actor %>
-                <%= form.hidden_field :username, value: @actor.username %>
+            <!-- 検索ボックス（ホーム画面と個別プロフィール画面でのみ表示） -->
+            <% if %w[home profiles].include?(controller_name) %>
+              <%= form_with url: search_index_path, method: :get, 
+                            data: { turbo_frame: "search_results" },
+                            class: "flex items-center" do |form| %>
+                <%= form.text_field :q, 
+                                    value: params[:q], 
+                                    placeholder: "検索", 
+                                    class: "px-2 py-1 border border-gray-300 text-sm h-6 w-20 focus:outline-none focus:border-gray-500",
+                                    data: { turbo_action: "advance" } %>
+                <% if controller_name == 'profiles' && @actor %>
+                  <%= form.hidden_field :username, value: @actor.username %>
+                <% end %>
               <% end %>
             <% end %>
             

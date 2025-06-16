@@ -1,11 +1,14 @@
-<% content_for :title, "letter" %>
+<% content_for :title, "ホーム | #{blog_title}" %>
+<% content_for :description, "General Letter Publication System based on ActivityPub" %>
+
+<h1 class="sr-only">ホーム</h1>
 
 <!-- 検索結果エリア -->
 <%= turbo_frame_tag "search_results" do %>
 <% end %>
 
 <!-- 無限スクロール対応タイムライン -->
-<div id="posts-container">
+<main id="posts-container" role="main">
   <% @posts.each do |timeline_item| %>
     <% if timeline_item[:type] == :post %>
       <%= render 'shared/post_card', post: timeline_item[:item] %>

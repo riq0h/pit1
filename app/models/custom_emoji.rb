@@ -9,7 +9,6 @@ class CustomEmoji < ApplicationRecord
   # スコープ
   scope :local, -> { where(domain: nil) }
   scope :remote, -> { where.not(domain: nil) }
-  scope :visible, -> { where(visible_in_picker: true) }
   scope :enabled, -> { where(disabled: false) }
   scope :alphabetical, -> { order(:shortcode) }
   scope :by_domain, ->(domain) { where(domain: domain) }
@@ -37,12 +36,20 @@ class CustomEmoji < ApplicationRecord
     !local?
   end
 
-  def image_url
-    return super if remote?
+  def url
+    return image_url if remote?
     return unless image.attached?
 
     # Active Storageファイルの公開URLを生成
-    Rails.application.routes.url_helpers.url_for(image)
+    if Rails.env.development?
+      Rails.application.routes.url_helpers.url_for(image, host: 'localhost:3000')
+    else
+      Rails.application.routes.url_helpers.url_for(image)
+    end
+  end
+
+  def image_url
+    url
   end
 
   def static_url
@@ -57,7 +64,7 @@ class CustomEmoji < ApplicationRecord
       shortcode: shortcode,
       url: image_url,
       static_url: static_url,
-      visible_in_picker: visible_in_picker,
+      visible_in_picker: true,
       category: category_id
     }
   end
@@ -106,7 +113,7 @@ class CustomEmoji < ApplicationRecord
   class << self
     def cached
       Rails.cache.fetch('custom_emojis', expires_in: 1.hour) do
-        enabled.visible.includes(:image_attachment).to_a
+        enabled.includes(:image_attachment).to_a
       end
     end
 
@@ -115,7 +122,6 @@ class CustomEmoji < ApplicationRecord
 
       where('shortcode LIKE ?', "%#{query}%")
         .enabled
-        .visible
         .alphabetical
         .limit(20)
     end
@@ -123,7 +129,6 @@ class CustomEmoji < ApplicationRecord
     def by_shortcodes(shortcodes)
       where(shortcode: shortcodes, domain: nil)
         .enabled
-        .visible
     end
 
     def from_text(text)

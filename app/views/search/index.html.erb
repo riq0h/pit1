@@ -1,4 +1,7 @@
 <% content_for :title, @query.present? ? "「#{@query}」の検索結果" : "検索" %>
+<% content_for :description, "General Letter Publication System based on ActivityPub" %>
+
+<h1 class="sr-only"><%= @query.present? ? "「#{@query}」の検索結果" : "検索" %></h1>
 
 <%= turbo_frame_tag "search_results" do %>
   <% if @query.present? && @query.strip.present? %>

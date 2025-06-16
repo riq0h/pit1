@@ -7,6 +7,10 @@ class CustomEmojiSerializer < ActiveModel::Serializer
 
   delegate :static_url, to: :object
 
+  def visible_in_picker
+    true
+  end
+
   def category
     object.category_id
   end

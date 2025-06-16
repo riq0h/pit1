@@ -73,3 +73,47 @@
 .emoji-button img {
   @apply w-6 h-6 object-contain;
 }
+
+button:not([disabled]),
+input[type="submit"]:not([disabled]),
+input[type="button"]:not([disabled]),
+.clickable,
+[role="button"],
+[onclick],
+[data-turbo-method],
+.cursor-pointer {
+  cursor: pointer !important;
+}
+
+button:not([disabled]):hover,
+input[type="submit"]:not([disabled]):hover,
+input[type="button"]:not([disabled]):hover,
+.clickable:hover,
+[role="button"]:hover,
+[onclick]:hover,
+[data-turbo-method]:hover {
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+button:not([disabled]):active,
+input[type="submit"]:not([disabled]):active,
+input[type="button"]:not([disabled]):active,
+.clickable:active,
+[role="button"]:active,
+[onclick]:active,
+[data-turbo-method]:active {
+  opacity: 0.6;
+  transform: translateY(1px);
+  transition: all 0.1s ease;
+}
+
+a:not(.no-hover):hover {
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+a:not(.no-hover):active {
+  opacity: 0.6;
+  transition: opacity 0.1s ease;
+}
