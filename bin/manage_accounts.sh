@@ -13,7 +13,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # Load environment variables
-source scripts/load_env.sh
+source bin/load_env.sh
 
 # Colors for output
 RED='\033[0;31m'

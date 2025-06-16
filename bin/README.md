@@ -1,15 +1,15 @@
 # Letter ActivityPub Instance Management Scripts
 
-このディレクトリには、LetterインスタンスのActivityPub機能を管理するためのスクリプトが含まれています。
+bin/ディレクトリには、ActivityPub機能を管理するためのスクリプトが含まれています。
 
 ## 📋 スクリプト一覧
 
 ### 🚀 サーバ管理
 
 #### `start_server.sh`
-**用途**: 通常のサーバ起動  
+**用途**: サーバ起動（詳細診断付き）  
 **使用法**: `./start_server.sh`  
-**説明**: .envファイルから環境変数を読み込み、RailsサーバとSolid Queueワーカーを起動します。
+**説明**: .envファイルから環境変数を読み込み、データベース健全性チェック、Actor URL修正を実行してからRailsサーバとSolid Queueワーカーを起動します。
 
 #### `cleanup_and_start.sh`
 **用途**: 強制リセット＆再起動  
@@ -18,7 +18,7 @@
 
 #### `load_env.sh`
 **用途**: 環境変数読み込みヘルパー  
-**使用法**: `source scripts/load_env.sh`  
+**使用法**: `source bin/load_env.sh`  
 **説明**: .envファイルから環境変数を確実に読み込み、Rails runnerのラッパー関数を提供します。
 
 ### 🔧 設定管理
@@ -71,6 +71,11 @@
 **使用法**: `./test_follow.sh`  
 **説明**: フォローシステム（FollowService、WebFingerService）の動作確認を行います。
 
+#### `migrate_to_r2.sh`
+**用途**: Cloudflare R2移行  
+**使用法**: `./migrate_to_r2.sh`  
+**説明**: ローカルストレージの画像をCloudflare R2に移行します。設定完了後に使用。
+
 ## 🔧 環境変数の確実な読み込み
 
 ### load_env.sh の使用方法
@@ -79,11 +84,11 @@
 
 ```bash
 # 環境変数を読み込んでからRails runnerを実行
-source scripts/load_env.sh
+source bin/load_env.sh
 run_with_env "puts Rails.application.config.activitypub.base_url"
 
 # または一行で
-source scripts/load_env.sh && run_with_env "your_ruby_code"
+source bin/load_env.sh && run_with_env "your_ruby_code"
 ```
 
 ### 主な機能
@@ -134,8 +139,8 @@ curl -X PATCH \
 # 問題発生時の強制リセット
 ./cleanup_and_start.sh
 
-# 詳細診断付き起動
-./start_server_improved.sh
+# 通常起動（詳細診断付き）
+./start_server.sh
 
 # アカウント削除（問題のあるアカウントを削除）
 ./delete_account.sh problem_user
@@ -151,10 +156,10 @@ curl -X PATCH \
 ## 📁 ファイル構成
 
 ```
-scripts/
+bin/
 ├── README.md                      # このファイル
 ├── load_env.sh                   # 環境変数読み込みヘルパー
-├── start_server.sh               # 通常のサーバ起動
+├── start_server.sh               # サーバ起動（詳細診断付き）
 ├── cleanup_and_start.sh          # 強制リセット＆再起動
 ├── switch_domain.sh              # ドメイン変更
 ├── check_domain.sh               # 設定確認・診断
@@ -163,7 +168,8 @@ scripts/
 ├── delete_account.sh             # アカウント削除
 ├── create_test_posts.sh          # テスト投稿生成
 ├── fix_follow_counts.sh          # フォローカウント修正
-└── test_follow.sh                # フォローシステムテスト
+├── test_follow.sh                # フォローシステムテスト
+└── migrate_to_r2.sh              # Cloudflare R2移行
 ```
 
 ## 🔍 よくある問題と解決方法
@@ -179,7 +185,7 @@ scripts/
 cat .env
 
 # 環境変数読み込みヘルパーを使用
-source scripts/load_env.sh
+source bin/load_env.sh
 run_with_env "puts Rails.application.config.activitypub.base_url"
 
 # 設定状態の確認
@@ -213,14 +219,14 @@ ps aux | grep -E "rails|solid"
 tail -f log/development.log log/solid_queue.log
 
 # 環境変数確認
-source scripts/load_env.sh
+source bin/load_env.sh
 
 # API テスト（トークンが必要）
 curl -H "Authorization: Bearer YOUR_TOKEN" \
      "https://YOUR_DOMAIN/api/v1/accounts/verify_credentials"
 
 # フォローシステムのテスト
-source scripts/load_env.sh && run_with_env "
+source bin/load_env.sh && run_with_env "
   tester = Actor.find_by(username: 'tester', local: true)
   puts \"Base URL: #{Rails.application.config.activitypub.base_url}\"
 "

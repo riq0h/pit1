@@ -13,7 +13,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # 環境変数を読み込み
-source scripts/load_env.sh
+source bin/load_env.sh
 
 # 出力用の色設定
 RED='\033[0;31m'

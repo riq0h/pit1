@@ -13,7 +13,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # Load environment variables
-source scripts/load_env.sh
+source bin/load_env.sh
 
 # Colors for output
 RED='\033[0;31m'
@@ -49,17 +49,17 @@ print_info() {
 print_header "Letter ActivityPub 完全クリーンアップ＆再起動"
 print_info "実行時刻: $(date)"
 
-# 1. 強制的なプロセスクリーンアップ
-print_info "1. 関連プロセスの強制終了..."
-sudo pkill -9 -f "solid.queue" 2>/dev/null || true
-sudo pkill -9 -f "rails server" 2>/dev/null || true
-sudo pkill -9 -f "puma.*pit1" 2>/dev/null || true
-sudo pkill -9 -f "bin/jobs" 2>/dev/null || true
+# 1. 既存プロセスのクリーンアップ
+print_info "1. 関連プロセスの終了..."
+{
+    pkill -f "solid.queue" 2>/dev/null || true
+    pkill -f "rails server" 2>/dev/null || true
+    pkill -f "puma.*pit1" 2>/dev/null || true
+    pkill -f "bin/jobs" 2>/dev/null || true
+    sleep 3
+} > /dev/null 2>&1
 
-# 少し待つ
-sleep 3
-
-print_success "関連プロセスを強制終了しました"
+print_success "関連プロセスを終了しました"
 
 # 2. 環境変数の読み込み確認
 print_info "2. 環境変数の読み込み確認..."
@@ -85,31 +85,27 @@ rails db:migrate 2>/dev/null || print_info "マイグレーションは既に最
 print_info "Actor URLの修正を実行中..."
 # Actor URLの修正
 rails runner "
-begin
-  incorrect_actors = Actor.where('ap_id LIKE ?', '%/actors/%')
-  if incorrect_actors.any?
-    puts '   #{incorrect_actors.count}個のActor URLを修正中...'
-    incorrect_actors.each do |actor|
-      domain = ENV['ACTIVITYPUB_DOMAIN']
-      protocol = ENV['ACTIVITYPUB_PROTOCOL'] || 'https'
-      base_url = \"#{protocol}://#{domain}\"
-      
-      actor.update!(
-        ap_id: \"#{base_url}/users/#{actor.username}\",
-        inbox_url: \"#{base_url}/users/#{actor.username}/inbox\",
-        outbox_url: \"#{base_url}/users/#{actor.username}/outbox\",
-        followers_url: \"#{base_url}/users/#{actor.username}/followers\",
-        following_url: \"#{base_url}/users/#{actor.username}/following\"
-      )
-    end
-    puts '   Actor URLを修正しました'
-  else
-    puts '   Actor URLは正常です'
+incorrect_actors = Actor.where('ap_id LIKE ?', '%/actors/%')
+if incorrect_actors.any?
+  puts '   ' + incorrect_actors.count.to_s + '個のActor URLを修正中...'
+  incorrect_actors.each do |actor|
+    domain = ENV['ACTIVITYPUB_DOMAIN']
+    protocol = ENV['ACTIVITYPUB_PROTOCOL'] || 'https'
+    base_url = protocol + '://' + domain
+    
+    actor.update!(
+      ap_id: base_url + '/users/' + actor.username,
+      inbox_url: base_url + '/users/' + actor.username + '/inbox',
+      outbox_url: base_url + '/users/' + actor.username + '/outbox',
+      followers_url: base_url + '/users/' + actor.username + '/followers',
+      following_url: base_url + '/users/' + actor.username + '/following'
+    )
   end
-rescue => e
-  puts \"   Actor修正エラー: #{e.message}\"
+  puts '   Actor URLを修正しました'
+else
+  puts '   Actor URLは正常です'
 end
-"
+" 2>/dev/null || print_warning "Actor URL修正をスキップしました"
 print_success "データベースのメンテナンスが完了しました"
 
 # 5. Rails サーバ起動（デーモンモード）
@@ -152,14 +148,10 @@ print_info "Solid Queueプロセス数: $QUEUE_PROCS"
 # 8. 最終設定確認
 print_info "8. 最終設定確認..."
 timeout 10 rails runner "
-begin
-  puts '   ベースURL: ' + Rails.application.config.activitypub.base_url
-  puts '   ローカルアクター数: ' + Actor.where(local: true).count.to_s
-  puts '   投稿総数: ' + ActivityPubObject.count.to_s
-  puts '   フォロー関係数: ' + Follow.count.to_s
-rescue => e
-  puts '   設定確認失敗: ' + e.message
-end
+puts '   ベースURL: ' + Rails.application.config.activitypub.base_url
+puts '   ローカルアクター数: ' + Actor.where(local: true).count.to_s
+puts '   投稿総数: ' + ActivityPubObject.count.to_s
+puts '   フォロー関係数: ' + Follow.count.to_s
 " 2>/dev/null || print_warning "設定確認がタイムアウトしました"
 
 echo ""

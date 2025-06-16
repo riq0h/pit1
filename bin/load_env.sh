@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 環境変数読み込みヘルパー
-# 使用法: source scripts/load_env.sh
+# 使用法: source bin/load_env.sh
 
 load_env_vars() {
     if [ ! -f .env ]; then

@@ -13,7 +13,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # Load environment variables
-source scripts/load_env.sh
+source bin/load_env.sh
 
 # Colors for output
 RED='\033[0;31m'
@@ -97,7 +97,13 @@ migration_stats=$(run_with_env "
 require 'stringio'
 
 def count_local_attachments(model, attachment_name)
-  model.joins('INNER JOIN active_storage_attachments ON active_storage_attachments.record_id = ' + model.table_name + '.id')
+  join_condition = if model.name == 'CustomEmoji'
+    'INNER JOIN active_storage_attachments ON active_storage_attachments.record_id = ' + model.table_name + '.id'
+  else
+    'INNER JOIN active_storage_attachments ON CAST(active_storage_attachments.record_id AS TEXT) = CAST(' + model.table_name + '.id AS TEXT)'
+  end
+  
+  model.joins(join_condition)
        .joins('INNER JOIN active_storage_blobs ON active_storage_blobs.id = active_storage_attachments.blob_id')
        .where(active_storage_attachments: { 
          record_type: model.name, 
