@@ -78,7 +78,6 @@ class Actor < ApplicationRecord
   before_validation :set_ap_urls, if: :local?, on: :create
   before_validation :generate_key_pair, if: :local?, on: :create
   before_create :set_admin_for_local_users, if: :local?
-  after_commit :update_icon_url_from_avatar, on: %i[create update]
 
   # ActivityPub URLs
   def followers_url
@@ -136,11 +135,11 @@ class Actor < ApplicationRecord
   end
 
   # Activity generation
-  def generate_follow_activity(target_actor)
+  def generate_follow_activity(target_actor, follow_id)
     {
       '@context' => Rails.application.config.activitypub.context_url,
       'type' => 'Follow',
-      'id' => "#{ap_id}#follows/#{SecureRandom.uuid}",
+      'id' => "#{ap_id}#follows/#{follow_id}",
       'actor' => ap_id,
       'object' => target_actor.ap_id
     }
@@ -227,21 +226,17 @@ class Actor < ApplicationRecord
     local? ? username : "#{username}@#{domain}"
   end
 
-  # Active StorageまたはレガシーURLの取得
+  # Active Storage画像URLの取得
   def avatar_url
-    if avatar.attached?
-      Rails.application.routes.url_helpers.url_for(avatar)
-    else
-      icon_url # レガシーフィールドからフォールバック
-    end
+    return nil unless avatar.attached?
+
+    Rails.application.routes.url_helpers.url_for(avatar)
   end
 
   def header_image_url
-    if header.attached?
-      Rails.application.routes.url_helpers.url_for(header)
-    else
-      header_url # レガシーフィールドからフォールバック
-    end
+    return nil unless header.attached?
+
+    Rails.application.routes.url_helpers.url_for(header)
   end
 
   private
@@ -383,19 +378,5 @@ class Actor < ApplicationRecord
   def unfollow!(target_actor_or_uri)
     follow_service = FollowService.new(self)
     follow_service.unfollow!(target_actor_or_uri)
-  end
-
-  private
-
-  # アバターが変更されたときにicon_urlフィールドを更新
-  def update_icon_url_from_avatar
-    return unless saved_change_to_attribute?(:avatar) || avatar.attached?
-
-    new_icon_url = (Rails.application.routes.url_helpers.url_for(avatar) if avatar.attached?)
-
-    # 現在の値と異なる場合のみ更新
-    return unless icon_url != new_icon_url
-
-    update_column(:icon_url, new_icon_url)
   end
 end

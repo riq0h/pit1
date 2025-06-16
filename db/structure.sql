@@ -1,14 +1,5 @@
 CREATE TABLE IF NOT EXISTS "ar_internal_metadata" ("key" varchar NOT NULL PRIMARY KEY, "value" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
 CREATE TABLE IF NOT EXISTS "schema_migrations" ("version" varchar NOT NULL PRIMARY KEY);
-CREATE TABLE IF NOT EXISTS "actors" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "username" varchar(20) NOT NULL, "domain" varchar(255), "display_name" varchar(100), "summary" text, "ap_id" varchar NOT NULL, "inbox_url" varchar NOT NULL, "outbox_url" varchar NOT NULL, "followers_url" varchar NOT NULL, "following_url" varchar NOT NULL, "public_key" text NOT NULL, "private_key" text, "avatar_url" varchar, "header_url" varchar, "local" boolean DEFAULT 0 NOT NULL, "locked" boolean DEFAULT 0 NOT NULL, "bot" boolean DEFAULT 0 NOT NULL, "suspended" boolean DEFAULT 0 NOT NULL, "followers_count" integer DEFAULT 0 NOT NULL, "following_count" integer DEFAULT 0 NOT NULL, "posts_count" integer DEFAULT 0 NOT NULL, "raw_data" json, "last_fetched_at" datetime(6), "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, "actor_type" varchar DEFAULT 'Person', "discoverable" boolean DEFAULT 1, "manually_approves_followers" boolean DEFAULT 0, "featured_url" varchar, "icon_url" varchar, "password_digest" varchar /*application='Letter'*/, "admin" boolean DEFAULT 0 NOT NULL /*application='Letter'*/);
-CREATE UNIQUE INDEX "index_actors_on_ap_id" ON "actors" ("ap_id") /*application='Letter'*/;
-CREATE UNIQUE INDEX "index_actors_on_username_and_domain" ON "actors" ("username", "domain") /*application='Letter'*/;
-CREATE INDEX "index_actors_on_domain" ON "actors" ("domain") /*application='Letter'*/;
-CREATE INDEX "index_actors_on_local" ON "actors" ("local") /*application='Letter'*/;
-CREATE INDEX "index_actors_on_suspended" ON "actors" ("suspended") /*application='Letter'*/;
-CREATE INDEX "index_actors_on_actor_type" ON "actors" ("actor_type") /*application='Letter'*/;
-CREATE INDEX "index_actors_on_discoverable" ON "actors" ("discoverable") /*application='Letter'*/;
-CREATE INDEX "index_actors_on_manually_approves_followers" ON "actors" ("manually_approves_followers") /*application='Letter'*/;
 CREATE TABLE IF NOT EXISTS "user_limits" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "actor_id" integer, "limit_type" varchar(50) NOT NULL, "limit_value" integer NOT NULL, "current_usage" integer DEFAULT 0 NOT NULL, "enabled" boolean DEFAULT 1 NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_1c7d473965"
 FOREIGN KEY ("actor_id")
   REFERENCES "actors" ("id")
@@ -235,18 +226,6 @@ CREATE INDEX "index_objects_on_local" ON "objects" ("local") /*application='Lett
 CREATE INDEX "index_objects_on_in_reply_to_ap_id" ON "objects" ("in_reply_to_ap_id") /*application='Letter'*/;
 CREATE INDEX "index_objects_on_conversation_ap_id" ON "objects" ("conversation_ap_id") /*application='Letter'*/;
 CREATE INDEX "index_objects_on_conversation_id" ON "objects" ("conversation_id") /*application='Letter'*/;
-CREATE VIRTUAL TABLE ap_object_search USING fts5(
-        object_id UNINDEXED,
-        content_plaintext,
-        summary,
-        tokenize='porter unicode61'
-      )
-/* ap_object_search(object_id,content_plaintext,summary) */;
-CREATE TABLE IF NOT EXISTS 'ap_object_search_data'(id INTEGER PRIMARY KEY, block BLOB);
-CREATE TABLE IF NOT EXISTS 'ap_object_search_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS 'ap_object_search_content'(id INTEGER PRIMARY KEY, c0, c1, c2);
-CREATE TABLE IF NOT EXISTS 'ap_object_search_docsize'(id INTEGER PRIMARY KEY, sz BLOB);
-CREATE TABLE IF NOT EXISTS 'ap_object_search_config'(k PRIMARY KEY, v) WITHOUT ROWID;
 CREATE TRIGGER ap_object_search_insert
       AFTER INSERT ON objects
       WHEN new.object_type = 'Note'
@@ -268,13 +247,6 @@ CREATE TRIGGER ap_object_search_update
         INSERT INTO ap_object_search(object_id, content_plaintext, summary)
         VALUES (new.id, COALESCE(new.content_plaintext, ''), COALESCE(new.summary, ''));
       END;
-CREATE TABLE IF NOT EXISTS "custom_emojis" ("id" varchar NOT NULL PRIMARY KEY, "shortcode" varchar NOT NULL, "domain" varchar, "uri" varchar, "image_url" varchar, "visible_in_picker" boolean DEFAULT 1, "disabled" boolean DEFAULT 0, "category_id" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
-CREATE UNIQUE INDEX "index_custom_emojis_on_shortcode_and_domain" ON "custom_emojis" ("shortcode", "domain") /*application='Letter'*/;
-CREATE INDEX "index_custom_emojis_on_domain" ON "custom_emojis" ("domain") /*application='Letter'*/;
-CREATE INDEX "index_custom_emojis_on_disabled" ON "custom_emojis" ("disabled") /*application='Letter'*/;
-CREATE INDEX "index_custom_emojis_on_visible_in_picker" ON "custom_emojis" ("visible_in_picker") /*application='Letter'*/;
-CREATE INDEX "index_custom_emojis_on_shortcode" ON "custom_emojis" ("shortcode") /*application='Letter'*/;
-CREATE INDEX "index_actors_on_admin" ON "actors" ("admin") /*application='Letter'*/;
 CREATE TABLE IF NOT EXISTS "active_storage_blobs" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "key" varchar NOT NULL, "filename" varchar NOT NULL, "content_type" varchar, "metadata" text, "service_name" varchar NOT NULL, "byte_size" bigint NOT NULL, "checksum" varchar, "created_at" datetime(6) NOT NULL);
 CREATE UNIQUE INDEX "index_active_storage_blobs_on_key" ON "active_storage_blobs" ("key") /*application='Letter'*/;
 CREATE TABLE IF NOT EXISTS "active_storage_attachments" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "name" varchar NOT NULL, "record_type" varchar NOT NULL, "record_id" bigint NOT NULL, "blob_id" bigint NOT NULL, "created_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_c3b3935057"
@@ -288,7 +260,55 @@ FOREIGN KEY ("blob_id")
   REFERENCES "active_storage_blobs" ("id")
 );
 CREATE UNIQUE INDEX "index_active_storage_variant_records_uniqueness" ON "active_storage_variant_records" ("blob_id", "variation_digest") /*application='Letter'*/;
+CREATE VIRTUAL TABLE object_search_fts USING fts5(
+    object_id UNINDEXED,
+    content_plaintext,
+    summary,
+    tokenize="porter unicode61"
+  )
+/* object_search_fts(object_id,content_plaintext,summary) */;
+CREATE TABLE IF NOT EXISTS 'object_search_fts_data'(id INTEGER PRIMARY KEY, block BLOB);
+CREATE TABLE IF NOT EXISTS 'object_search_fts_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS 'object_search_fts_content'(id INTEGER PRIMARY KEY, c0, c1, c2);
+CREATE TABLE IF NOT EXISTS 'object_search_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB);
+CREATE TABLE IF NOT EXISTS 'object_search_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID;
+CREATE TRIGGER object_search_fts_insert
+  AFTER INSERT ON objects
+  WHEN new.object_type = "Note"
+  BEGIN
+    INSERT INTO object_search_fts(object_id, content_plaintext, summary)
+    VALUES (new.id, COALESCE(new.content_plaintext, ""), COALESCE(new.summary, ""));
+  END;
+CREATE TRIGGER object_search_fts_delete
+  AFTER DELETE ON objects
+  WHEN old.object_type = "Note"
+  BEGIN
+    DELETE FROM object_search_fts WHERE object_id = old.id;
+  END;
+CREATE TRIGGER object_search_fts_update
+  AFTER UPDATE ON objects
+  WHEN new.object_type = "Note"
+  BEGIN
+    DELETE FROM object_search_fts WHERE object_id = old.id;
+    INSERT INTO object_search_fts(object_id, content_plaintext, summary)
+    VALUES (new.id, COALESCE(new.content_plaintext, ""), COALESCE(new.summary, ""));
+  END;
+CREATE TABLE IF NOT EXISTS "actors" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "username" varchar(20) NOT NULL, "domain" varchar(255), "display_name" varchar(100), "summary" text, "ap_id" varchar NOT NULL, "inbox_url" varchar NOT NULL, "outbox_url" varchar NOT NULL, "followers_url" varchar NOT NULL, "following_url" varchar NOT NULL, "public_key" text NOT NULL, "private_key" text, "local" boolean DEFAULT 0 NOT NULL, "locked" boolean DEFAULT 0 NOT NULL, "bot" boolean DEFAULT 0 NOT NULL, "suspended" boolean DEFAULT 0 NOT NULL, "followers_count" integer DEFAULT 0 NOT NULL, "following_count" integer DEFAULT 0 NOT NULL, "posts_count" integer DEFAULT 0 NOT NULL, "raw_data" json, "last_fetched_at" datetime(6), "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, "actor_type" varchar DEFAULT 'Person', "discoverable" boolean DEFAULT 1, "manually_approves_followers" boolean DEFAULT 0, "featured_url" varchar, "password_digest" varchar, "admin" boolean DEFAULT 0 NOT NULL);
+CREATE UNIQUE INDEX "index_actors_on_ap_id" ON "actors" ("ap_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_actors_on_username_and_domain" ON "actors" ("username", "domain") /*application='Letter'*/;
+CREATE INDEX "index_actors_on_domain" ON "actors" ("domain") /*application='Letter'*/;
+CREATE INDEX "index_actors_on_local" ON "actors" ("local") /*application='Letter'*/;
+CREATE INDEX "index_actors_on_suspended" ON "actors" ("suspended") /*application='Letter'*/;
+CREATE INDEX "index_actors_on_actor_type" ON "actors" ("actor_type") /*application='Letter'*/;
+CREATE INDEX "index_actors_on_discoverable" ON "actors" ("discoverable") /*application='Letter'*/;
+CREATE INDEX "index_actors_on_manually_approves_followers" ON "actors" ("manually_approves_followers") /*application='Letter'*/;
+CREATE INDEX "index_actors_on_admin" ON "actors" ("admin") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "custom_emojis" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "shortcode" varchar NOT NULL, "domain" varchar, "uri" varchar, "image_url" varchar, "visible_in_picker" boolean DEFAULT 1, "disabled" boolean DEFAULT 0, "category_id" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
+CREATE UNIQUE INDEX "index_custom_emojis_on_shortcode_and_domain" ON "custom_emojis" ("shortcode", "domain") /*application='Letter'*/;
+CREATE INDEX "index_custom_emojis_on_shortcode" ON "custom_emojis" ("shortcode") /*application='Letter'*/;
 INSERT INTO "schema_migrations" (version) VALUES
+('20250616223157'),
+('20250616123814'),
 ('20250615141259'),
 ('20250615110345'),
 ('20250615000002'),

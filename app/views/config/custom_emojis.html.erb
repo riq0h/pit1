@@ -5,12 +5,12 @@
     body { overflow-y: scroll !important; }
     
     /* Custom checkbox styles */
-    input[type="checkbox"]:checked {
+    .custom-checkbox:checked {
       border-color: #6b7280 !important;
       background-color: white !important;
     }
     
-    input[type="checkbox"]:checked::after {
+    .custom-checkbox:checked::after {
       content: '';
       position: absolute;
       left: 3px;
@@ -22,7 +22,7 @@
       transform: rotate(45deg);
     }
     
-    input[type="checkbox"]:hover {
+    .custom-checkbox:hover {
       border-color: #9ca3af !important;
     }
   </style>
@@ -40,18 +40,14 @@
           カスタム絵文字管理
         </h1>
       </div>
-      
-      <div class="flex items-center space-x-4">
-        <%= link_to "新しい絵文字を追加", new_config_custom_emoji_path, 
-            class: "text-gray-600 hover:text-gray-900 transition-colors text-sm",
-            style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400; text-decoration: underline; text-underline-offset: 4px;" %>
-      </div>
     </div>
   </header>
 
   <!-- 検索・フィルター -->
   <div class="mb-6">
-    <%= form_with url: config_custom_emojis_path, method: :get, local: true, class: "flex items-center space-x-4" do |form| %>
+    <%= form_with url: config_custom_emojis_path, method: :get, local: true, 
+                  data: { turbo_frame: "emoji_results" }, 
+                  class: "flex items-center space-x-4" do |form| %>
       <div class="flex-1">
         <%= form.text_field :q, 
             value: params[:q],
@@ -69,7 +65,8 @@
             ], params[:enabled]),
             {},
             class: "px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
-            style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+            style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;",
+            onchange: "this.form.requestSubmit()" %>
       </div>
       
       <%= form.submit "検索", 
@@ -79,159 +76,63 @@
   </div>
 
   <!-- 絵文字一覧 -->
-  <% if @custom_emojis.any? %>
-    <div class="border border-gray-300 overflow-hidden">
-      <!-- 一括操作バー -->
-      <div class="border-b border-gray-300 px-6 py-3">
-        <%= form_with url: bulk_action_config_custom_emojis_path, method: :post, local: true, id: "bulk_form" do |form| %>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-              <label class="inline-flex items-center">
-                <input type="checkbox" id="select_all" style="appearance: none; width: 1rem; height: 1rem; border: 1px solid #d1d5db; background-color: white; position: relative; cursor: pointer;">
-                <span class="ml-2 text-sm text-gray-600" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">すべて選択</span>
-              </label>
-              
-              <div class="flex items-center space-x-2">
-                <%= form.select :action_type, 
-                    options_for_select([
-                      ['一括操作を選択', ''],
-                      ['有効化', 'enable'],
-                      ['無効化', 'disable'],
-                      ['削除', 'delete']
-                    ]),
-                    {},
-                    class: "px-3 py-1 border border-gray-300 text-sm",
-                    style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-                
-                <%= form.submit "実行", 
-                    class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
-                    style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;",
-                    onclick: "return confirmBulkAction()" %>
-              </div>
-            </div>
-            
-            <div class="text-sm text-gray-500" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
-              <%= @custom_emojis.count %>件の絵文字
-            </div>
-          </div>
-        <% end %>
-      </div>
-
-      <!-- 絵文字リスト -->
-      <div class="divide-y divide-gray-200">
-        <% @custom_emojis.each do |emoji| %>
-          <div class="px-6 py-4 flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-              <input type="checkbox" name="emoji_ids[]" value="<%= emoji.id %>" 
-                     class="emoji-checkbox"
-                     style="appearance: none; width: 1rem; height: 1rem; border: 1px solid #d1d5db; background-color: white; position: relative; cursor: pointer;"
-                     form="bulk_form">
-              
-              <div class="flex items-center space-x-3">
-                <% if emoji.image.attached? %>
-                  <%= image_tag emoji.url, 
-                      alt: ":#{emoji.shortcode}:",
-                      class: "w-8 h-8 object-contain",
-                      onerror: "this.parentElement.innerHTML='<div class=\"w-8 h-8 bg-gray-200 flex items-center justify-center\"><span class=\"text-xs text-gray-500\">?</span></div>'" %>
-                <% else %>
-                  <div class="w-8 h-8 bg-gray-200 flex items-center justify-center">
-                    <span class="text-xs text-gray-500">?</span>
-                  </div>
-                <% end %>
-                
-                <div>
-                  <div class="flex items-center space-x-2">
-                    <span class="font-mono text-sm">:<%= emoji.shortcode %>:</span>
-                    <% unless emoji.disabled %>
-                      <span class="text-gray-600 text-xs">有効</span>
-                    <% else %>
-                      <span class="text-gray-600 text-xs">無効</span>
-                    <% end %>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="flex items-center space-x-3">
-              <!-- 編集アイコン -->
-              <%= link_to edit_config_custom_emoji_path(emoji), 
-                  class: "text-gray-600 hover:text-gray-900 transition-colors",
-                  title: "編集" do %>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                </svg>
-              <% end %>
-              
-              <!-- 有効化/無効化アイコン -->
-              <% if emoji.disabled %>
-                <%= link_to enable_config_custom_emoji_path(emoji), 
-                    method: :patch,
-                    class: "text-gray-600 hover:text-gray-900 transition-colors",
-                    title: "有効化" do %>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                <% end %>
-              <% else %>
-                <%= link_to disable_config_custom_emoji_path(emoji), 
-                    method: :patch,
-                    class: "text-gray-600 hover:text-gray-900 transition-colors",
-                    title: "無効化" do %>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                <% end %>
-              <% end %>
-              
-              <!-- 削除アイコン -->
-              <%= link_to config_custom_emoji_path(emoji), 
-                  method: :delete,
-                  data: { confirm: "絵文字「:#{emoji.shortcode}:」を削除しますか？この操作は取り消せません。" },
-                  class: "text-gray-600 hover:text-gray-900 transition-colors",
-                  title: "削除" do %>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-              <% end %>
-            </div>
-          </div>
-        <% end %>
-      </div>
-    </div>
-  <% else %>
-    <!-- 空状態 -->
-    <div class="text-center py-12">
-      <p class="text-sm text-gray-500" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
-        該当なし
-      </p>
-    </div>
+  <%= turbo_frame_tag "emoji_results" do %>
+    <%= render "emoji_results", custom_emojis: @custom_emojis %>
   <% end %>
+  
+  <!-- 新しい絵文字を追加ボタン -->
+  <div class="mt-8 text-right">
+    <%= link_to "新しい絵文字を追加", new_config_custom_emoji_path, 
+        class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
+        style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+  </div>
 </div>
 
 <!-- JavaScript -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+function initializeCheckboxes() {
   const selectAllCheckbox = document.getElementById('select_all');
   const emojiCheckboxes = document.querySelectorAll('.emoji-checkbox');
   
-  // すべて選択チェックボックスの動作
+  // 既存のイベントリスナーを削除（重複を避ける）
   if (selectAllCheckbox) {
-    selectAllCheckbox.addEventListener('change', function() {
-      emojiCheckboxes.forEach(checkbox => {
-        checkbox.checked = this.checked;
-      });
-    });
+    selectAllCheckbox.removeEventListener('change', handleSelectAll);
+    selectAllCheckbox.addEventListener('change', handleSelectAll);
   }
   
-  // 個別チェックボックスの動作
   emojiCheckboxes.forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-      const checkedCount = document.querySelectorAll('.emoji-checkbox:checked').length;
-      selectAllCheckbox.checked = checkedCount === emojiCheckboxes.length;
-      selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < emojiCheckboxes.length;
-    });
+    checkbox.removeEventListener('change', handleIndividualCheck);
+    checkbox.addEventListener('change', handleIndividualCheck);
   });
-});
+}
+
+function handleSelectAll() {
+  const emojiCheckboxes = document.querySelectorAll('.emoji-checkbox');
+  emojiCheckboxes.forEach(checkbox => {
+    checkbox.checked = this.checked;
+  });
+}
+
+function handleIndividualCheck() {
+  const selectAllCheckbox = document.getElementById('select_all');
+  const emojiCheckboxes = document.querySelectorAll('.emoji-checkbox');
+  const checkedCount = document.querySelectorAll('.emoji-checkbox:checked').length;
+  
+  if (selectAllCheckbox) {
+    selectAllCheckbox.checked = checkedCount === emojiCheckboxes.length;
+    selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < emojiCheckboxes.length;
+  }
+}
+
+// 初回読み込み時
+document.addEventListener('DOMContentLoaded', initializeCheckboxes);
+
+// ページ表示時（ブラウザの戻るボタンなど）
+window.addEventListener('pageshow', initializeCheckboxes);
+
+// Turbolinks/Turbo対応（もし使用している場合）
+document.addEventListener('turbo:load', initializeCheckboxes);
+document.addEventListener('turbolinks:load', initializeCheckboxes);
 
 function confirmBulkAction() {
   const actionType = document.querySelector('select[name="action_type"]').value;

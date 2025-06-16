@@ -1,0 +1,129 @@
+<% if custom_emojis.any? %>
+  <div class="border border-gray-300 overflow-hidden">
+    <!-- 一括操作バー -->
+    <div class="border-b border-gray-300 px-6 py-3">
+      <%= form_with url: bulk_action_config_custom_emojis_path, method: :post, local: true, id: "bulk_form" do |form| %>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <label class="inline-flex items-center">
+              <input type="checkbox" id="select_all" class="custom-checkbox" style="appearance: none; width: 1rem; height: 1rem; border: 1px solid #d1d5db; background-color: white; position: relative; cursor: pointer;">
+              <span class="ml-2 text-sm text-gray-600" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">すべて選択</span>
+            </label>
+            
+            <div class="flex items-center space-x-2">
+              <%= form.select :action_type, 
+                  options_for_select([
+                    ['一括操作を選択', ''],
+                    ['有効化', 'enable'],
+                    ['無効化', 'disable'],
+                    ['削除', 'delete']
+                  ]),
+                  {},
+                  class: "px-3 py-1 border border-gray-300 text-sm",
+                  style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              
+              <%= form.submit "実行", 
+                  class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
+                  style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;",
+                  onclick: "return confirmBulkAction()" %>
+            </div>
+          </div>
+          
+          <div class="text-sm text-gray-500" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+            <%= custom_emojis.count %>件の絵文字
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- 絵文字リスト -->
+    <div class="divide-y divide-gray-200">
+      <% custom_emojis.each do |emoji| %>
+        <div class="px-6 py-4 flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <input type="checkbox" name="emoji_ids[]" value="<%= emoji.id %>" 
+                   class="emoji-checkbox custom-checkbox"
+                   style="appearance: none; width: 1rem; height: 1rem; border: 1px solid #d1d5db; background-color: white; position: relative; cursor: pointer;"
+                   form="bulk_form">
+            
+            <div class="flex items-center space-x-3">
+              <% if emoji.image.attached? %>
+                <%= image_tag emoji.url, 
+                    alt: ":#{emoji.shortcode}:",
+                    class: "w-8 h-8 object-contain" %>
+              <% else %>
+                <div class="w-8 h-8 bg-gray-200 flex items-center justify-center">
+                  <span class="text-xs text-gray-500">?</span>
+                </div>
+              <% end %>
+              
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="font-mono text-sm">:<%= emoji.shortcode %>:</span>
+                  <% unless emoji.disabled %>
+                    <span class="text-gray-600 text-xs">有効</span>
+                  <% else %>
+                    <span class="text-gray-600 text-xs">無効</span>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex items-center space-x-3">
+            <!-- 編集アイコン -->
+            <%= link_to edit_config_custom_emoji_path(emoji), 
+                class: "text-gray-600 hover:text-gray-900 transition-colors",
+                title: "編集",
+                data: { turbo: false } do %>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+              </svg>
+            <% end %>
+            
+            <!-- 有効化/無効化アイコン -->
+            <% if emoji.disabled %>
+              <%= link_to enable_config_custom_emoji_path(emoji), 
+                  method: :patch,
+                  class: "text-gray-600 hover:text-gray-900 transition-colors",
+                  title: "有効化",
+                  data: { turbo: false } do %>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              <% end %>
+            <% else %>
+              <%= link_to disable_config_custom_emoji_path(emoji), 
+                  method: :patch,
+                  class: "text-gray-600 hover:text-gray-900 transition-colors",
+                  title: "無効化",
+                  data: { turbo: false } do %>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              <% end %>
+            <% end %>
+            
+            <!-- 削除アイコン -->
+            <%= link_to config_custom_emoji_path(emoji), 
+                method: :delete,
+                data: { confirm: "絵文字「:#{emoji.shortcode}:」を削除しますか？この操作は取り消せません。", turbo: false },
+                class: "text-gray-600 hover:text-gray-900 transition-colors",
+                title: "削除" do %>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% else %>
+  <!-- 空状態 -->
+  <div class="text-center py-12">
+    <p class="text-sm text-gray-500" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+      該当なし
+    </p>
+  </div>
+<% end %>

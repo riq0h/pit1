@@ -33,10 +33,10 @@ module AccountSerializer
 
   def image_attributes(account)
     {
-      avatar: account.icon_url || default_avatar_url,
-      avatar_static: account.icon_url || default_avatar_url,
-      header: account.header_url || default_header_url,
-      header_static: account.header_url || default_header_url
+      avatar: account.avatar_url || default_avatar_url,
+      avatar_static: account.avatar_url || default_avatar_url,
+      header: account.header_image_url || default_header_url,
+      header_static: account.header_image_url || default_header_url
     }
   end
 

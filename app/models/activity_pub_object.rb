@@ -316,8 +316,6 @@ class ActivityPubObject < ApplicationRecord
     return unless local?
 
     "#{base_url}/users/#{actor.username}/posts/#{id}"
-  rescue StandardError
-    "#{base_url}/objects/#{SecureRandom.uuid}"
   end
 
   def base_url

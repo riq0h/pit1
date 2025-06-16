@@ -49,9 +49,9 @@ module Api
                 'video/mp4',
                 'video/webm'
               ],
-              image_size_limit: 10_485_760, # 10MB
+              image_size_limit: 52_428_800, # 50MB
               image_matrix_limit: 16_777_216,
-              video_size_limit: 41_943_040, # 40MB
+              video_size_limit: 524_288_000, # 500MB
               video_frame_rate_limit: 60,
               video_matrix_limit: 2_304_000
             },

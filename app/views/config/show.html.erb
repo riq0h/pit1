@@ -148,11 +148,9 @@
       
       <div class="space-y-4">
         <div>
-          <%= link_to config_custom_emojis_path, 
-              class: "inline-flex items-center text-gray-900 hover:text-gray-600 transition-colors",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400; text-decoration: underline; text-underline-offset: 4px;" do %>
-            <span>カスタム絵文字の管理</span>
-          <% end %>
+          <%= link_to "カスタム絵文字の管理", config_custom_emojis_path, 
+              class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
+              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
           <p class="text-sm text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
             インスタンス独自の絵文字を追加・管理できます
           </p>
@@ -298,8 +296,8 @@
     <!-- 保存ボタン -->
     <div class="pt-4 text-right">
       <%= form.submit "設定を保存", 
-          class: "text-gray-900 hover:text-gray-600 transition-colors cursor-pointer bg-transparent border-none",
-          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400; text-decoration: underline; text-underline-offset: 4px;" %>
+          class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
+          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
     </div>
   <% end %>
 

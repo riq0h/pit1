@@ -8,10 +8,10 @@ class MediaAttachment < ApplicationRecord
   AUDIO_FORMATS = %w[mp3 ogg wav flac m4a].freeze
   DOCUMENT_FORMATS = %w[pdf txt doc docx].freeze
 
-  MAX_IMAGE_SIZE = 10.megabytes
-  MAX_VIDEO_SIZE = 100.megabytes
-  MAX_AUDIO_SIZE = 50.megabytes
-  MAX_DOCUMENT_SIZE = 20.megabytes
+  MAX_IMAGE_SIZE = 50.megabytes
+  MAX_VIDEO_SIZE = 500.megabytes
+  MAX_AUDIO_SIZE = 250.megabytes
+  MAX_DOCUMENT_SIZE = 100.megabytes
 
   # 浮動小数点比較用の許容範囲
   FLOAT_TOLERANCE = 0.01

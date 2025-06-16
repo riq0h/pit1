@@ -34,10 +34,10 @@ Rails.application.configure do
   config.activitypub.max_accounts = 2
 
   # メディア制限
-  config.activitypub.max_image_size = 10.megabytes
-  config.activitypub.max_video_size = 100.megabytes
-  config.activitypub.max_audio_size = 50.megabytes
-  config.activitypub.max_document_size = 20.megabytes
+  config.activitypub.max_image_size = 50.megabytes
+  config.activitypub.max_video_size = 500.megabytes
+  config.activitypub.max_audio_size = 250.megabytes
+  config.activitypub.max_document_size = 100.megabytes
 
   # フェデレーション設定
   config.activitypub.federation_enabled = ENV.fetch('FEDERATION_ENABLED', 'true') == 'true'

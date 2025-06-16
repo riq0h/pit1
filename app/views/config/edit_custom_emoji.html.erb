@@ -25,7 +25,7 @@
     
     <div class="flex items-center space-x-4">
       <% if @custom_emoji.image.attached? %>
-        <%= image_tag @custom_emoji.image, 
+        <%= image_tag @custom_emoji.url, 
             alt: ":#{@custom_emoji.shortcode}:",
             class: "w-16 h-16 object-contain border border-gray-300 p-2" %>
       <% else %>
@@ -89,7 +89,7 @@
             <label for="emoji_image_input" class="cursor-pointer">
               <div id="image_preview_container" class="<%= 'hidden' unless @custom_emoji.image.attached? %>">
                 <img id="image_preview" 
-                     src="<%= @custom_emoji.image.attached? ? url_for(@custom_emoji.image) : '' %>"
+                     src="<%= @custom_emoji.image.attached? ? @custom_emoji.url : '' %>"
                      class="mx-auto max-w-16 max-h-16 object-contain mb-2">
                 <p class="text-sm text-gray-600" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
                   クリックして変更

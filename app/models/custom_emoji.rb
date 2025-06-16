@@ -10,6 +10,7 @@ class CustomEmoji < ApplicationRecord
   scope :local, -> { where(domain: nil) }
   scope :remote, -> { where.not(domain: nil) }
   scope :enabled, -> { where(disabled: false) }
+  scope :visible, -> { where(visible_in_picker: true) }
   scope :alphabetical, -> { order(:shortcode) }
   scope :by_domain, ->(domain) { where(domain: domain) }
 
@@ -21,7 +22,6 @@ class CustomEmoji < ApplicationRecord
   validate :image_presence
 
   # コールバック
-  before_validation :generate_id, on: :create
   before_validation :normalize_shortcode
   after_create :update_cache
   after_update :update_cache
@@ -40,7 +40,17 @@ class CustomEmoji < ApplicationRecord
     if remote?
       self[:image_url]
     elsif image.attached?
-      Rails.application.routes.url_helpers.url_for(image)
+      blob_url = Rails.application.routes.url_helpers.url_for(image)
+
+      # 正しいドメインに置換（環境変数を直接読み込み）
+      actual_domain = read_actual_domain
+      if actual_domain && actual_domain != 'localhost:3000'
+        protocol = read_actual_protocol
+        blob_url.gsub('http://localhost:3000', "#{protocol}://#{actual_domain}")
+                .gsub('https://localhost:3000', "#{protocol}://#{actual_domain}")
+      else
+        blob_url
+      end
     end
   end
 
@@ -80,8 +90,26 @@ class CustomEmoji < ApplicationRecord
 
   private
 
-  def generate_id
-    self.id ||= SecureRandom.uuid
+  def read_actual_domain
+    # .envファイルを直接読み込んで正しいドメインを取得
+    env_file = Rails.root.join('.env')
+    return ENV.fetch('ACTIVITYPUB_DOMAIN', nil) unless File.exist?(env_file)
+
+    File.readlines(env_file).each do |line|
+      return ::Regexp.last_match(1).strip if line =~ /^ACTIVITYPUB_DOMAIN=(.+)$/
+    end
+    ENV.fetch('ACTIVITYPUB_DOMAIN', nil)
+  end
+
+  def read_actual_protocol
+    # .envファイルを直接読み込んで正しいプロトコルを取得
+    env_file = Rails.root.join('.env')
+    return ENV['ACTIVITYPUB_PROTOCOL'] || 'https' unless File.exist?(env_file)
+
+    File.readlines(env_file).each do |line|
+      return ::Regexp.last_match(1).strip if line =~ /^ACTIVITYPUB_PROTOCOL=(.+)$/
+    end
+    ENV['ACTIVITYPUB_PROTOCOL'] || 'https'
   end
 
   def normalize_shortcode

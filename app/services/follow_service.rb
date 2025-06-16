@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require 'net/http'
+require 'stringio'
+
 class FollowService
   include ActivityPubHelper
 
@@ -106,7 +109,12 @@ class FollowService
   end
 
   def create_remote_actor_from_data(actor_data)
-    Actor.create!(build_actor_attributes(actor_data))
+    actor = Actor.create!(build_actor_attributes(actor_data))
+
+    # アバターとヘッダー画像を非同期で添付
+    attach_remote_images(actor, actor_data)
+
+    actor
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "Failed to create remote actor: #{e.message}"
     nil
@@ -143,8 +151,6 @@ class FollowService
 
   def actor_metadata(actor_data)
     {
-      avatar_url: actor_data.dig('icon', 'url'),
-      header_url: actor_data.dig('image', 'url'),
       actor_type: actor_data['type'] || 'Person',
       discoverable: actor_data['discoverable'],
       manually_approves_followers: actor_data['manuallyApprovesFollowers'],
@@ -152,12 +158,77 @@ class FollowService
     }
   end
 
+  def attach_remote_images(actor, actor_data)
+    # アバター画像を添付
+    if (avatar_url = actor_data.dig('icon', 'url'))
+      attach_remote_image(actor, :avatar, avatar_url)
+    end
+
+    # ヘッダー画像を添付
+    if (header_url = actor_data.dig('image', 'url'))
+      attach_remote_image(actor, :header, header_url)
+    end
+  rescue StandardError => e
+    Rails.logger.warn "Failed to attach images for actor #{actor.ap_id}: #{e.message}"
+  end
+
+  def attach_remote_image(actor, attachment_name, image_url)
+    return if image_url.blank?
+
+    response = fetch_image_response(image_url)
+    return unless response
+
+    content_type, filename = extract_image_metadata(response, image_url)
+    attach_image_to_actor(actor, attachment_name, response.body, filename, content_type)
+  rescue StandardError => e
+    Rails.logger.warn "Failed to attach #{attachment_name} for actor #{actor.ap_id}: #{e.message}"
+  end
+
+  def fetch_image_response(image_url)
+    response = Net::HTTP.get_response(URI(image_url))
+    response.is_a?(Net::HTTPSuccess) ? response : nil
+  end
+
+  def extract_image_metadata(response, image_url)
+    content_type = response['content-type'] || 'application/octet-stream'
+    filename = File.basename(URI(image_url).path).presence || 'image'
+    filename = add_extension_if_needed(filename, content_type)
+    [content_type, filename]
+  end
+
+  def add_extension_if_needed(filename, content_type)
+    return filename if filename.include?('.')
+
+    extension = determine_extension(content_type)
+    "#{filename}#{extension}"
+  end
+
+  def determine_extension(content_type)
+    case content_type
+    when /jpeg/ then '.jpg'
+    when /png/ then '.png'
+    when /gif/ then '.gif'
+    when /webp/ then '.webp'
+    else '.bin'
+    end
+  end
+
+  def attach_image_to_actor(actor, attachment_name, image_data, filename, content_type)
+    actor.public_send(attachment_name).attach(
+      io: StringIO.new(image_data),
+      filename: filename,
+      content_type: content_type
+    )
+  end
+
   def create_follow_relationship(target_actor, _options = {})
+    follow_id = Letter::Snowflake.generate
     follow_params = {
+      id: follow_id,
       actor: @actor,
       target_actor: target_actor,
-      ap_id: generate_follow_ap_id(target_actor),
-      follow_activity_ap_id: generate_follow_ap_id(target_actor)
+      ap_id: generate_follow_ap_id(target_actor, follow_id),
+      follow_activity_ap_id: generate_follow_ap_id(target_actor, follow_id)
     }
 
     # For local follows, auto-accept unless target requires approval
@@ -172,8 +243,8 @@ class FollowService
     Follow.create!(follow_params)
   end
 
-  def generate_follow_ap_id(target_actor)
-    "#{@actor.ap_id}#follows/#{target_actor.username}@#{target_actor.domain || 'local'}/#{SecureRandom.uuid}"
+  def generate_follow_ap_id(_target_actor, follow_id)
+    "#{@actor.ap_id}#follows/#{follow_id}"
   end
 
   def send_follow_activity(follow)

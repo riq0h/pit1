@@ -218,7 +218,7 @@ class Follow < ApplicationRecord
   end
 
   def generate_follow_ap_id
-    return "#{actor.ap_id}#follows/#{SecureRandom.uuid}" if actor&.local?
+    return "#{actor.ap_id}#follows/#{id}" if actor&.local? && id.present?
 
     # 外部からのフォローの場合はap_idを保持（通常は受信時に設定済み）
     nil

@@ -12,10 +12,10 @@ ja:
     invalid_background_color: "背景色は#から始まる6桁のカラーコードで入力してください（例: #fdfbfb）"
   pages:
     home:
-      title: "ホーム - letter"
-      public_timeline: "公開タイムライン"
-      no_posts_title: "投稿がありません"
-      no_posts_description: "まだ投稿がありません。"
+      title: "letter"
+      public_timeline: "公開基盤"
+      no_posts_title: "該当なし"
+      no_posts_description: "該当なし"
   navigation:
     settings: "設定"
     login: "ログイン"

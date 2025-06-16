@@ -36,7 +36,8 @@ module Admin
     end
 
     def destroy
-      @custom_emoji.destroy
+      @custom_emoji.image.purge if @custom_emoji.image.attached?
+      @custom_emoji.delete
       redirect_to admin_custom_emojis_path, notice: t('custom_emojis.deleted')
     end
 
@@ -77,7 +78,11 @@ module Admin
         CustomEmoji.where(id: emoji_ids).update_all(disabled: true)
         { notice: t('custom_emojis.bulk_disabled') }
       when 'delete'
-        CustomEmoji.where(id: emoji_ids).destroy_all
+        emojis_to_delete = CustomEmoji.where(id: emoji_ids).includes(:image_attachment)
+        emojis_to_delete.find_each do |emoji|
+          emoji.image.purge if emoji.image.attached?
+          emoji.delete
+        end
         { notice: t('custom_emojis.bulk_deleted') }
       else
         { alert: t('custom_emojis.invalid_action') }
