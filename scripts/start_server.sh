@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Letter ActivityPub Instance - Server Startup Script
-# サーバー起動スクリプト
+# サーバ起動スクリプト
 
 set -e
 
@@ -48,7 +48,7 @@ print_info() {
 
 # Main function
 main() {
-    print_header "Letter ActivityPub サーバー起動"
+    print_header "Letter ActivityPub サーバ起動"
     
     print_info "環境変数を読み込んでいます..."
     print_info "ドメイン: $ACTIVITYPUB_DOMAIN"
@@ -66,15 +66,15 @@ main() {
     rm -f tmp/pids/server.pid
     print_success "プロセスクリーンアップが完了しました"
     
-    print_info "Railsサーバーを起動しています..."
+    print_info "Railsサーバを起動しています..."
     ACTIVITYPUB_DOMAIN="$ACTIVITYPUB_DOMAIN" \
     ACTIVITYPUB_PROTOCOL="$ACTIVITYPUB_PROTOCOL" \
     rails server -b 0.0.0.0 -p 3000 -d
     
     if [[ $? -eq 0 ]]; then
-        print_success "Railsサーバーが正常に起動しました"
+        print_success "Railsサーバが正常に起動しました"
     else
-        print_error "Railsサーバーの起動に失敗しました"
+        print_error "Railsサーバの起動に失敗しました"
         exit 1
     fi
     
@@ -91,7 +91,7 @@ main() {
     fi
     
     echo ""
-    print_header "サーバー起動完了"
+    print_header "サーバ起動完了"
     print_info "接続情報:"
     echo "  ローカル: http://localhost:3000"
     echo "  公開URL: $ACTIVITYPUB_PROTOCOL://$ACTIVITYPUB_DOMAIN"

@@ -12,7 +12,7 @@ services:
       
       # Instance Configuration
       INSTANCE_NAME: ${INSTANCE_NAME:-letter}
-      INSTANCE_DESCRIPTION: ${INSTANCE_DESCRIPTION:-General Letter Intercommunication System based on ActivityPub}
+      INSTANCE_DESCRIPTION: ${INSTANCE_DESCRIPTION:-General Letter Publication System based on ActivityPub}
       CONTACT_EMAIL: ${CONTACT_EMAIL:-admin@localhost}
       MAINTAINER_NAME: ${MAINTAINER_NAME:-letter Administrator}
       

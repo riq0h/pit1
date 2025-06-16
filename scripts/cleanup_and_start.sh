@@ -112,14 +112,14 @@ end
 "
 print_success "データベースのメンテナンスが完了しました"
 
-# 5. Rails サーバー起動（デーモンモード）
-print_info "5. Railsサーバーを起動中..."
+# 5. Rails サーバ起動（デーモンモード）
+print_info "5. Railsサーバを起動中..."
 RAILS_ENV=development \
 ACTIVITYPUB_DOMAIN="$ACTIVITYPUB_DOMAIN" \
 ACTIVITYPUB_PROTOCOL="$ACTIVITYPUB_PROTOCOL" \
 rails server -b 0.0.0.0 -p 3000 -d
 
-print_success "Railsサーバーをデーモンモードで起動しました"
+print_success "Railsサーバをデーモンモードで起動しました"
 
 # 6. Solid Queue 起動（1つだけ）
 print_info "6. Solid Queueワーカーを起動中..."
@@ -135,11 +135,11 @@ print_success "Solid Queueワーカーを起動しました (PID: $JOBS_PID)"
 print_info "7. 起動確認を実行中..."
 sleep 5
 
-# サーバー確認
+# サーバ確認
 if curl -s http://localhost:3000 >/dev/null 2>&1; then
-    print_success "Railsサーバーが応答しています"
+    print_success "Railsサーバが応答しています"
 else
-    print_error "Railsサーバーが応答していません"
+    print_error "Railsサーバが応答していません"
 fi
 
 # プロセス確認
@@ -164,8 +164,8 @@ end
 
 echo ""
 print_header "起動完了"
-print_info "サーバー情報:"
-echo "  サーバーURL: ${ACTIVITYPUB_PROTOCOL}://${ACTIVITYPUB_DOMAIN}"
+print_info "サーバ情報:"
+echo "  サーバURL: ${ACTIVITYPUB_PROTOCOL}://${ACTIVITYPUB_DOMAIN}"
 echo "  ローカルURL: http://localhost:3000"
 echo ""
 print_info "監視コマンド:"

@@ -1,8 +1,8 @@
 ---
-instance_name: 一般書簡相互通信システム
-instance_description: General Letter Intercommunication System based on ActivityPub
+instance_name: 一般書簡公衆化システム
+instance_description: General Letter Publication System based on ActivityPub
 instance_contact_email: admin@localhost
 instance_maintainer: letter Administrator
-blog_footer: General Letter Intercommunication System based on ActivityPub
+blog_footer: General Letter Publication System based on ActivityPub
 background_color: "#fdfbfb"
 user_bio: "aaaaa\r\nhttps://riq0h.jp\r\nあいうえお"

@@ -48,10 +48,10 @@ module Letter
     
     # インスタンス設定のデフォルト値
     config.instance_name = "letter"
-    config.instance_description = "General Letter Intercommunication System based on ActivityPub"
+    config.instance_description = "General Letter Publication System based on ActivityPub"
     config.instance_contact_email = ""
     config.instance_maintainer = ""
-    config.blog_footer = "General Letter Intercommunication System based on ActivityPub"
+    config.blog_footer = "General Letter Publication System based on ActivityPub"
     
     # カスタムエラーページを使用
     config.exceptions_app = self.routes

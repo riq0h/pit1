@@ -51,7 +51,7 @@ Rails.application.configure do
   # インスタンス情報
   config.instance_name = ENV.fetch('INSTANCE_NAME', 'letter')
   config.instance_description = ENV.fetch('INSTANCE_DESCRIPTION',
-                                          'General Letter Intercommunication System based on ActivityPub')
+                                          'General Letter Publication System based on ActivityPub')
   config.instance_contact_email = ENV.fetch('CONTACT_EMAIL', 'admin@localhost')
   config.instance_maintainer = ENV.fetch('MAINTAINER_NAME', 'letter Administrator')
 

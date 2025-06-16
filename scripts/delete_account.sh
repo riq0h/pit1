@@ -67,7 +67,7 @@ delete_actor() {
       end
       
       puts 'found'
-      puts \"ID: #{actor.id}, ユーザー名: #{actor.username}, 表示名: #{actor.display_name || '未設定'}\"
+      puts \"ID: #{actor.id}, ユーザ名: #{actor.username}, 表示名: #{actor.display_name || '未設定'}\"
       
       # Delete all dependent records in the correct order
       puts 'OAuthトークンを削除中...'
@@ -134,7 +134,7 @@ main() {
     print_header "アカウント削除"
     
     if [[ -z "$1" ]]; then
-        print_error "使用法: $0 <ユーザー名またはID>"
+        print_error "使用法: $0 <ユーザ名またはID>"
         echo "例: $0 tester"
         echo "例: $0 4"
         exit 1
@@ -156,13 +156,13 @@ main() {
             detail=$(echo "$result" | sed -n '2p')
             print_error "$detail"
             echo ""
-            print_info "既存のローカルユーザー一覧:"
+            print_info "既存のローカルユーザ一覧:"
             local_users=$(run_with_env "
             actors = Actor.where(local: true)
             if actors.any?
-              actors.each { |a| puts \"  - ID: #{a.id}, ユーザー名: #{a.username} (#{a.display_name || '表示名未設定'})\" }
+              actors.each { |a| puts \"  - ID: #{a.id}, ユーザ名: #{a.username} (#{a.display_name || '表示名未設定'})\" }
             else
-              puts '  ローカルユーザーがありません。'
+              puts '  ローカルユーザがありません。'
             end
             ")
             echo "$local_users"

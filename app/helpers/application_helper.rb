@@ -78,7 +78,7 @@ module ApplicationHelper
     return '#' if safe_username.empty? || safe_domain.empty?
 
     # ActivityPubの一般的なURL形式を使用
-    # 多くのActivityPubサーバー（Mastodon、Pleroma、Misskey等）で採用されている形式
+    # 多くのActivityPubサーバ（Mastodon、Pleroma、Misskey等）で採用されている形式
     "https://#{ERB::Util.url_encode(safe_domain)}/users/#{ERB::Util.url_encode(safe_username)}"
   end
 

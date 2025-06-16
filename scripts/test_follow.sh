@@ -52,8 +52,8 @@ echo ""
 print_info "このスクリプトはフォローシステム（FollowService、WebFingerService）の動作確認を行います"
 echo ""
 
-# 現在のユーザー一覧を表示
-print_info "利用可能なローカルユーザー:"
+# 現在のユーザ一覧を表示
+print_info "利用可能なローカルユーザ:"
 run_with_env "
 Actor.where(local: true).each do |a|
   puts '  - ' + a.username + ' (' + (a.display_name || '表示名なし') + ')'
@@ -62,18 +62,18 @@ end
 
 echo ""
 
-# ユーザー名の入力
+# ユーザ名の入力
 while true; do
-    read -p "テストに使用するユーザー名を入力してください: " username
+    read -p "テストに使用するユーザ名を入力してください: " username
     
     if [[ -z "$username" ]]; then
-        print_error "ユーザー名は必須です"
+        print_error "ユーザ名は必須です"
         continue
     fi
     
     # Basic username validation
     if [[ ! "$username" =~ ^[a-zA-Z0-9_]+$ ]]; then
-        print_error "ユーザー名は英数字とアンダースコアのみ使用できます"
+        print_error "ユーザ名は英数字とアンダースコアのみ使用できます"
         continue
     fi
     
@@ -87,16 +87,16 @@ while true; do
     ")
     
     if [[ "$user_check" == "not_found" ]]; then
-        print_error "ユーザー '$username' が見つかりません"
-        print_info "既存のローカルユーザーを確認してください"
+        print_error "ユーザ '$username' が見つかりません"
+        print_info "既存のローカルユーザを確認してください"
         echo ""
-        print_info "既存のローカルユーザー一覧:"
+        print_info "既存のローカルユーザ一覧:"
         local_users=$(run_with_env "
         actors = Actor.where(local: true)
         if actors.any?
           actors.each { |a| puts \"  - #{a.username} (#{a.display_name || 'No display name'})\" }
         else
-          puts '  ローカルユーザーがありません。まず ./scripts/manage_accounts.sh でアカウントを作成してください。'
+          puts '  ローカルユーザがありません。まず ./scripts/manage_accounts.sh でアカウントを作成してください。'
         end
         ")
         echo "$local_users"
@@ -108,7 +108,7 @@ while true; do
 done
 
 echo ""
-print_info "ユーザー '$username' でフォローシステムをテストします"
+print_info "ユーザ '$username' でフォローシステムをテストします"
 
 # フォローシステムのテスト
 cat > tmp_test_follow.rb << EOF
@@ -120,11 +120,11 @@ begin
   # Find the actor
   actor = Actor.find_by(username: username, local: true)
   unless actor
-    puts "error|ユーザー '\#{username}' が見つかりません"
+    puts "error|ユーザ '\#{username}' が見つかりません"
     exit 1
   end
 
-  puts "success|ユーザーを発見: \#{actor.username}"
+  puts "success|ユーザを発見: \#{actor.username}"
   puts "info|現在のフォロー数: \#{actor.following_count}"
   puts "info|現在のフォロワー数: \#{actor.followers_count}"
   

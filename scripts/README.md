@@ -4,12 +4,12 @@
 
 ## 📋 スクリプト一覧
 
-### 🚀 サーバー管理
+### 🚀 サーバ管理
 
 #### `start_server.sh`
-**用途**: 通常のサーバー起動  
+**用途**: 通常のサーバ起動  
 **使用法**: `./start_server.sh`  
-**説明**: .envファイルから環境変数を読み込み、RailsサーバーとSolid Queueワーカーを起動します。
+**説明**: .envファイルから環境変数を読み込み、RailsサーバとSolid Queueワーカーを起動します。
 
 #### `cleanup_and_start.sh`
 **用途**: 強制リセット＆再起動  
@@ -27,14 +27,14 @@
 **用途**: ドメイン変更  
 **使用法**: `./switch_domain.sh <新しいドメイン> [プロトコル]`  
 **例**: `./switch_domain.sh abc123.serveo.net https`  
-**説明**: ActivityPubドメインを変更し、全ユーザーのURLを更新します。
+**説明**: ActivityPubドメインを変更し、全ユーザのURLを更新します。
 
 #### `check_domain.sh`
 **用途**: 現在の設定確認  
 **使用法**: `./check_domain.sh`  
-**説明**: ドメイン設定、サーバー状態、データベース統計、エンドポイントの動作を確認します。
+**説明**: ドメイン設定、サーバ状態、データベース統計、エンドポイントの動作を確認します。
 
-### 👤 ユーザー管理
+### 👤 ユーザ管理
 
 #### `manage_accounts.sh`
 **用途**: アカウント管理  
@@ -44,11 +44,11 @@
 #### `create_oauth_token.sh`
 **用途**: OAuth トークン生成  
 **使用法**: `./create_oauth_token.sh`  
-**説明**: 指定したユーザー用のOAuthアクセストークンを生成します。API使用に必要。
+**説明**: 指定したユーザ用のOAuthアクセストークンを生成します。API使用に必要。
 
 #### `delete_account.sh`
 **用途**: アカウント削除  
-**使用法**: `./delete_account.sh <ユーザー名またはID>`  
+**使用法**: `./delete_account.sh <ユーザ名またはID>`  
 **例**: `./delete_account.sh tester` または `./delete_account.sh 4`  
 **説明**: 指定したアカウントとすべての関連データを完全に削除します。OAuth tokens、投稿、フォロー関係、メディアなど、すべての依存レコードを適切な順序で削除し、データベースの整合性を保ちます。
 
@@ -119,7 +119,7 @@ curl -X PATCH \
 
 ### 日常運用
 ```bash
-# サーバー起動
+# サーバ起動
 ./start_server.sh
 
 # 設定確認
@@ -154,7 +154,7 @@ curl -X PATCH \
 scripts/
 ├── README.md                      # このファイル
 ├── load_env.sh                   # 環境変数読み込みヘルパー
-├── start_server.sh               # 通常のサーバー起動
+├── start_server.sh               # 通常のサーバ起動
 ├── cleanup_and_start.sh          # 強制リセット＆再起動
 ├── switch_domain.sh              # ドメイン変更
 ├── check_domain.sh               # 設定確認・診断
@@ -168,7 +168,7 @@ scripts/
 
 ## 🔍 よくある問題と解決方法
 
-### サーバーが起動しない
+### サーバが起動しない
 ```bash
 ./cleanup_and_start.sh
 ```

@@ -100,7 +100,7 @@ module ActivityPubCreateHandlers
   def handle_direct_message_conversation(object, object_data)
     Rails.logger.info "💬 Processing DM conversation for #{object.id}"
 
-    # 受信者（ローカルユーザー）を特定
+    # 受信者（ローカルユーザ）を特定
     to_addresses = object_data['to'] || []
     local_recipients = find_local_recipients_from_addresses(to_addresses)
 
@@ -124,7 +124,7 @@ module ActivityPubCreateHandlers
     local_actors = []
 
     to_addresses.each do |address|
-      # ローカルユーザーのActivityPub IDかチェック
+      # ローカルユーザのActivityPub IDかチェック
       if address.start_with?(Rails.application.config.activitypub.base_url)
         actor = Actor.find_by(ap_id: address, local: true)
         local_actors << actor if actor

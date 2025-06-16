@@ -15,8 +15,8 @@ module Api
         {
           uri: local_domain,
           title: 'letter',
-          short_description: 'General Letter Intercommunication System based on ActivityPub',
-          description: 'General Letter Intercommunication System based on ActivityPub',
+          short_description: 'General Letter Publication System based on ActivityPub',
+          description: 'General Letter Publication System based on ActivityPub',
           email: Rails.application.config.instance_contact_email || '',
           version: '0.1.0 (compatible; letter 0.1.0)',
           urls: {

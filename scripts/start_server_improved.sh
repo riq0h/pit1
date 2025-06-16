@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 改善されたサーバー起動スクリプト
+# 改善されたサーバ起動スクリプト
 # 環境変数の確認、プロセスクリーンアップ、設定修正を含む
 set -e
 
@@ -70,10 +70,10 @@ else
 end
 "
 
-# 5. 環境変数の正しい設定でサーバー起動
+# 5. 環境変数の正しい設定でサーバ起動
 echo "5. Starting Rails server with correct environment..."
 
-# バックグラウンドでサーバー起動
+# バックグラウンドでサーバ起動
 ACTIVITYPUB_DOMAIN="$ACTIVITYPUB_DOMAIN" \
 ACTIVITYPUB_PROTOCOL="$ACTIVITYPUB_PROTOCOL" \
 rails server -b 0.0.0.0 -p 3000 &
@@ -90,7 +90,7 @@ bin/jobs &
 JOBS_PID=$!
 echo "   Solid Queue worker started (PID: $JOBS_PID)"
 
-# 7. サーバーの起動確認
+# 7. サーバの起動確認
 echo "7. Waiting for server to start..."
 sleep 5
 

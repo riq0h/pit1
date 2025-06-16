@@ -89,5 +89,5 @@ if tester
   end
 
 else
-  puts 'testerユーザーが見つかりません'
+  puts 'testerユーザが見つかりません'
 end

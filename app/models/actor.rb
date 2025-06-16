@@ -326,7 +326,7 @@ class Actor < ApplicationRecord
     errors.add(:local, 'Maximum number of local accounts reached')
   end
 
-  # すべてのローカルユーザーを自動的にadminにする
+  # すべてのローカルユーザを自動的にadminにする
   def set_admin_for_local_users
     self.admin = true if local?
   end

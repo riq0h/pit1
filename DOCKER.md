@@ -18,7 +18,7 @@ cp .env.docker .env.docker.local
 nano .env.docker.local
 ```
 
-### 3. サーバー起動
+### 3. サーバ起動
 ```bash
 # ビルドと起動
 docker-compose up --build
@@ -57,9 +57,9 @@ ports:
 
 ## 🔧 管理コマンド
 
-### ユーザー作成
+### ユーザ作成
 ```bash
-# コンテナ内でインタラクティブにユーザー作成
+# コンテナ内でインタラクティブにユーザ作成
 docker-compose exec web ./scripts/create_user_interactive.sh
 
 # または直接Rails consoleを使用

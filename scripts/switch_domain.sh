@@ -74,9 +74,9 @@ main() {
     echo ""
     print_warning "この操作により以下が実行されます:"
     echo "  1. .envファイルの更新"
-    echo "  2. 現在のサーバーの停止"
+    echo "  2. 現在のサーバの停止"
     echo "  3. データベース内のActor URLの更新"
-    echo "  4. 新しいドメインでのサーバー再起動"
+    echo "  4. 新しいドメインでのサーバ再起動"
     echo ""
     read -p "続行しますか? (y/N): " -n 1 -r
     echo ""
@@ -93,14 +93,14 @@ main() {
     
     print_success ".envファイルを更新しました"
     
-    print_info "ステップ 2/5: 現在のサーバーを停止中..."
+    print_info "ステップ 2/5: 現在のサーバを停止中..."
     
     # Stop current server
     pkill -f "rails server" 2>/dev/null || true
     pkill -f "puma" 2>/dev/null || true
     rm -f tmp/pids/server.pid
     
-    print_success "サーバーを停止しました"
+    print_success "サーバを停止しました"
     
     print_info "ステップ 3/5: データベース内のActor URLを更新中..."
 
@@ -170,12 +170,12 @@ EOF
     
     print_success "データベースのURLを更新しました"
     
-    print_info "ステップ 4/5: サーバーを再起動中..."
+    print_info "ステップ 4/5: サーバを再起動中..."
     
     # Start server with new configuration
     "$SCRIPT_DIR/start_server.sh"
     
-    print_success "新しいドメインでサーバーを再起動しました"
+    print_success "新しいドメインでサーバを再起動しました"
     
     print_info "ステップ 5/5: 設定を確認中..."
     
@@ -186,7 +186,7 @@ EOF
     echo ""
     print_header "ドメイン切り替え完了"
     print_info "確認情報:"
-    echo "  サーバー: http://localhost:3000"
+    echo "  サーバ: http://localhost:3000"
     echo "  ドメイン: $NEW_DOMAIN"
     echo "  プロトコル: $NEW_PROTOCOL"
     
@@ -205,7 +205,7 @@ EOF
       echo "  curl \"http://localhost:3000/.well-known/webfinger?resource=acct:$FIRST_USER@$NEW_DOMAIN\" | jq '.subject'"
     else
       print_success "ドメイン切り替えが正常に完了しました!"
-      print_warning "ローカルユーザーが見つかりません。次のコマンドでユーザーを作成してください: ./scripts/manage_accounts.sh"
+      print_warning "ローカルユーザが見つかりません。次のコマンドでユーザを作成してください: ./scripts/manage_accounts.sh"
     fi
 }
 

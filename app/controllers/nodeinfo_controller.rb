@@ -104,7 +104,7 @@ class NodeinfoController < ApplicationController
     {
       maxAccounts: Rails.application.config.activitypub.max_accounts,
       currentAccounts: Actor.local.count,
-      motto: 'General Letter Intercommunication System based on ActivityPub'
+      motto: 'General Letter Publication System based on ActivityPub'
     }
   end
 end

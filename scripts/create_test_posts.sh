@@ -53,22 +53,22 @@ print_info "このスクリプトは多言語のテスト投稿データを生�
 print_info "英語20件、日本語20件、混在テキスト20件の計60件を作成します"
 echo ""
 
-# ユーザー名の入力
+# ユーザ名の入力
 while true; do
-    read -p "投稿を作成するユーザー名を入力してください: " username
+    read -p "投稿を作成するユーザ名を入力してください: " username
     
     if [[ -z "$username" ]]; then
-        print_error "ユーザー名は必須です"
+        print_error "ユーザ名は必須です"
         continue
     fi
     
-    # 基本的なユーザー名バリデーション
+    # 基本的なユーザ名バリデーション
     if [[ ! "$username" =~ ^[a-zA-Z0-9_]+$ ]]; then
-        print_error "ユーザー名は英数字とアンダースコアのみ使用できます"
+        print_error "ユーザ名は英数字とアンダースコアのみ使用できます"
         continue
     fi
     
-    # ユーザーの存在確認
+    # ユーザの存在確認
     user_check=$(run_with_env "
     if Actor.exists?(username: '$username', local: true)
       puts 'exists'
@@ -78,16 +78,16 @@ while true; do
     ")
     
     if [[ "$user_check" == "not_found" ]]; then
-        print_error "ユーザー '$username' が見つかりません"
-        print_info "既存のローカルユーザーを確認してください"
+        print_error "ユーザ '$username' が見つかりません"
+        print_info "既存のローカルユーザを確認してください"
         echo ""
-        print_info "既存のローカルユーザー一覧:"
+        print_info "既存のローカルユーザ一覧:"
         local_users=$(run_with_env "
         actors = Actor.where(local: true)
         if actors.any?
           actors.each { |a| puts \"  - #{a.username} (#{a.display_name || '表示名未設定'})\" }
         else
-          puts '  ローカルユーザーがありません。まず ./scripts/manage_accounts.sh でアカウントを作成してください。'
+          puts '  ローカルユーザがありません。まず ./scripts/manage_accounts.sh でアカウントを作成してください。'
         end
         ")
         echo "$local_users"
@@ -99,16 +99,16 @@ while true; do
 done
 
 echo ""
-print_info "ユーザー '$username' 用のテスト投稿を作成中..."
+print_info "ユーザ '$username' 用のテスト投稿を作成中..."
 print_info "ドメイン: $ACTIVITYPUB_DOMAIN"
 
 # 投稿作成の実行
 result=$(run_with_env "
 begin
-  # ユーザーを検索
+  # ユーザを検索
   actor = Actor.find_by(username: '$username', local: true)
   unless actor
-    puts 'error|ユーザー \"$username\" が見つかりません'
+    puts 'error|ユーザ \"$username\" が見つかりません'
     exit 1
   end
 
@@ -141,7 +141,7 @@ begin
   # 日本語投稿
   japanese_posts = [
     'こんにちは世界！このActivityPubインスタンスでの初めての日本語投稿です。',
-    'このサーバーの連合機能をテストしています。他のインスタンスとうまく動作するでしょうか？',
+    'このサーバの連合機能をテストしています。他のインスタンスとうまく動作するでしょうか？',
     '今日の夕焼けはとても美しかったです！色が本当に素晴らしかった。#写真 #自然',
     '分散システムについての素晴らしい本を読み終えました。強くお勧めします！',
     'このActivityPub実装に新しいエキサイティングな機能を開発中です。',
@@ -151,13 +151,13 @@ begin
     'オープンソースソフトウェアは世界中での素晴らしいコラボレーションを可能にします。',
     'ハッシュタグ、メンション、その他のActivityPub機能をテストしています。#テスト #activitypub',
     'このインスタンスは絵文字リアクションをサポートしています！',
-    'ここのコミュニティは日々成長しています。すべての新しいユーザーを歓迎します！',
+    'ここのコミュニティは日々成長しています。すべての新しいユーザを歓迎します！',
     '連合のデバッグは困難ですが、動作したときはとてもやりがいがあります。',
     'フェディバースでより多くのインスタンスと接続することを楽しみにしています。',
     'ActivityPubの美しさは、そのシンプルさと拡張性にあります。',
     'より良い、よりオープンなソーシャルウェブを、一つのコミットずつ構築しています。',
     'インスタンス間通信とメッセージ配信をテストしています。',
-    'プライバシーとユーザーコントロールは、インターネット上での基本的権利であるべきです。',
+    'プライバシーとユーザコントロールは、インターネット上での基本的権利であるべきです。',
     'これはテスト用のランダムなコンテンツを含む19番目のテスト投稿です。',
     '最後の日本語テスト投稿です。これらすべてを読んでいただき、ありがとうございます！'
   ]
@@ -174,7 +174,7 @@ begin
     'Documentation ドキュメント is important 重要です。Always いつも keep it updated',
     'Lunch time ランチタイム！ Back to coding after meal 食事後にコーディング再開',
     'Weekend 週末 coding session セッション。Fun 楽しい and productive 生産的',
-    'New feature 新機能 deployed デプロイ完了！Users ユーザー will love it きっと気に入る',
+    'New feature 新機能 deployed デプロイ完了！Users ユーザ will love it きっと気に入る',
     'Debug デバッグ session セッション complete 完了。All tests すべてのテスト passed',
     'Community コミュニティ feedback フィードバック is valuable 貴重です。Keep it coming',
     'Late night 夜更かし coding コーディング session セッション。Almost done もうすぐ完了',

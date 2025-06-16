@@ -67,7 +67,7 @@ list_accounts_detailed() {
     accounts = Actor.where(local: true)
     if accounts.any?
       accounts.each_with_index do |account, index|
-        puts \"#{index + 1}. ユーザー名: #{account.username}\"
+        puts \"#{index + 1}. ユーザ名: #{account.username}\"
         puts \"   表示名: #{account.display_name || '未設定'}\"
         puts \"   作成日: #{account.created_at.strftime('%Y-%m-%d %H:%M')}\"
         puts \"   投稿数: #{account.posts_count || 0}\"
@@ -92,15 +92,15 @@ create_account() {
     
     # Get username
     while true; do
-        read -p "ユーザー名 (英数字とアンダースコアのみ): " username
+        read -p "ユーザ名 (英数字とアンダースコアのみ): " username
         
         if [[ -z "$username" ]]; then
-            print_error "ユーザー名は必須です"
+            print_error "ユーザ名は必須です"
             continue
         fi
         
         if [[ ! "$username" =~ ^[a-zA-Z0-9_]+$ ]]; then
-            print_error "ユーザー名は英数字とアンダースコアのみ使用できます"
+            print_error "ユーザ名は英数字とアンダースコアのみ使用できます"
             continue
         fi
         
@@ -114,7 +114,7 @@ create_account() {
         ")
         
         if [[ "$existing_check" == "exists" ]]; then
-            print_error "ユーザー名 '$username' は既に存在します"
+            print_error "ユーザ名 '$username' は既に存在します"
             continue
         fi
         
@@ -148,7 +148,7 @@ create_account() {
     
     echo ""
     print_info "入力内容を確認してください:"
-    echo "  ユーザー名: $username"
+    echo "  ユーザ名: $username"
     echo "  表示名: ${display_name:-'未設定'}"
     echo "  プロフィール: ${summary:-'未設定'}"
     echo ""
@@ -197,7 +197,7 @@ create_account() {
         print_success "アカウントが正常に作成されました!"
         echo ""
         print_info "アカウント詳細:"
-        echo "  ユーザー名: $username"
+        echo "  ユーザ名: $username"
         echo "  表示名: ${display_name:-'未設定'}"
         echo "  ActivityPub ID: $ACTIVITYPUB_PROTOCOL://$ACTIVITYPUB_DOMAIN/users/$username"
         echo "  WebFinger: @$username@$ACTIVITYPUB_DOMAIN"
@@ -256,7 +256,7 @@ delete_account() {
     
     echo ""
     print_warning "削除対象のアカウント:"
-    echo "  ユーザー名: $username"
+    echo "  ユーザ名: $username"
     echo "  表示名: $display_name"
     echo "  投稿数: $posts_count"
     echo "  フォロー数: $following_count"

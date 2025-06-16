@@ -8,7 +8,7 @@ cd /path/to/letter
 ./scripts/start_server.sh
 ```
 
-### 2. 最初のユーザー作成
+### 2. 最初のユーザ作成
 ```bash
 # アカウント管理スクリプト（2個制限を自動考慮）
 ./scripts/manage_accounts.sh
@@ -62,7 +62,7 @@ cd /path/to/letter
 
 ## 🐛 トラブルシューティング例
 
-### ケース1: サーバーが応答しない
+### ケース1: サーバが応答しない
 ```bash
 # 症状: curl でアクセスできない
 # 解決方法:
@@ -107,7 +107,7 @@ run_with_env "puts Rails.application.config.activitypub.base_url"
 
 ## 🔧 開発者向けワークフロー
 
-### 新機能テスト用ユーザー作成
+### 新機能テスト用ユーザ作成
 ```bash
 ./scripts/manage_accounts.sh
 # 既存のアカウント状況に応じた作成・削除
