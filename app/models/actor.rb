@@ -12,6 +12,10 @@ class Actor < ApplicationRecord
   has_many :reblogs, dependent: :destroy
   has_many :mentions, dependent: :destroy
 
+  # Active Storage統合
+  has_one_attached :avatar
+  has_one_attached :header
+
   # Follow relationships
   has_many :following_relationships, class_name: 'Follow', dependent: :destroy, inverse_of: :actor
   has_many :following, through: :following_relationships, source: :target_actor
@@ -74,6 +78,7 @@ class Actor < ApplicationRecord
   before_validation :set_ap_urls, if: :local?, on: :create
   before_validation :generate_key_pair, if: :local?, on: :create
   before_create :set_admin_for_local_users, if: :local?
+  after_commit :update_icon_url_from_avatar, on: %i[create update]
 
   # ActivityPub URLs
   def followers_url
@@ -222,6 +227,23 @@ class Actor < ApplicationRecord
     local? ? username : "#{username}@#{domain}"
   end
 
+  # Active StorageまたはレガシーURLの取得
+  def avatar_url
+    if avatar.attached?
+      Rails.application.routes.url_helpers.url_for(avatar)
+    else
+      icon_url # レガシーフィールドからフォールバック
+    end
+  end
+
+  def header_image_url
+    if header.attached?
+      Rails.application.routes.url_helpers.url_for(header)
+    else
+      header_url # レガシーフィールドからフォールバック
+    end
+  end
+
   private
 
   # ActivityPub base data
@@ -267,8 +289,8 @@ class Actor < ApplicationRecord
   # ActivityPub images
   def activitypub_images(_request = nil)
     {
-      'icon' => icon_url ? { 'type' => 'Image', 'url' => icon_url } : nil,
-      'image' => header_url ? { 'type' => 'Image', 'url' => header_url } : nil
+      'icon' => avatar_url ? { 'type' => 'Image', 'url' => avatar_url } : nil,
+      'image' => header_image_url ? { 'type' => 'Image', 'url' => header_image_url } : nil
     }
   end
 
@@ -361,5 +383,19 @@ class Actor < ApplicationRecord
   def unfollow!(target_actor_or_uri)
     follow_service = FollowService.new(self)
     follow_service.unfollow!(target_actor_or_uri)
+  end
+
+  private
+
+  # アバターが変更されたときにicon_urlフィールドを更新
+  def update_icon_url_from_avatar
+    return unless saved_change_to_attribute?(:avatar) || avatar.attached?
+
+    new_icon_url = (Rails.application.routes.url_helpers.url_for(avatar) if avatar.attached?)
+
+    # 現在の値と異なる場合のみ更新
+    return unless icon_url != new_icon_url
+
+    update_column(:icon_url, new_icon_url)
   end
 end

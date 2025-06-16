@@ -6,3 +6,9 @@ instance_maintainer: letter Administrator
 blog_footer: General Letter Publication System based on ActivityPub
 background_color: "#fdfbfb"
 user_bio: "aaaaa\r\nhttps://riq0h.jp\r\nあいうえお"
+s3_enabled: '1'
+s3_endpoint: https://ef685eac7325e178f5a723151a78ed82.r2.cloudflarestorage.com
+s3_bucket: ext
+r2_access_key_id: aeb37c452795effc69d5cf5c4d63eb73
+r2_secret_access_key: 6c39e4cf91f2fc0ab10d4c77127e7a2f83dc09e5f1f198339f840552de52ec1f
+s3_alias_host: ''

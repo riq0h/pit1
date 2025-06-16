@@ -18,7 +18,7 @@ class MediaAttachment < ApplicationRecord
 
   # === バリデーション ===
   validates :media_type, presence: true, inclusion: { in: MEDIA_TYPES }
-  validates :remote_url, presence: true
+  validates :remote_url, presence: true, unless: :local_file?
   validates :file_size, presence: true, numericality: { greater_than: 0 }
   validates :content_type, presence: true
   validates :file_name, presence: true
@@ -29,6 +29,9 @@ class MediaAttachment < ApplicationRecord
   # === アソシエーション ===
   belongs_to :actor, inverse_of: :media_attachments
   belongs_to :object, optional: true, inverse_of: :media_attachments, class_name: 'ActivityPubObject'
+
+  # Active Storage統合
+  has_one_attached :file
 
   # === スコープ ===
   scope :images, -> { where(media_type: 'image') }
@@ -99,10 +102,28 @@ class MediaAttachment < ApplicationRecord
   end
 
   def preview_url
-    return remote_url if image?
+    # Active Storageファイルが添付されている場合
+    return Rails.application.routes.url_helpers.url_for(file) if file.attached?
+
+    # リモートファイルの場合
+    return remote_url if image? && remote_url.present?
 
     # デフォルトのプレビューアイコン
     default_preview_icon_url
+  end
+
+  # Active Storageファイルまたはリモートファイルの公開URL
+  def url
+    if file.attached?
+      Rails.application.routes.url_helpers.url_for(file)
+    else
+      remote_url
+    end
+  end
+
+  # ローカルファイルかどうかの判定
+  def local_file?
+    file.attached?
   end
 
   def aspect_ratio
@@ -136,7 +157,7 @@ class MediaAttachment < ApplicationRecord
     {
       type: 'Document',
       mediaType: content_type,
-      url: remote_url,
+      url: url, # Active StorageのURLまたはremote_urlを使用
       name: description.presence || display_name,
       width: width,
       height: height
@@ -153,8 +174,33 @@ class MediaAttachment < ApplicationRecord
   end
 
   def extract_metadata
-    return unless remote_url.present? && !processed?
+    # Active Storageファイルがアタッチされている場合
+    if file.attached?
+      extract_metadata_from_file
+    elsif remote_url.present? && !processed?
+      extract_metadata_from_remote_url
+    end
+  end
 
+  def extract_metadata_from_file
+    return unless file.attached?
+
+    set_basic_file_attributes
+    detect_media_type_from_filename if media_type.blank?
+    mark_as_processed
+  end
+
+  def set_basic_file_attributes
+    self.file_name ||= file.filename.to_s
+    self.content_type ||= file.content_type
+    self.file_size ||= file.byte_size
+  end
+
+  def mark_as_processed
+    self.processed = true
+  end
+
+  def extract_metadata_from_remote_url
     # ファイル拡張子からmedia_typeを推測
     detect_media_type_from_filename if media_type.blank?
 

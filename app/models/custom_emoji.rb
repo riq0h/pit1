@@ -37,13 +37,9 @@ class CustomEmoji < ApplicationRecord
   end
 
   def url
-    return image_url if remote?
-    return unless image.attached?
-
-    # Active Storageファイルの公開URLを生成
-    if Rails.env.development?
-      Rails.application.routes.url_helpers.url_for(image, host: 'localhost:3000')
-    else
+    if remote?
+      self[:image_url]
+    elsif image.attached?
       Rails.application.routes.url_helpers.url_for(image)
     end
   end

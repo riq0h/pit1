@@ -169,16 +169,19 @@ module Api
         params.permit(:display_name, :summary, :locked, :bot, :discoverable, :avatar, :header)
       end
 
-      def handle_avatar_upload
+      # Active Storage版の画像アップロード処理
+      def handle_avatar_upload_active_storage
         return unless valid_upload?(params[:avatar])
 
-        process_image_upload(params[:avatar], 'avatars', :icon_url)
+        current_user.avatar.attach(params[:avatar])
+        Rails.logger.info "Avatar uploaded for #{current_user.username} via Active Storage"
       end
 
-      def handle_header_upload
+      def handle_header_upload_active_storage
         return unless valid_upload?(params[:header])
 
-        process_image_upload(params[:header], 'headers', :header_url)
+        current_user.header.attach(params[:header])
+        Rails.logger.info "Header uploaded for #{current_user.username} via Active Storage"
       end
 
       def file_extension(filename)
@@ -190,8 +193,8 @@ module Api
       end
 
       def process_file_uploads
-        handle_avatar_upload if params[:avatar].present?
-        handle_header_upload if params[:header].present?
+        handle_avatar_upload_active_storage if params[:avatar].present?
+        handle_header_upload_active_storage if params[:header].present?
       end
 
       def update_account_attributes
@@ -211,40 +214,6 @@ module Api
 
       def valid_upload?(file)
         file&.respond_to?(:tempfile)
-      end
-
-      def process_image_upload(uploaded_file, folder, url_attribute)
-        filename = generate_filename(uploaded_file.original_filename, folder)
-        file_path = build_file_path(folder, filename)
-
-        save_uploaded_file(uploaded_file, file_path)
-        update_user_url(url_attribute, folder, filename)
-        log_upload_success(folder, filename)
-      end
-
-      def generate_filename(original_filename, folder_type)
-        timestamp = Time.current.to_i
-        extension = file_extension(original_filename)
-        "#{current_user.username}_#{folder_type.singularize}_#{timestamp}.#{extension}"
-      end
-
-      def build_file_path(folder, filename)
-        Rails.public_path.join('system', 'accounts', folder, filename)
-      end
-
-      def save_uploaded_file(uploaded_file, file_path)
-        FileUtils.mkdir_p(File.dirname(file_path))
-        FileUtils.cp(uploaded_file.tempfile.path, file_path)
-      end
-
-      def update_user_url(url_attribute, folder, filename)
-        base_url = Rails.application.config.activitypub.base_url
-        file_url = "#{base_url}/system/accounts/#{folder}/#{filename}"
-        current_user.update_column(url_attribute, file_url)
-      end
-
-      def log_upload_success(folder, filename)
-        Rails.logger.info "#{folder.capitalize.singularize} uploaded for #{current_user.username}: #{filename}"
       end
 
       def serialized_status(status)

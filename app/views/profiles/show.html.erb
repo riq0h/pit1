@@ -8,8 +8,8 @@
     <div class="flex items-center space-x-4 mb-4">
       <!-- アバター -->
       <div class="h-12 w-12 bg-gray-500 flex items-center justify-center overflow-hidden">
-        <% if @actor.icon_url.present? %>
-          <img src="<%= @actor.icon_url %>" 
+        <% if @actor.avatar_url.present? %>
+          <img src="<%= @actor.avatar_url %>" 
                alt="<%= @actor.display_name.presence || @actor.username %>" 
                class="w-full h-full object-cover"
                loading="lazy">

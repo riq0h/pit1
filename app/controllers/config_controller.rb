@@ -142,11 +142,26 @@ class ConfigController < ApplicationController
   end
 
   def build_activitypub_config
+    build_activitypub_settings.merge(build_r2_settings)
+  end
+
+  def build_activitypub_settings
     {
       activitypub_domain: Rails.application.config.activitypub.domain,
       character_limit: Rails.application.config.activitypub.character_limit,
       max_accounts: Rails.application.config.activitypub.max_accounts,
       federation_enabled: true # 常に有効化
+    }
+  end
+
+  def build_r2_settings
+    {
+      s3_enabled: ENV['S3_ENABLED'] == 'true',
+      s3_endpoint: ENV.fetch('S3_ENDPOINT', nil),
+      s3_bucket: ENV.fetch('S3_BUCKET', nil),
+      r2_access_key_id: ENV.fetch('R2_ACCESS_KEY_ID', nil),
+      r2_secret_access_key: ENV.fetch('R2_SECRET_ACCESS_KEY', nil),
+      s3_alias_host: ENV.fetch('S3_ALIAS_HOST', nil)
     }
   end
 
@@ -201,7 +216,7 @@ class ConfigController < ApplicationController
   def update_user_profile
     return true if params[:actor].blank?
 
-    actor_params = params.expect(actor: [:summary])
+    actor_params = params.expect(actor: %i[summary avatar])
     current_user.update(actor_params)
   rescue StandardError => e
     Rails.logger.error "User profile update failed: #{e.message}"
@@ -209,8 +224,7 @@ class ConfigController < ApplicationController
   end
 
   def config_params
-    permitted_params = params.expect(config: %i[instance_name instance_description instance_contact_email instance_maintainer blog_footer
-                                                background_color])
+    permitted_params = params.expect(config: config_permitted_keys)
 
     # 背景色のバリデーション
     if permitted_params[:background_color].present? && !permitted_params[:background_color].match?(/\A#[0-9a-fA-F]{6}\z/)
@@ -218,7 +232,60 @@ class ConfigController < ApplicationController
       return nil
     end
 
+    # R2設定を環境変数に反映
+    update_env_vars(permitted_params) if permitted_params.present?
+
     permitted_params
+  end
+
+  def config_permitted_keys
+    %i[instance_name instance_description instance_contact_email instance_maintainer blog_footer
+       background_color s3_enabled s3_endpoint s3_bucket r2_access_key_id r2_secret_access_key
+       s3_alias_host]
+  end
+
+  def update_env_vars(params)
+    env_updates = build_env_updates(params)
+    update_env_file(env_updates) if env_updates.present?
+  end
+
+  def build_env_updates(params)
+    env_updates = {}
+    env_updates['S3_ENABLED'] = params[:s3_enabled] == '1' ? 'true' : 'false'
+    add_optional_env_updates(env_updates, params)
+    env_updates
+  end
+
+  def add_optional_env_updates(env_updates, params)
+    optional_keys = {
+      s3_endpoint: 'S3_ENDPOINT',
+      s3_bucket: 'S3_BUCKET',
+      r2_access_key_id: 'R2_ACCESS_KEY_ID',
+      r2_secret_access_key: 'R2_SECRET_ACCESS_KEY',
+      s3_alias_host: 'S3_ALIAS_HOST'
+    }
+
+    optional_keys.each do |param_key, env_key|
+      env_updates[env_key] = params[param_key] if params[param_key].present?
+    end
+  end
+
+  def update_env_file(updates)
+    env_file_path = Rails.root.join('.env')
+    return unless File.exist?(env_file_path)
+
+    env_content = File.read(env_file_path)
+
+    updates.each do |key, value|
+      if env_content.match?(/^#{key}=/)
+        env_content.gsub!(/^#{key}=.*$/, "#{key}=#{value}")
+      else
+        env_content += "\n#{key}=#{value}"
+      end
+    end
+
+    File.write(env_file_path, env_content)
+    Rails.logger.info "Updated .env file with R2 settings: #{updates.keys.join(', ')}"
   end
 
   def custom_emoji_params

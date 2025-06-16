@@ -94,12 +94,10 @@
     </main>
 
     <!-- ブログ風フッター -->
-    <% unless %w[sessions config].include?(controller_name) %>
-      <footer class="max-w-4xl mx-auto px-6 py-8 mt-16">
-        <div class="text-sm text-gray-500 text-center">
-          <p><%= blog_footer %></p>
-        </div>
-      </footer>
-    <% end %>
+    <footer class="max-w-4xl mx-auto px-6 py-8 mt-16">
+      <div class="text-sm text-gray-500 text-center">
+        <p><%= blog_footer %></p>
+      </div>
+    </footer>
   </body>
 </html>

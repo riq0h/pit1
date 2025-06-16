@@ -3,20 +3,14 @@
 <% content_for :head do %>
   <style>
     body { overflow-y: scroll !important; }
-    /* チェックボックスのカスタムスタイル */
-    .custom-checkbox {
-      appearance: none;
-      width: 1rem;
-      height: 1rem;
-      border: 1px solid #d1d5db;
-      background-color: white;
-      position: relative;
-      cursor: pointer;
+    
+    /* Custom checkbox styles */
+    input[type="checkbox"]:checked {
+      border-color: #6b7280 !important;
+      background-color: white !important;
     }
-    .custom-checkbox:checked {
-      border-color: #6b7280;
-    }
-    .custom-checkbox:checked::after {
+    
+    input[type="checkbox"]:checked::after {
       content: '';
       position: absolute;
       left: 3px;
@@ -27,8 +21,9 @@
       border-width: 0 2px 2px 0;
       transform: rotate(45deg);
     }
-    .custom-checkbox:hover {
-      border-color: #9ca3af;
+    
+    input[type="checkbox"]:hover {
+      border-color: #9ca3af !important;
     }
   </style>
 <% end %>
@@ -92,7 +87,7 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-4">
               <label class="inline-flex items-center">
-                <input type="checkbox" id="select_all" class="custom-checkbox">
+                <input type="checkbox" id="select_all" style="appearance: none; width: 1rem; height: 1rem; border: 1px solid #d1d5db; background-color: white; position: relative; cursor: pointer;">
                 <span class="ml-2 text-sm text-gray-600" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">すべて選択</span>
               </label>
               
@@ -128,7 +123,8 @@
           <div class="px-6 py-4 flex items-center justify-between">
             <div class="flex items-center space-x-4">
               <input type="checkbox" name="emoji_ids[]" value="<%= emoji.id %>" 
-                     class="emoji-checkbox custom-checkbox"
+                     class="emoji-checkbox"
+                     style="appearance: none; width: 1rem; height: 1rem; border: 1px solid #d1d5db; background-color: white; position: relative; cursor: pointer;"
                      form="bulk_form">
               
               <div class="flex items-center space-x-3">

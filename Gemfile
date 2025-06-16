@@ -39,6 +39,7 @@ gem 'rack-cors'                  # CORS handling
 gem 'solid_queue' # Rails 8 solid queue for background jobs
 
 # Utilities
+gem 'aws-sdk-s3', require: false # S3-compatible storage (Cloudflare R2)
 gem 'blurhash'                   # Image placeholder generation
 gem 'foreman'
 gem 'marcel'                     # MIME type detection

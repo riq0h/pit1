@@ -31,7 +31,7 @@
   <div class="form-group row">
     <%= f.label :confidential, class: 'col-sm-2 form-check-label font-weight-bold' %>
     <div class="col-sm-10">
-      <%= f.check_box :confidential, class: "checkbox #{ 'is-invalid' if application.errors[:confidential].present? }" %>
+      <%= f.check_box :confidential, class: "custom-checkbox #{ 'is-invalid' if application.errors[:confidential].present? }" %>
       <%= doorkeeper_errors_for application, :confidential %>
       <span class="form-text text-secondary">
         <%= t('doorkeeper.applications.help.confidential') %>

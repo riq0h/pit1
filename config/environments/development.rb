@@ -31,8 +31,8 @@ Rails.application.configure do
   # Use Solid Queue for background jobs in development
   config.active_job.queue_adapter = :solid_queue
 
-  # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # Store uploaded files - use Cloudflare R2 if S3_ENABLED=true, otherwise local storage
+  config.active_storage.service = ENV['S3_ENABLED'] == 'true' ? :cloudflare_r2 : :local
 
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false

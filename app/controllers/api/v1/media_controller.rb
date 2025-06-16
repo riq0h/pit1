@@ -49,10 +49,9 @@ module Api
 
       def create_media_attachment(file)
         file_info = extract_file_info(file)
-        storage_path = save_file_to_storage(file)
         metadata = extract_file_metadata(file, file_info[:media_type])
 
-        build_media_attachment(file_info, storage_path, metadata)
+        build_media_attachment_with_active_storage(file, file_info, metadata)
       end
 
       def extract_file_info(file)
@@ -66,18 +65,17 @@ module Api
         }
       end
 
-      def build_media_attachment(file_info, storage_path, metadata)
-        media_attachment = create_media_attachment_record(file_info, storage_path, metadata)
-        save_and_update_remote_url(media_attachment)
+      def build_media_attachment_with_active_storage(file, file_info, metadata)
+        media_attachment = create_media_attachment_record_with_active_storage(file, file_info, metadata)
+        media_attachment.save!
         media_attachment
       end
 
-      def create_media_attachment_record(file_info, storage_path, metadata)
-        current_user.media_attachments.build(
+      def create_media_attachment_record_with_active_storage(file, file_info, metadata)
+        media_attachment = current_user.media_attachments.build(
           file_name: file_info[:filename],
           content_type: file_info[:content_type],
           file_size: file_info[:file_size],
-          storage_path: storage_path,
           media_type: file_info[:media_type],
           width: metadata[:width],
           height: metadata[:height],
@@ -86,41 +84,10 @@ module Api
           metadata: metadata.to_json,
           processed: true
         )
-      end
 
-      def save_and_update_remote_url(media_attachment)
-        # 一時的にremote_urlを設定してバリデーションを通す
-        media_attachment.remote_url = 'temp'
-        media_attachment.save!
+        media_attachment.file.attach(file)
 
-        # IDが生成された後に正しいremote_urlを設定
-        media_attachment.update!(remote_url: generate_file_url(media_attachment.id))
-      end
-
-      def save_file_to_storage(file)
-        # 一意なファイル名を生成
-        timestamp = Time.current.to_i
-        random_id = SecureRandom.hex(8)
-        extension = File.extname(file.original_filename)
-        unique_filename = "#{timestamp}_#{random_id}#{extension}"
-
-        # 保存パス（実際の実装では設定可能にする）
-        storage_dir = Rails.root.join('storage', 'media')
-        FileUtils.mkdir_p(storage_dir)
-
-        storage_path = storage_dir.join(unique_filename)
-
-        # ファイルを保存
-        File.binwrite(storage_path, file.read)
-
-        unique_filename
-      end
-
-      def generate_file_url(media_id)
-        # 本来はCDNやS3のURLを生成
-        # .envから設定されたActivityPubドメインを使用
-        base_url = Rails.application.config.activitypub.base_url
-        "#{base_url}/media/#{media_id}"
+        media_attachment
       end
 
       def determine_media_type(content_type, _filename)
@@ -172,8 +139,8 @@ module Api
         {
           id: media.id.to_s,
           type: media.media_type,
-          url: media.remote_url,
-          preview_url: media.remote_url,
+          url: media.url,
+          preview_url: media.preview_url,
           remote_url: media.remote_url,
           meta: build_media_metadata(media),
           description: media.description,

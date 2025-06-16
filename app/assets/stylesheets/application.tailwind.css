@@ -41,6 +41,40 @@
   .character-counter.over-limit {
     @apply text-red-500 font-bold;
   }
+
+  /* Custom checkbox styles */
+  .custom-checkbox {
+    appearance: none !important;
+    width: 1rem !important;
+    height: 1rem !important;
+    border: 1px solid #d1d5db !important;
+    background-color: white !important;
+    position: relative !important;
+    cursor: pointer !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .custom-checkbox:checked {
+    border-color: #6b7280 !important;
+    background-color: white !important;
+  }
+
+  .custom-checkbox:checked::after {
+    content: "" !important;
+    position: absolute !important;
+    left: 3px !important;
+    top: 1px !important;
+    width: 6px !important;
+    height: 10px !important;
+    border: solid #6b7280 !important;
+    border-width: 0 2px 2px 0 !important;
+    transform: rotate(45deg) !important;
+  }
+
+  .custom-checkbox:hover {
+    border-color: #9ca3af !important;
+  }
 }
 
 /* Custom utilities for letter */

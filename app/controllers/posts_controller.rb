@@ -22,7 +22,7 @@ class PostsController < ApplicationController
   end
 
   def configure_meta_tags(title, description)
-    image_url = @post.media_attachments.first&.remote_url || @actor.avatar_url
+    image_url = @post.media_attachments.first&.url || @actor.avatar_url
 
     @meta_tags = {
       title: title,

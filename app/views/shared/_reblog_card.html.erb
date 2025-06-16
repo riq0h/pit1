@@ -5,8 +5,8 @@
     <div class="flex items-center justify-between mb-2">
       <!-- 左側：ユーザアバター -->
       <div class="h-10 w-10 bg-gray-500 flex items-center justify-center overflow-hidden">
-        <% if reblog.object.actor.icon_url.present? %>
-          <img src="<%= reblog.object.actor.icon_url %>" 
+        <% if reblog.object.actor.avatar_url.present? %>
+          <img src="<%= reblog.object.actor.avatar_url %>" 
                alt="<%= reblog.object.actor.display_name.presence || reblog.object.actor.username %>" 
                class="w-full h-full object-cover"
                loading="lazy">
@@ -92,12 +92,12 @@
       <% reblog.object.media_attachments.limit(4).each do |media| %>
         <div class="mb-4">
           <% if media.image? %>
-            <img src="<%= media.remote_url %>" alt="<%= media.description %>" 
-                 class="max-w-full h-auto border border-gray-200"
+            <img src="<%= media.url %>" alt="<%= media.description %>" 
+                 class="max-w-full max-h-96 object-contain border border-gray-200"
                  loading="lazy">
           <% elsif media.video? %>
-            <video class="max-w-full h-auto border border-gray-200" controls preload="metadata">
-              <source src="<%= media.remote_url %>" type="<%= media.content_type %>">
+            <video class="max-w-full max-h-96 border border-gray-200" controls preload="metadata">
+              <source src="<%= media.url %>" type="<%= media.content_type %>">
               <%= I18n.t('media.video_not_supported') %>
             </video>
           <% else %>
