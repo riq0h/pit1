@@ -118,15 +118,15 @@ class UserLimit < ApplicationRecord
     end
   end
 
-  def spaceship_status
+  def account_status
     case limit_type
     when 'max_accounts'
       if at_limit?
-        "🚀 This spaceship is full! (#{current_usage}/#{limit_value} seats taken)"
+        "⚠️ Account limit reached! (#{current_usage}/#{limit_value} accounts used)"
       elsif current_usage == 1
-        "🚀 One pilot aboard, one seat remaining (#{current_usage}/#{limit_value})"
+        "👤 One account active, one slot remaining (#{current_usage}/#{limit_value})"
       else
-        "🚀 Empty spaceship ready for crew (#{current_usage}/#{limit_value})"
+        "✅ Ready for new accounts (#{current_usage}/#{limit_value})"
       end
     else
       display_usage

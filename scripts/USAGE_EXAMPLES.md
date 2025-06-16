@@ -87,6 +87,17 @@ run_with_env "puts Rails.application.config.activitypub.base_url"
 ./scripts/cleanup_and_start.sh
 ```
 
+### ケース4: アカウントが破損して削除できない
+```bash
+# 症状: manage_accounts.sh でアカウント削除に失敗
+# 解決方法:
+./scripts/delete_account.sh username_or_id
+
+# 使用例:
+./scripts/delete_account.sh broken_user
+./scripts/delete_account.sh 5
+```
+
 ## 📊 日常運用のベストプラクティス
 
 ### 毎日の健康チェック
@@ -103,6 +114,9 @@ run_with_env "puts Rails.application.config.activitypub.base_url"
 
 ./scripts/create_oauth_token.sh
 # Username: testuser001
+
+# テスト完了後のクリーンアップ
+./scripts/delete_account.sh testuser001
 ```
 
 ### API動作テスト

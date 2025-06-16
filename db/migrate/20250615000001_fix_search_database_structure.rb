@@ -14,7 +14,7 @@ class FixSearchDatabaseStructure < ActiveRecord::Migration[8.0]
 
     # 新しいFTS5仮想テーブル作成（日本語検索対応）
     execute <<-SQL
-      CREATE VIRTUAL TABLE ap_object_search USING fts5(
+      CREATE VIRTUAL TABLE object_search_fts USING fts5(
         object_id UNINDEXED,
         content_plaintext,
         summary,
@@ -24,7 +24,7 @@ class FixSearchDatabaseStructure < ActiveRecord::Migration[8.0]
 
     # 既存データをFTSテーブルに投入
     execute <<-SQL
-      INSERT INTO ap_object_search(object_id, content_plaintext, summary)
+      INSERT INTO object_search_fts(object_id, content_plaintext, summary)
       SELECT id, COALESCE(content_plaintext, ''), COALESCE(summary, '')
       FROM objects
       WHERE object_type = 'Note';
@@ -32,40 +32,40 @@ class FixSearchDatabaseStructure < ActiveRecord::Migration[8.0]
 
     # データ同期用トリガー作成
     execute <<-SQL
-      CREATE TRIGGER ap_object_search_insert
+      CREATE TRIGGER object_search_fts_insert
       AFTER INSERT ON objects
       WHEN new.object_type = 'Note'
       BEGIN
-        INSERT INTO ap_object_search(object_id, content_plaintext, summary)
+        INSERT INTO object_search_fts(object_id, content_plaintext, summary)
         VALUES (new.id, COALESCE(new.content_plaintext, ''), COALESCE(new.summary, ''));
       END;
     SQL
 
     execute <<-SQL
-      CREATE TRIGGER ap_object_search_delete
+      CREATE TRIGGER object_search_fts_delete
       AFTER DELETE ON objects
       WHEN old.object_type = 'Note'
       BEGIN
-        DELETE FROM ap_object_search WHERE object_id = old.id;
+        DELETE FROM object_search_fts WHERE object_id = old.id;
       END;
     SQL
 
     execute <<-SQL
-      CREATE TRIGGER ap_object_search_update
+      CREATE TRIGGER object_search_fts_update
       AFTER UPDATE ON objects
       WHEN new.object_type = 'Note'
       BEGIN
-        DELETE FROM ap_object_search WHERE object_id = old.id;
-        INSERT INTO ap_object_search(object_id, content_plaintext, summary)
+        DELETE FROM object_search_fts WHERE object_id = old.id;
+        INSERT INTO object_search_fts(object_id, content_plaintext, summary)
         VALUES (new.id, COALESCE(new.content_plaintext, ''), COALESCE(new.summary, ''));
       END;
     SQL
   end
 
   def down
-    execute 'DROP TRIGGER IF EXISTS ap_object_search_update;'
-    execute 'DROP TRIGGER IF EXISTS ap_object_search_delete;'
-    execute 'DROP TRIGGER IF EXISTS ap_object_search_insert;'
-    execute 'DROP TABLE IF EXISTS ap_object_search;'
+    execute 'DROP TRIGGER IF EXISTS object_search_fts_update;'
+    execute 'DROP TRIGGER IF EXISTS object_search_fts_delete;'
+    execute 'DROP TRIGGER IF EXISTS object_search_fts_insert;'
+    execute 'DROP TABLE IF EXISTS object_search_fts;'
   end
 end

@@ -77,7 +77,7 @@ list_accounts_detailed() {
       end
     else
       puts \"ローカルアカウントはありません\"
-    fi
+    end
     "
 }
 
@@ -110,7 +110,7 @@ create_account() {
           puts 'exists'
         else
           puts 'available'
-        fi
+        end
         ")
         
         if [[ "$existing_check" == "exists" ]]; then
@@ -208,8 +208,14 @@ create_account() {
         echo "  3. テスト投稿を作成: ./scripts/create_test_posts.sh"
         
         return 0
-    else
+    elif [[ "$result_status" == "error" ]]; then
         print_error "アカウント作成に失敗しました: $result_detail"
+        return 1
+    elif [[ "$result_status" == "exception" ]]; then
+        print_error "アカウント作成で例外が発生しました: $result_detail"
+        return 1
+    else
+        print_error "予期しないエラーが発生しました: $creation_result"
         return 1
     fi
 }
@@ -269,12 +275,60 @@ delete_account() {
     echo ""
     print_info "アカウントを削除中..."
     
-    # Delete account
+    # Delete account using improved deletion logic
     deletion_result=$(run_with_env "
     begin
       actor = Actor.find($account_id)
-      actor.destroy!
+      
+      # Delete all dependent records in the correct order
+      puts 'Deleting OAuth tokens...'
+      Doorkeeper::AccessToken.where(resource_owner_id: actor.id).delete_all
+      Doorkeeper::AccessGrant.where(resource_owner_id: actor.id).delete_all
+      
+      puts 'Deleting conversation participations...'
+      actor.conversation_participants.delete_all
+      
+      puts 'Deleting domain blocks...'
+      actor.domain_blocks.delete_all
+      
+      puts 'Deleting blocks and mutes...'
+      actor.blocks.delete_all
+      actor.mutes.delete_all
+      actor.blocked_by.delete_all
+      actor.muted_by.delete_all
+      
+      puts 'Deleting mentions...'
+      actor.mentions.delete_all
+      
+      puts 'Deleting object tags...'
+      ObjectTag.joins(:object).where(objects: { actor_id: actor.id }).delete_all
+      
+      puts 'Deleting favourites and reblogs...'
+      actor.favourites.delete_all
+      actor.reblogs.delete_all
+      Favourite.joins(:object).where(objects: { actor_id: actor.id }).delete_all
+      Reblog.joins(:object).where(objects: { actor_id: actor.id }).delete_all
+      
+      puts 'Deleting media attachments...'
+      actor.media_attachments.delete_all
+      
+      puts 'Deleting follows...'
+      actor.following_relationships.delete_all
+      actor.follower_relationships.delete_all
+      actor.follows.delete_all
+      actor.reverse_follows.delete_all
+      
+      puts 'Deleting objects...'
+      actor.objects.delete_all
+      
+      puts 'Deleting activities...'
+      actor.activities.delete_all
+      
+      puts 'Deleting actor record...'
+      actor.delete
+      
       puts 'success'
+      
     rescue => e
       puts 'error'
       puts e.message
@@ -285,6 +339,9 @@ delete_account() {
     
     if [[ "$result_status" == "success" ]]; then
         print_success "アカウント '$username' が正常に削除されました"
+        echo ""
+        print_info "削除ステップが完了しました:"
+        echo "$deletion_result" | grep -E "^Deleting" | sed 's/^/  - /'
         return 0
     else
         result_detail=$(echo "$deletion_result" | tail -1)

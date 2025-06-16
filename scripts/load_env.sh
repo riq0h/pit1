@@ -32,7 +32,7 @@ load_env_vars() {
 
 # Rails runnerのラッパー関数
 run_with_env() {
-    load_env_vars || return 1
+    load_env_vars >/dev/null || return 1
     
     ACTIVITYPUB_DOMAIN="$ACTIVITYPUB_DOMAIN" \
     ACTIVITYPUB_PROTOCOL="$ACTIVITYPUB_PROTOCOL" \

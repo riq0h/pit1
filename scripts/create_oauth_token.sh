@@ -61,18 +61,36 @@ while true; do
         continue
     fi
     
+    # Basic username validation
+    if [[ ! "$username" =~ ^[a-zA-Z0-9_]+$ ]]; then
+        print_error "ユーザー名は英数字とアンダースコアのみ使用できます"
+        continue
+    fi
+    
     # Check if user exists
     user_check=$(run_with_env "
     if Actor.exists?(username: '$username', local: true)
       puts 'exists'
     else
       puts 'not_found'
-    fi
+    end
     ")
     
     if [[ "$user_check" == "not_found" ]]; then
         print_error "ユーザー '$username' が見つかりません"
-        print_info "既存のユーザーを確認してください"
+        print_info "既存のローカルユーザーを確認してください"
+        echo ""
+        print_info "既存のローカルユーザー一覧:"
+        local_users=$(run_with_env "
+        actors = Actor.where(local: true)
+        if actors.any?
+          actors.each { |a| puts \"  - #{a.username} (#{a.display_name || 'No display name'})\" }
+        else
+          puts '  ローカルユーザーがありません。まず ./scripts/manage_accounts.sh でアカウントを作成してください。'
+        end
+        ")
+        echo "$local_users"
+        echo ""
         continue
     fi
     

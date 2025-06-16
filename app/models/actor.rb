@@ -56,10 +56,10 @@ class Actor < ApplicationRecord
 
   # バリデーション
   validates :username, presence: true, format: { with: /\A[a-zA-Z0-9_]+\z/ }
-  validates :ap_id, presence: true, uniqueness: true
-  validates :inbox_url, presence: true
-  validates :outbox_url, presence: true
-  validates :public_key, presence: true
+  validates :ap_id, presence: true, uniqueness: true, if: -> { !local? || !new_record? }
+  validates :inbox_url, presence: true, if: -> { !local? || !new_record? }
+  validates :outbox_url, presence: true, if: -> { !local? || !new_record? }
+  validates :public_key, presence: true, if: -> { !local? || !new_record? }
   validates :password, length: { minimum: 6 }, if: -> { local? && password.present? }
 
   # ローカルアクター制限（SQLiteトリガーで制御）
@@ -71,27 +71,27 @@ class Actor < ApplicationRecord
   scope :discoverable, -> { where(discoverable: true) }
 
   # コールバック
-  before_create :generate_key_pair, if: :local?
-  before_create :set_ap_urls, if: :local?
+  before_validation :set_ap_urls, if: :local?, on: :create
+  before_validation :generate_key_pair, if: :local?, on: :create
   before_create :set_admin_for_local_users, if: :local?
 
   # ActivityPub URLs
   def followers_url
     return super if super.present?
 
-    "#{ap_id}/followers" if local?
+    "#{ap_id}/followers" if local? && ap_id.present?
   end
 
   def following_url
     return super if super.present?
 
-    "#{ap_id}/following" if local?
+    "#{ap_id}/following" if local? && ap_id.present?
   end
 
   def featured_url
     return super if super.present?
 
-    "#{ap_id}/collections/featured" if local?
+    "#{ap_id}/collections/featured" if local? && ap_id.present?
   end
 
   # WebFinger identifier
@@ -311,11 +311,8 @@ class Actor < ApplicationRecord
   def set_ap_urls
     return unless local?
 
-    base_url = Rails.application.config.activitypub.base_url
-
-    self.ap_id ||= "#{base_url}/users/#{username}"
-    self.inbox_url ||= "#{base_url}/users/#{username}/inbox"
-    self.outbox_url ||= "#{base_url}/users/#{username}/outbox"
+    set_primary_ap_urls
+    set_collection_ap_urls
   end
 
   # ローカルアクター数制限（SQLiteトリガーと連携）
@@ -326,13 +323,33 @@ class Actor < ApplicationRecord
 
     return unless local_count >= 2
 
-    errors.add(:local, 'This spaceship is a two-seater')
+    errors.add(:local, 'Maximum number of local accounts reached')
   end
 
   # すべてのローカルユーザーを自動的にadminにする
   def set_admin_for_local_users
     self.admin = true if local?
   end
+
+  def set_primary_ap_urls
+    base_url = Rails.application.config.activitypub.base_url
+    user_base = "#{base_url}/users/#{username}"
+
+    self.ap_id ||= user_base
+    self.inbox_url ||= "#{user_base}/inbox"
+    self.outbox_url ||= "#{user_base}/outbox"
+  end
+
+  def set_collection_ap_urls
+    base_url = Rails.application.config.activitypub.base_url
+    user_base = "#{base_url}/users/#{username}"
+
+    self[:followers_url] ||= "#{user_base}/followers"
+    self[:following_url] ||= "#{user_base}/following"
+    self.featured_url ||= "#{user_base}/collections/featured"
+  end
+
+  public
 
   # Add method to follow another actor using FollowService
   def follow!(target_actor_or_uri)

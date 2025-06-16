@@ -51,7 +51,7 @@ class NodeinfoController < ApplicationController
   def build_metadata
     base_metadata.merge(
       features: supported_features,
-      spaceship: spaceship_metadata
+      instance: instance_metadata
     )
   end
 
@@ -100,10 +100,10 @@ class NodeinfoController < ApplicationController
     ]
   end
 
-  def spaceship_metadata
+  def instance_metadata
     {
-      maxSeats: Rails.application.config.activitypub.max_accounts,
-      occupiedSeats: Actor.local.count,
+      maxAccounts: Rails.application.config.activitypub.max_accounts,
+      currentAccounts: Actor.local.count,
       motto: 'General Letter Intercommunication System based on ActivityPub'
     }
   end

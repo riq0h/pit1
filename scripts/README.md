@@ -46,6 +46,12 @@
 **使用法**: `./create_oauth_token.sh`  
 **説明**: 指定したユーザー用のOAuthアクセストークンを生成します。API使用に必要。
 
+#### `delete_account.sh`
+**用途**: アカウント削除  
+**使用法**: `./delete_account.sh <ユーザー名またはID>`  
+**例**: `./delete_account.sh tester` または `./delete_account.sh 4`  
+**説明**: 指定したアカウントとすべての関連データを完全に削除します。OAuth tokens、投稿、フォロー関係、メディアなど、すべての依存レコードを適切な順序で削除し、データベースの整合性を保ちます。
+
 ### 📝 テストデータ生成
 
 #### `create_test_posts.sh`
@@ -130,6 +136,9 @@ curl -X PATCH \
 
 # 詳細診断付き起動
 ./start_server_improved.sh
+
+# アカウント削除（問題のあるアカウントを削除）
+./delete_account.sh problem_user
 ```
 
 ## ⚙️ 前提条件
@@ -151,6 +160,7 @@ scripts/
 ├── check_domain.sh               # 設定確認・診断
 ├── manage_accounts.sh            # アカウント管理（2個制限対応）
 ├── create_oauth_token.sh         # OAuthトークン生成
+├── delete_account.sh             # アカウント削除
 ├── create_test_posts.sh          # テスト投稿生成
 ├── fix_follow_counts.sh          # フォローカウント修正
 └── test_follow.sh                # フォローシステムテスト

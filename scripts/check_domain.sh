@@ -5,17 +5,24 @@
 
 set -e
 
-# Get the directory of this script and the project root
+# デバッグモードの確認
+DEBUG_MODE=false
+if [ "$1" = "--debug" ] || [ "$1" = "-d" ]; then
+    DEBUG_MODE=true
+    echo "🔍 デバッグモードが有効です"
+fi
+
+# スクリプトのディレクトリとプロジェクトルートを取得
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Change to project root to ensure relative paths work
+# 相対パスが正しく動作するようプロジェクトルートに移動
 cd "$PROJECT_ROOT"
 
-# Load environment variables
+# 環境変数を読み込み
 source scripts/load_env.sh
 
-# Colors for output
+# 出力用の色設定
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -23,7 +30,7 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Function to print colored output
+# カラー出力用関数
 print_header() {
     echo -e "${BLUE}========================================${NC}"
     echo -e "${BLUE}$1${NC}"
@@ -46,9 +53,15 @@ print_info() {
     echo -e "${CYAN}ℹ️${NC} $1"
 }
 
+print_debug() {
+    if [ "$DEBUG_MODE" = true ]; then
+        echo -e "${YELLOW}🔍${NC} [DEBUG] $1"
+    fi
+}
+
 print_header "Letter ActivityPub ドメイン設定確認"
 
-# Check .env file
+# .envファイルをチェック
 if [ -f .env ]; then
     DOMAIN=$(grep "^ACTIVITYPUB_DOMAIN=" .env | cut -d'=' -f2)
     PROTOCOL=$(grep "^ACTIVITYPUB_PROTOCOL=" .env | cut -d'=' -f2)
@@ -61,11 +74,107 @@ else
     print_warning ".envファイルが見つかりません"
 fi
 
-# Check if server is running
-if pgrep -f "rails server\|puma" > /dev/null; then
-    print_success "サーバー状態: 動作中"
+# サーバーが動作しているかチェック
+echo ""
+print_info "サーバー状態チェック中..."
+
+# 環境変数の確認
+print_info "環境変数チェック:"
+echo "  ACTIVITYPUB_PROTOCOL: ${ACTIVITYPUB_PROTOCOL:-'未設定'}"
+echo "  ACTIVITYPUB_DOMAIN: ${ACTIVITYPUB_DOMAIN:-'未設定'}"
+
+# より幅広いパターンでRailsプロセスをチェック
+RAILS_PATTERNS=(
+    "rails server"
+    "rails s"
+    "bin/rails server"
+    "bin/rails s"
+    "puma"
+    "bundle exec rails server"
+    "bundle exec rails s"
+    "bundle exec puma"
+)
+
+SERVER_RUNNING=false
+DETECTED_PROCESS=""
+
+for pattern in "${RAILS_PATTERNS[@]}"; do
+    print_debug "プロセスパターン検索: '$pattern'"
+    if pgrep -f "$pattern" > /dev/null 2>&1; then
+        SERVER_RUNNING=true
+        DETECTED_PROCESS="$pattern"
+        print_debug "マッチしたパターン: '$pattern'"
+        break
+    fi
+done
+
+print_debug "プロセス検索結果: SERVER_RUNNING=$SERVER_RUNNING"
+
+if [ "$SERVER_RUNNING" = true ]; then
+    print_info "検出されたプロセス: $DETECTED_PROCESS"
     
-    # Get list of local users
+    # プロセス詳細を表示
+    PROCESS_INFO=$(ps aux | grep -E "(rails|puma)" | grep -v grep | head -3)
+    if [ -n "$PROCESS_INFO" ]; then
+        echo "  アクティブなプロセス:"
+        echo "$PROCESS_INFO" | while IFS= read -r line; do
+            echo "    $line"
+        done
+    fi
+    
+    # 複数のURLパターンでHTTP接続テスト
+    HTTP_SUCCESS=false
+    
+    # パターン1: 設定されたドメインとプロトコル
+    if [ -n "$ACTIVITYPUB_PROTOCOL" ] && [ -n "$ACTIVITYPUB_DOMAIN" ]; then
+        print_info "テスト1: $ACTIVITYPUB_PROTOCOL://$ACTIVITYPUB_DOMAIN"
+        print_debug "curl実行: curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 '$ACTIVITYPUB_PROTOCOL://$ACTIVITYPUB_DOMAIN'"
+        server_response=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "$ACTIVITYPUB_PROTOCOL://$ACTIVITYPUB_DOMAIN" 2>/dev/null || echo "000")
+        echo "  レスポンスコード: $server_response"
+        if [ "$server_response" = "200" ] || [ "$server_response" = "302" ] || [ "$server_response" = "301" ]; then
+            HTTP_SUCCESS=true
+            print_debug "HTTP接続成功: テスト1"
+        fi
+    fi
+    
+    # パターン2: localhost:3000での直接テスト
+    if [ "$HTTP_SUCCESS" = false ]; then
+        print_info "テスト2: http://localhost:3000"
+        print_debug "curl実行: curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 'http://localhost:3000'"
+        local_response=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "http://localhost:3000" 2>/dev/null || echo "000")
+        echo "  レスポンスコード: $local_response"
+        if [ "$local_response" = "200" ] || [ "$local_response" = "302" ] || [ "$local_response" = "301" ]; then
+            HTTP_SUCCESS=true
+            print_info "ローカル接続が利用可能です"
+            print_debug "HTTP接続成功: テスト2"
+        fi
+    fi
+    
+    # パターン3: 127.0.0.1:3000での直接テスト
+    if [ "$HTTP_SUCCESS" = false ]; then
+        print_info "テスト3: http://127.0.0.1:3000"
+        print_debug "curl実行: curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 'http://127.0.0.1:3000'"
+        ip_response=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "http://127.0.0.1:3000" 2>/dev/null || echo "000")
+        echo "  レスポンスコード: $ip_response"
+        if [ "$ip_response" = "200" ] || [ "$ip_response" = "302" ] || [ "$ip_response" = "301" ]; then
+            HTTP_SUCCESS=true
+            print_info "IP直接接続が利用可能です"
+            print_debug "HTTP接続成功: テスト3"
+        fi
+    fi
+    
+    # 結果の表示
+    if [ "$HTTP_SUCCESS" = true ]; then
+        print_success "サーバー状態: 動作中 (プロセス検出済み・HTTP応答確認済み)"
+    else
+        print_warning "サーバー状態: プロセス動作中だがHTTP応答なし"
+        echo "  プロセスは検出されましたが、HTTP接続に失敗しました"
+        echo "  - 設定されたドメイン: ${ACTIVITYPUB_DOMAIN:-'未設定'}"
+        echo "  - ローカル接続も失敗しました"
+        echo "  - サーバーが完全に起動していない可能性があります"
+    fi
+    
+    # ローカルユーザーのリストを取得
     echo ""
     print_info "ローカルユーザー:"
     LOCAL_USERS=$(rails runner "Actor.where(local: true).pluck(:username).each { |u| puts u }" 2>/dev/null)
@@ -76,22 +185,22 @@ if pgrep -f "rails server\|puma" > /dev/null; then
             fi
         done
         
-        # Test endpoints with first user
+        # 最初のユーザーでエンドポイントをテスト
         FIRST_USER=$(echo "$LOCAL_USERS" | head -1)
         if [ -n "$FIRST_USER" ]; then
             echo ""
             print_info "エンドポイントテスト ($FIRST_USER を使用):"
             
-            # Test Actor endpoint
-            ACTOR_RESPONSE=$(curl -s -H "Accept: application/activity+json" http://localhost:3000/users/$FIRST_USER | jq -r '.id' 2>/dev/null)
+            # Actorエンドポイントをテスト
+            ACTOR_RESPONSE=$(curl -s -H "Accept: application/activity+json" "$ACTIVITYPUB_PROTOCOL://$ACTIVITYPUB_DOMAIN/users/$FIRST_USER" | jq -r '.id' 2>/dev/null)
             if [ "$ACTOR_RESPONSE" != "null" ] && [ -n "$ACTOR_RESPONSE" ]; then
                 echo "  Actor ID: $ACTOR_RESPONSE"
             else
                 echo "  Actor ID: エンドポイントアクセスエラー"
             fi
             
-            # Test WebFinger
-            WEBFINGER_RESPONSE=$(curl -s "http://localhost:3000/.well-known/webfinger?resource=acct:$FIRST_USER@$DOMAIN" | jq -r '.subject' 2>/dev/null)
+            # WebFingerをテスト
+            WEBFINGER_RESPONSE=$(curl -s "$ACTIVITYPUB_PROTOCOL://$ACTIVITYPUB_DOMAIN/.well-known/webfinger?resource=acct:$FIRST_USER@$ACTIVITYPUB_DOMAIN" | jq -r '.subject' 2>/dev/null)
             if [ "$WEBFINGER_RESPONSE" != "null" ] && [ -n "$WEBFINGER_RESPONSE" ]; then
                 echo "  WebFinger: $WEBFINGER_RESPONSE"
             else
@@ -103,7 +212,7 @@ if pgrep -f "rails server\|puma" > /dev/null; then
         echo "  次のコマンドでユーザーを作成してください: ./scripts/manage_accounts.sh"
     fi
     
-    # Check database stats
+    # データベース統計をチェック
     echo ""
     print_info "データベース統計:"
     rails runner "
@@ -120,15 +229,64 @@ else
     echo "  次のコマンドでサーバーを起動してください: ./scripts/start_server.sh"
 fi
 
-# Show process information
+# プロセス情報を表示
 echo ""
-print_info "プロセス情報:"
-RAILS_PROCS=$(ps aux | grep -c "[r]ails server" || echo "0")
-QUEUE_PROCS=$(ps aux | grep -c "[s]olid.*queue" || echo "0")
-echo "  Railsサーバープロセス数: $RAILS_PROCS"
-echo "  Solid Queueプロセス数: $QUEUE_PROCS"
+print_info "詳細プロセス情報:"
 
-# Show recent domain history
+# Rails/Pumaプロセスの詳細検索
+RAILS_FOUND=false
+for pattern in "${RAILS_PATTERNS[@]}"; do
+    PROCS=$(pgrep -f "$pattern" 2>/dev/null || echo "")
+    if [ -n "$PROCS" ]; then
+        RAILS_FOUND=true
+        PROC_COUNT=$(echo "$PROCS" | wc -l)
+        echo "  パターン '$pattern': $PROC_COUNT プロセス"
+        echo "$PROCS" | while read -r pid; do
+            if [ -n "$pid" ]; then
+                PROC_INFO=$(ps -p "$pid" -o pid,ppid,user,cmd --no-headers 2>/dev/null || echo "PID $pid: 情報取得不可")
+                echo "    PID $pid: $PROC_INFO"
+            fi
+        done
+    fi
+done
+
+if [ "$RAILS_FOUND" = false ]; then
+    echo "  Rails/Pumaプロセスが見つかりません"
+    
+    # 類似プロセスを検索
+    echo "  類似プロセス検索:"
+    SIMILAR_PROCS=$(ps aux | grep -E "(ruby|rails|puma|bundle)" | grep -v grep | head -5)
+    if [ -n "$SIMILAR_PROCS" ]; then
+        echo "$SIMILAR_PROCS" | while IFS= read -r line; do
+            echo "    $line"
+        done
+    else
+        echo "    関連プロセスが見つかりません"
+    fi
+fi
+
+# Solid Queueプロセス
+QUEUE_PROCS=$(pgrep -f "solid.*queue" 2>/dev/null | wc -l || echo "0")
+echo "  Solid Queueプロセス数: $QUEUE_PROCS"
+if [ "$QUEUE_PROCS" -gt 0 ]; then
+    QUEUE_PIDS=$(pgrep -f "solid.*queue" | tr '\n' ' ')
+    echo "  Queue PID: $QUEUE_PIDS"
+fi
+
+# ポート使用状況
+echo ""
+print_info "ポート使用状況:"
+PORT_3000=$(netstat -tlnp 2>/dev/null | grep ":3000 " || echo "")
+if [ -n "$PORT_3000" ]; then
+    echo "  ポート3000:"
+    echo "$PORT_3000" | while IFS= read -r line; do
+        echo "    $line"
+    done
+else
+    echo "  ポート3000: 使用されていません"
+fi
+
+# 最近のドメイン履歴を表示
 echo ""
 print_info "最近のドメイン履歴:"
 if [ -f .env ]; then
@@ -137,15 +295,33 @@ else
     echo "  履歴は利用できません"
 fi
 
-# Show available management scripts
+# 利用可能な管理スクリプトを表示
 echo ""
 print_info "利用可能な管理スクリプト:"
+echo ""
+echo "🚀 サーバー管理:"
 echo "  ./scripts/start_server.sh - サーバーの起動"
-echo "  ./scripts/switch_domain.sh <ドメイン> - 新しいドメインに切り替え"
-echo "  ./scripts/manage_accounts.sh - アカウント管理"
-echo "  ./scripts/create_oauth_token.sh - OAuthトークンの生成"
-echo "  ./scripts/create_test_posts.sh - テスト投稿の作成"
 echo "  ./scripts/cleanup_and_start.sh - 強制クリーンアップと再起動"
+echo ""
+echo "🔧 設定管理:"
+echo "  ./scripts/switch_domain.sh <ドメイン> - 新しいドメインに切り替え"
+echo "  ./scripts/check_domain.sh - 現在の設定確認・診断"
+echo ""
+echo "👤 ユーザー管理:"
+echo "  ./scripts/manage_accounts.sh - アカウント管理（2個制限対応）"
+echo "  ./scripts/create_oauth_token.sh - OAuthトークンの生成"
+echo "  ./scripts/delete_account.sh <ユーザー名またはID> - アカウント削除"
+echo ""
+echo "📝 テストデータ生成:"
+echo "  ./scripts/create_test_posts.sh - テスト投稿の作成（60件の多言語投稿）"
+echo ""
+echo "🔧 メンテナンス:"
+echo "  ./scripts/fix_follow_counts.sh - フォローカウント修正"
+echo "  ./scripts/test_follow.sh - フォローシステムテスト"
 
+echo ""
+print_info "使用方法:"
+echo "  通常実行: ./scripts/check_domain.sh"
+echo "  デバッグモード: ./scripts/check_domain.sh --debug"
 echo ""
 print_header "確認完了"
