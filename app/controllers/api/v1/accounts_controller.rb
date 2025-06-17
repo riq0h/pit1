@@ -146,13 +146,14 @@ module Api
       end
 
       def create_new_follow
-        follow = current_user.follows.build(target_actor: @account)
+        follow_service = FollowService.new(current_user)
+        follow = follow_service.follow!(@account)
 
-        if follow.save
+        if follow
           Rails.logger.info "Follow request created for #{@account.ap_id}"
           render json: serialized_relationship(@account)
         else
-          render_follow_creation_error(follow)
+          render json: { error: 'Follow failed', details: ['Could not create follow relationship'] }, status: :unprocessable_entity
         end
       end
 
@@ -256,12 +257,15 @@ module Api
       end
 
       def follow_relationship_data(account)
+        following_relationship = Follow.find_by(actor: current_user, target_actor: account)
+        followed_by_relationship = Follow.find_by(actor: account, target_actor: current_user)
+
         {
-          following: current_user.followed_actors.include?(account),
-          followed_by: account.followers.include?(current_user),
+          following: following_relationship&.accepted? || false,
+          followed_by: followed_by_relationship&.accepted? || false,
           showing_reblogs: true,
           notifying: false,
-          requested: false
+          requested: following_relationship&.pending? || false
         }
       end
 

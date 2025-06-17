@@ -87,7 +87,7 @@ while true; do
         if actors.any?
           actors.each { |a| puts \"  - #{a.username} (#{a.display_name || '表示名未設定'})\" }
         else
-          puts '  ローカルユーザがありません。まず ./scripts/manage_accounts.sh でアカウントを作成してください。'
+          puts '  ローカルユーザがありません。まず ./bin/manage_accounts.sh でアカウントを作成してください。'
         end
         ")
         echo "$local_users"

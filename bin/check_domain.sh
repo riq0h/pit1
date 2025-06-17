@@ -209,7 +209,7 @@ if [ "$SERVER_RUNNING" = true ]; then
         fi
     else
         echo "  ローカルユーザが見つかりません"
-        echo "  次のコマンドでユーザを作成してください: ./scripts/manage_accounts.sh"
+        echo "  次のコマンドでユーザを作成してください: ./bin/manage_accounts.sh"
     fi
     
     # データベース統計をチェック
@@ -226,7 +226,7 @@ if [ "$SERVER_RUNNING" = true ]; then
     
 else
     print_warning "サーバ状態: 停止中"
-    echo "  次のコマンドでサーバを起動してください: ./scripts/start_server.sh"
+    echo "  次のコマンドで戻ってください: ./bin/start_server.sh"
 fi
 
 # プロセス情報を表示
@@ -300,28 +300,28 @@ echo ""
 print_info "利用可能な管理スクリプト:"
 echo ""
 echo "🚀 サーバ管理:"
-echo "  ./scripts/start_server.sh - サーバの起動"
-echo "  ./scripts/cleanup_and_start.sh - 強制クリーンアップと再起動"
+echo "  ./bin/start_server.sh - サーバの起動"
+echo "  ./bin/cleanup_and_start.sh - 強制クリーンアップと再起動"
 echo ""
 echo "🔧 設定管理:"
-echo "  ./scripts/switch_domain.sh <ドメイン> - 新しいドメインに切り替え"
-echo "  ./scripts/check_domain.sh - 現在の設定確認・診断"
+echo "  ./bin/switch_domain.sh <ドメイン> - 新しいドメインに切り替え"
+echo "  ./bin/check_domain.sh - 現在の設定確認・診断"
 echo ""
 echo "👤 ユーザ管理:"
-echo "  ./scripts/manage_accounts.sh - アカウント管理（2個制限対応）"
-echo "  ./scripts/create_oauth_token.sh - OAuthトークンの生成"
-echo "  ./scripts/delete_account.sh <ユーザ名またはID> - アカウント削除"
+echo "  ./bin/manage_accounts.sh - アカウント管理（2個制限対応）"
+echo "  ./bin/create_oauth_token.sh - OAuthトークンの生成"
+echo "  ./bin/delete_account.sh <ユーザ名またはID> - アカウント削除"
 echo ""
 echo "📝 テストデータ生成:"
-echo "  ./scripts/create_test_posts.sh - テスト投稿の作成（60件の多言語投稿）"
+echo "  ./bin/create_test_posts.sh - テスト投稿の作成（60件の多言語投稿）"
 echo ""
 echo "🔧 メンテナンス:"
-echo "  ./scripts/fix_follow_counts.sh - フォローカウント修正"
-echo "  ./scripts/test_follow.sh - フォローシステムテスト"
+echo "  ./bin/fix_follow_counts.sh - フォローカウント修正"
+echo "  ./bin/test_follow.sh - フォローシステムテスト"
 
 echo ""
 print_info "使用方法:"
-echo "  通常実行: ./scripts/check_domain.sh"
-echo "  デバッグモード: ./scripts/check_domain.sh --debug"
+echo "  通常実行: ./bin/check_domain.sh"
+echo "  デバッグモード: ./bin/check_domain.sh --debug"
 echo ""
 print_header "確認完了"

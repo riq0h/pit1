@@ -41,6 +41,12 @@ docker-compose up -d --build
 | `ACTIVITYPUB_PROTOCOL` | プロトコル (http/https) | http | ❌ |
 | `INSTANCE_NAME` | インスタンス名 | letter | ❌ |
 | `RAILS_ENV` | Rails環境 | development | ❌ |
+| `S3_ENABLED` | R2オブジェクトストレージ使用 | false | ❌ |
+| `S3_BUCKET` | R2バケット名 | - | S3_ENABLED=trueの場合必須 |
+| `S3_REGION` | R2リージョン | auto | ❌ |
+| `S3_ACCESS_KEY_ID` | R2アクセスキーID | - | S3_ENABLED=trueの場合必須 |
+| `S3_SECRET_ACCESS_KEY` | R2シークレットキー | - | S3_ENABLED=trueの場合必須 |
+| `S3_ENDPOINT` | R2エンドポイント | - | S3_ENABLED=trueの場合必須 |
 
 ### ポートマッピング
 docker-compose.ymlでポートを変更できます：
@@ -51,16 +57,16 @@ ports:
 
 ### データ永続化
 以下のディレクトリが自動的にマウントされます：
-- `./db` - SQLiteデータベース
+- `./storage` - SQLiteデータベース
 - `./log` - ログファイル
-- `./public/system` - アップロードされたメディアファイル
+- `./storage` - Active Storageファイル（R2使用時は不要）
 
 ## 🔧 管理コマンド
 
 ### ユーザ作成
 ```bash
 # コンテナ内でインタラクティブにユーザ作成
-docker-compose exec web ./scripts/create_user_interactive.sh
+docker-compose exec web ./bin/create_user_interactive.sh
 
 # または直接Rails consoleを使用
 docker-compose exec web rails console
@@ -68,13 +74,13 @@ docker-compose exec web rails console
 
 ### OAuthトークン生成
 ```bash
-docker-compose exec web ./scripts/create_oauth_token.sh
+docker-compose exec web ./bin/create_oauth_token.sh
 ```
 
 ### ドメイン変更
 ```bash
 # 新しいドメインに切り替え
-docker-compose exec web ./scripts/switch_domain.sh your-new-domain.com https
+docker-compose exec web ./bin/switch_domain.sh your-new-domain.com https
 
 # コンテナ再起動
 docker-compose restart web
@@ -101,6 +107,14 @@ ACTIVITYPUB_DOMAIN=your-domain.com
 ACTIVITYPUB_PROTOCOL=https
 RAILS_ENV=production
 SECRET_KEY_BASE=your_secret_key_here
+
+# R2オブジェクトストレージ使用時（推奨）
+S3_ENABLED=true
+S3_BUCKET=your-bucket-name
+S3_REGION=auto
+S3_ACCESS_KEY_ID=your_access_key
+S3_SECRET_ACCESS_KEY=your_secret_key
+S3_ENDPOINT=https://your-account-id.r2.cloudflarestorage.com
 ```
 
 ### 2. リバースプロキシ設定
@@ -221,10 +235,12 @@ docker-compose restart web
 ### バックアップ
 ```bash
 # データベースバックアップ
-docker-compose exec web sqlite3 db/production.sqlite3 ".backup /app/backup.db"
+docker-compose exec web sqlite3 storage/production.sqlite3 ".backup /app/backup.db"
 
-# メディアファイルバックアップ
-tar -czf media_backup.tar.gz public/system/
+# ローカルストレージファイルバックアップ（R2未使用時）
+tar -czf storage_backup.tar.gz storage/
+
+# R2使用時はCloudflareの管理画面から設定
 ```
 
 ## 📞 サポート

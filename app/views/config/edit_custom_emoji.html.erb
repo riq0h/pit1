@@ -184,10 +184,12 @@
 
     <!-- 送信ボタン -->
     <div class="flex justify-between">
-      <%= link_to "キャンセル", config_custom_emojis_path %>
-      <%= form.submit "変更を保存", 
-          class: "text-gray-900 hover:text-gray-600 transition-colors cursor-pointer bg-transparent border-none",
-          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400; text-decoration: underline; text-underline-offset: 4px;" %>
+      <%= link_to "キャンセル", config_custom_emojis_path,
+          class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
+          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+      <%= form.submit "保存", 
+          class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
+          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
     </div>
   <% end %>
 </div>

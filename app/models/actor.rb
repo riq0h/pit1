@@ -33,9 +33,6 @@ class Actor < ApplicationRecord
   has_many :muted_by, class_name: 'Mute', foreign_key: :target_actor_id, dependent: :destroy, inverse_of: :target_actor
   has_many :muting_actors, through: :muted_by, source: :actor
 
-  # Domain blocking
-  has_many :domain_blocks, dependent: :destroy
-
   # Conversations
   has_many :conversation_participants, dependent: :destroy
   has_many :conversations, through: :conversation_participants
@@ -210,15 +207,13 @@ class Actor < ApplicationRecord
   def domain_blocking?(domain)
     return false unless domain
 
-    domain_blocks.exists?(domain: domain)
+    DomainBlock.exists?(domain: domain)
   end
 
   def domain_blocked_by?(actor_domain)
     return false unless actor_domain && domain.present?
 
-    # Check if any actor from actor_domain has blocked this actor's domain
-    DomainBlock.joins(:actor)
-               .exists?(actors: { domain: actor_domain }, domain_blocks: { domain: domain })
+    DomainBlock.exists?(domain: domain)
   end
 
   # Mastodon互換のacctメソッド

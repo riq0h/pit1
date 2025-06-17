@@ -10,20 +10,20 @@ class Tag < ApplicationRecord
   before_validation :normalize_name
 
   scope :trending, -> { where(trending: true) }
-  scope :popular, -> { order(usages_count: :desc) }
-  scope :recent, -> { order(last_used_at: :desc) }
+  scope :popular, -> { order(usage_count: :desc) }
+  scope :recent, -> { order(updated_at: :desc) }
 
   def to_param
     name
   end
 
   def increment_usage!
-    increment!(:usages_count)
-    touch(:last_used_at)
+    increment!(:usage_count)
+    touch
   end
 
   def decrement_usage!
-    decrement!(:usages_count)
+    decrement!(:usage_count)
   end
 
   private

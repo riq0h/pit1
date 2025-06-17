@@ -203,9 +203,9 @@ create_account() {
         echo "  WebFinger: @$username@$ACTIVITYPUB_DOMAIN"
         echo ""
         print_info "次のステップ:"
-        echo "  1. OAuthトークンを生成: ./scripts/create_oauth_token.sh"
+        echo "  1. OAuthトークンを生成: ./bin/create_oauth_token.sh"
         echo "  2. アバターを設定: Mastodon API /api/v1/accounts/update_credentials"
-        echo "  3. テスト投稿を作成: ./scripts/create_test_posts.sh"
+        echo "  3. テスト投稿を作成: ./bin/create_test_posts.sh"
         
         return 0
     elif [[ "$result_status" == "error" ]]; then

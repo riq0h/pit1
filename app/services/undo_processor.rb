@@ -30,10 +30,20 @@ class UndoProcessor
 
     target_obj = ActivityPubObject.find_by(ap_id: target_activity.target_ap_id)
     return unless target_obj
-    return unless target_obj.favourites_count.positive?
 
-    # バリデーションを含む安全な更新
-    target_obj.update!(favourites_count: target_obj.favourites_count - 1)
+    ActiveRecord::Base.transaction do
+      # Favouriteレコードを削除
+      favourite = Favourite.find_by(
+        actor: target_activity.actor,
+        object: target_obj
+      )
+      favourite&.destroy
+
+      # Like Activityを削除
+      target_activity.destroy
+
+      Rails.logger.info "❤️ Like undone: Activity #{target_activity.id} deleted, Favourite #{favourite&.id} deleted"
+    end
   end
 
   def undo_announce
@@ -41,9 +51,19 @@ class UndoProcessor
 
     target_obj = ActivityPubObject.find_by(ap_id: target_activity.target_ap_id)
     return unless target_obj
-    return unless target_obj.reblogs_count.positive?
 
-    # バリデーションを含む安全な更新
-    target_obj.update!(reblogs_count: target_obj.reblogs_count - 1)
+    ActiveRecord::Base.transaction do
+      # Reblogレコードを削除
+      reblog = Reblog.find_by(
+        actor: target_activity.actor,
+        object: target_obj
+      )
+      reblog&.destroy
+
+      # Announce Activityを削除
+      target_activity.destroy
+
+      Rails.logger.info "📢 Announce undone: Activity #{target_activity.id} deleted, Reblog #{reblog&.id} deleted"
+    end
   end
 end

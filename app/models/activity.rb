@@ -14,16 +14,15 @@ class Activity < ApplicationRecord
 
   # === アソシエーション ===
   belongs_to :actor, inverse_of: :activities
-  belongs_to :object, optional: true, inverse_of: :activities, class_name: 'ActivityPubObject'
+  belongs_to :object, optional: true, inverse_of: :activities, class_name: 'ActivityPubObject', foreign_key: :object_ap_id, primary_key: :ap_id
 
   # === スコープ ===
   scope :local, -> { where(local: true) }
   scope :remote, -> { where(local: false) }
   scope :processed, -> { where(processed: true) }
   scope :unprocessed, -> { where(processed: false) }
-  scope :delivered, -> { where(delivered: true) }
-  scope :undelivered, -> { where(delivered: false) }
-  scope :failed_delivery, -> { where(delivered: false).where.not(last_delivery_error: nil) }
+  scope :delivered, -> { where(delivered_at: !nil) }
+  scope :undelivered, -> { where(delivered_at: nil) }
   scope :recent, -> { order(published_at: :desc) }
   scope :by_type, ->(type) { where(activity_type: type) }
 
@@ -35,6 +34,7 @@ class Activity < ApplicationRecord
 
   # === コールバック ===
   before_validation :set_defaults, on: :create
+  before_validation :generate_snowflake_id, on: :create
   after_create :process_activity!, if: :should_auto_process?
 
   # === ActivityPub関連メソッド ===
@@ -122,8 +122,14 @@ class Activity < ApplicationRecord
     self.processed = false if processed.nil?
   end
 
+  def generate_snowflake_id
+    return if id.present?
+
+    self.id = Letter::Snowflake.generate.to_s
+  end
+
   def should_auto_process?
-    local? && %w[Create Follow Accept].include?(activity_type)
+    local? && %w[Create Accept].include?(activity_type)
   end
 
   def find_target_by_ap_id

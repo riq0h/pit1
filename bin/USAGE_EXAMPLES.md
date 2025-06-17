@@ -5,13 +5,13 @@
 ### 1. インスタンス初期化
 ```bash
 cd /path/to/letter
-./scripts/start_server.sh
+./bin/start_server.sh
 ```
 
 ### 2. 最初のユーザ作成
 ```bash
 # アカウント管理スクリプト（2個制限を自動考慮）
-./scripts/manage_accounts.sh
+./bin/manage_accounts.sh
 # 入力例:
 # Username: admin
 # Password: mypassword123
@@ -20,7 +20,7 @@ cd /path/to/letter
 
 ### 3. API アクセス用トークン生成
 ```bash
-./scripts/create_oauth_token.sh
+./bin/create_oauth_token.sh
 # 入力例:
 # Username: admin
 # 
@@ -30,7 +30,7 @@ cd /path/to/letter
 
 ### 4. テストデータ生成（オプション）
 ```bash
-./scripts/create_test_posts.sh
+./bin/create_test_posts.sh
 # 入力例:
 # Username: admin
 # 
@@ -39,7 +39,7 @@ cd /path/to/letter
 
 ### 5. フォローシステムのテスト
 ```bash
-./scripts/test_follow.sh
+./bin/test_follow.sh
 # 入力例:
 # Username: admin
 # 
@@ -51,13 +51,13 @@ cd /path/to/letter
 ### トンネルURLの期限切れ時
 ```bash
 # 1. 現在の状態確認
-./scripts/check_domain.sh
+./bin/check_domain.sh
 
 # 2. 新しいドメインに変更
-./scripts/switch_domain.sh abc123.serveo.net https
+./bin/switch_domain.sh abc123.serveo.net https
 
 # 3. 動作確認
-./scripts/check_domain.sh
+./bin/check_domain.sh
 ```
 
 ## 🐛 トラブルシューティング例
@@ -66,57 +66,57 @@ cd /path/to/letter
 ```bash
 # 症状: curl でアクセスできない
 # 解決方法:
-./scripts/cleanup_and_start.sh
+./bin/cleanup_and_start.sh
 ```
 
 ### ケース2: 環境変数が反映されない
 ```bash
 # 症状: ドメインがlocalhost:3000のまま
 # 解決方法:
-source scripts/load_env.sh
+source bin/load_env.sh
 run_with_env "puts Rails.application.config.activitypub.base_url"
 
 # または
-./scripts/cleanup_and_start.sh
+./bin/cleanup_and_start.sh
 ```
 
 ### ケース3: Solid Queueプロセスが大量にある
 ```bash
 # 症状: ps aux でsolid_queueが何十個も表示
 # 解決方法:
-./scripts/cleanup_and_start.sh
+./bin/cleanup_and_start.sh
 ```
 
 ### ケース4: アカウントが破損して削除できない
 ```bash
 # 症状: manage_accounts.sh でアカウント削除に失敗
 # 解決方法:
-./scripts/delete_account.sh username_or_id
+./bin/delete_account.sh username_or_id
 
 # 使用例:
-./scripts/delete_account.sh broken_user
-./scripts/delete_account.sh 5
+./bin/delete_account.sh broken_user
+./bin/delete_account.sh 5
 ```
 
 ## 📊 日常運用のベストプラクティス
 
 ### 毎日の健康チェック
 ```bash
-./scripts/check_domain.sh
+./bin/check_domain.sh
 ```
 
 ## 🔧 開発者向けワークフロー
 
 ### 新機能テスト用ユーザ作成
 ```bash
-./scripts/manage_accounts.sh
+./bin/manage_accounts.sh
 # 既存のアカウント状況に応じた作成・削除
 
-./scripts/create_oauth_token.sh
+./bin/create_oauth_token.sh
 # Username: testuser001
 
 # テスト完了後のクリーンアップ
-./scripts/delete_account.sh testuser001
+./bin/delete_account.sh testuser001
 ```
 
 ### API動作テスト
@@ -157,7 +157,7 @@ watch -n 5 'ps aux | grep -E "rails|solid" | grep -v grep'
 
 ### データベース統計
 ```bash
-source scripts/load_env.sh && run_with_env "
+source bin/load_env.sh && run_with_env "
 puts 'Users: ' + Actor.where(local: true).count.to_s
 puts 'Posts: ' + ActivityPubObject.count.to_s
 puts 'Follows: ' + Follow.count.to_s

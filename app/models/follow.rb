@@ -206,22 +206,27 @@ class Follow < ApplicationRecord
   end
 
   def generate_accept_activity_id
-    "#{target_actor.ap_id}#accepts/follows/#{id}"
+    snowflake_id = Letter::Snowflake.generate
+    "#{Rails.application.config.activitypub.base_url}/#{snowflake_id}"
   end
 
   def generate_reject_activity_id
-    "#{target_actor.ap_id}#rejects/follows/#{id}"
+    snowflake_id = Letter::Snowflake.generate
+    "#{Rails.application.config.activitypub.base_url}/#{snowflake_id}"
   end
 
   def generate_undo_activity_id
-    "#{actor.ap_id}#undos/follows/#{id}"
+    snowflake_id = Letter::Snowflake.generate
+    "#{Rails.application.config.activitypub.base_url}/#{snowflake_id}"
   end
 
   def generate_follow_ap_id
-    return "#{actor.ap_id}#follows/#{id}" if actor&.local? && id.present?
-
-    # 外部からのフォローの場合はap_idを保持（通常は受信時に設定済み）
-    nil
+    if actor&.local?
+      snowflake_id = Letter::Snowflake.generate
+      "#{Rails.application.config.activitypub.base_url}/#{snowflake_id}"
+    else
+      nil
+    end
   end
 
   def should_send_follow_activity?
@@ -230,7 +235,19 @@ class Follow < ApplicationRecord
   end
 
   def send_follow_activity
-    Rails.logger.info "📤 Queuing Follow activity for follow #{id}"
+    Rails.logger.info "📤 Creating and queuing Follow activity for follow #{id}"
+
+    # Create Activity record
+    activity = Activity.create!(
+      ap_id: follow_activity_ap_id,
+      activity_type: 'Follow',
+      actor: actor,
+      target_ap_id: target_actor.ap_id,
+      published_at: Time.current,
+      local: true,
+      processed: false
+    )
+
     SendFollowJob.perform_later(self)
   end
 end

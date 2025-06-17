@@ -205,7 +205,7 @@ EOF
       echo "  curl \"http://localhost:3000/.well-known/webfinger?resource=acct:$FIRST_USER@$NEW_DOMAIN\" | jq '.subject'"
     else
       print_success "ドメイン切り替えが正常に完了しました!"
-      print_warning "ローカルユーザが見つかりません。次のコマンドでユーザを作成してください: ./scripts/manage_accounts.sh"
+      print_warning "ローカルユーザが見つかりません。次のコマンドでユーザを作成してください: ./bin/manage_accounts.sh"
     fi
 }
 

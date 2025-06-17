@@ -20,7 +20,7 @@ class ActivityPubObject < ApplicationRecord
   has_many :activities, dependent: :destroy, inverse_of: :object
   has_many :favourites, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
   has_many :reblogs, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
-  has_many :media_attachments, dependent: :destroy, inverse_of: :object
+  has_many :media_attachments, dependent: :destroy, inverse_of: :object, foreign_key: :object_id, primary_key: :id
   has_many :object_tags, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
   has_many :tags, through: :object_tags
   has_many :mentions, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
@@ -28,11 +28,6 @@ class ActivityPubObject < ApplicationRecord
 
   # Conversations (for direct messages)
   belongs_to :conversation, optional: true
-
-  # 返信関係（AP ID使用）
-  # belongs_to :in_reply_to, class_name: 'ActivityPubObject', optional: true
-  # has_many :replies, class_name: 'ActivityPubObject', foreign_key: 'in_reply_to_id',
-  #                    dependent: :destroy, inverse_of: :in_reply_to
 
   # === スコープ ===
   scope :local, -> { where(local: true) }
@@ -256,6 +251,16 @@ class ActivityPubObject < ApplicationRecord
     end
   end
 
+  def build_direct_audience_list(type)
+    case type
+    when :to
+      # DMの場合はメンションされたアクターのAP IDを返す
+      mentioned_actors.map(&:ap_id)
+    when :cc
+      []
+    end
+  end
+
   def build_attachment_list
     media_attachments.map do |attachment|
       {
@@ -268,6 +273,28 @@ class ActivityPubObject < ApplicationRecord
         'blurhash' => attachment.blurhash
       }.compact
     end
+  end
+
+  def build_tag_list
+    # ハッシュタグを追加
+    tag_list = tags.map do |tag|
+      {
+        'type' => 'Hashtag',
+        'name' => "##{tag.name}",
+        'href' => "#{Rails.application.config.activitypub.base_url}/tags/#{tag.name}"
+      }
+    end
+
+    # メンションされたアクターをMentionタグとして追加
+    mentions.includes(:actor).find_each do |mention|
+      tag_list << {
+        'type' => 'Mention',
+        'name' => "@#{mention.actor.username}@#{mention.actor.domain}",
+        'href' => mention.actor.ap_id
+      }
+    end
+
+    tag_list
   end
 
   # === バリデーション・コールバックヘルパー ===
@@ -359,10 +386,9 @@ class ActivityPubObject < ApplicationRecord
       ap_id: "#{ap_id}#create",
       activity_type: 'Create',
       actor: actor,
-      object: self,
+      object_ap_id: ap_id,
       published_at: published_at,
-      local: true,
-      processed: true
+      local: true
     )
   end
 
@@ -373,8 +399,7 @@ class ActivityPubObject < ApplicationRecord
       actor: actor,
       target_ap_id: ap_id,
       published_at: Time.current,
-      local: true,
-      processed: true
+      local: true
     )
   end
 

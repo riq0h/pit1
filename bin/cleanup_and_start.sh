@@ -145,6 +145,18 @@ QUEUE_PROCS=$(ps aux | grep -c "[s]olid.*queue" || true)
 print_info "Railsプロセス数: $RAILS_PROCS"
 print_info "Solid Queueプロセス数: $QUEUE_PROCS"
 
+# Solid Queueの動作確認
+if [ "$QUEUE_PROCS" -gt 0 ]; then
+    print_success "Solid Queueワーカーが動作中です"
+    timeout 5 rails runner "
+    pending_jobs = SolidQueue::Job.where(finished_at: nil).count
+    puts '   待機中ジョブ数: ' + pending_jobs.to_s
+    " 2>/dev/null || print_warning "ジョブ状況確認がタイムアウトしました"
+else
+    print_error "Solid Queueワーカーが起動していません。手動で再起動してください:"
+    print_info "  bin/jobs &"
+fi
+
 # 8. 最終設定確認
 print_info "8. 最終設定確認..."
 timeout 10 rails runner "

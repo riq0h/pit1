@@ -157,7 +157,7 @@ module Api
           follower_inboxes = current_user.followers.where(local: false).pluck(:inbox_url)
           SendActivityJob.perform_later(create_activity.id, follower_inboxes.uniq) if follower_inboxes.any?
         when 'direct'
-          # Get mentioned actor inboxes for direct messages
+          # DMの場合はメンションされたアクター（外部）のinboxに配信
           mentioned_inboxes = @status.mentioned_actors.where(local: false).pluck(:inbox_url)
           SendActivityJob.perform_later(create_activity.id, mentioned_inboxes.uniq) if mentioned_inboxes.any?
         end
@@ -181,7 +181,7 @@ module Api
       end
 
       def status_params
-        permitted_params = params.permit(:status, :in_reply_to_id, :sensitive, :spoiler_text, :visibility, :language, media_ids: [])
+        permitted_params = params.permit(:status, :in_reply_to_id, :sensitive, :spoiler_text, :visibility, :language, media_ids: [], mentions: [])
 
         transformed_params = permitted_params.transform_keys do |key|
           case key
@@ -192,17 +192,26 @@ module Api
           end
         end
 
-        # Convert in_reply_to_id to ActivityPub ID
+        # in_reply_to_idの処理
         if transformed_params['in_reply_to_ap_id'].present?
-          in_reply_to = ActivityPubObject.find_by(id: transformed_params['in_reply_to_ap_id'])
-          transformed_params['in_reply_to_ap_id'] = in_reply_to&.ap_id
+          reply_id = transformed_params['in_reply_to_ap_id']
+
+          # ActivityPub IDが直接指定された場合はそのまま使用
+          if reply_id.start_with?('http')
+            transformed_params['in_reply_to_ap_id'] = reply_id
+          else
+            # ローカルIDの場合はAP IDに変換
+            in_reply_to = ActivityPubObject.find_by(id: reply_id)
+            transformed_params['in_reply_to_ap_id'] = in_reply_to&.ap_id
+          end
         end
 
         # Set default visibility
         transformed_params['visibility'] ||= 'public'
 
-        # Remove media_ids from transformed_params as it's handled separately
+        # media_idsとmentionsは別途処理
         @media_ids = transformed_params.delete('media_ids')
+        @mentions = transformed_params.delete('mentions')
 
         transformed_params
       end
@@ -210,8 +219,8 @@ module Api
       def handle_direct_message_conversation
         return unless @status.visibility == 'direct'
 
-        # メンションされたアクターを取得（現在はメンション機能未実装のため後で対応）
-        mentioned_actors = extract_mentioned_actors_from_content
+        # DMの場合はメンションされたアクターを参加者として追加
+        mentioned_actors = @status.mentioned_actors.to_a
         participants = [current_user] + mentioned_actors
 
         # 会話を作成または取得
@@ -227,12 +236,52 @@ module Api
       def process_mentions_and_tags
         return unless @status.content
 
-        parser = TextParser.new(@status.content)
-        parser.process_for_object(@status)
+        # mention配列パラメータが提供されている場合はそれを優先
+        if @mentions.present?
+          process_explicit_mentions(@mentions)
+        else
+          # フォールバック：本文パース
+          parser = TextParser.new(@status.content)
+          parser.process_for_object(@status)
+        end
       end
 
-      def extract_mentioned_actors_from_content
-        @status.mentioned_actors
+      def process_explicit_mentions(mentions_param)
+        # mention配列からメンションを処理
+        mentions_param.each do |mention_data|
+          actor = find_actor_for_mention(mention_data)
+          next unless actor
+
+          @status.mentions.find_or_create_by(actor: actor)
+        end
+
+        # ハッシュタグは本文パース
+        parser = TextParser.new(@status.content)
+        parser.extract_hashtags
+        parser.create_hashtags_for_object(@status)
+      end
+
+      def find_actor_for_mention(mention_data)
+        if mention_data.is_a?(String)
+          # "username@domain"形式
+          username, domain = mention_data.split('@', 2)
+        elsif mention_data.is_a?(Hash)
+          username = mention_data[:username] || mention_data['username']
+          domain = mention_data[:domain] || mention_data['domain']
+
+          # acct形式
+          if username.nil? && (acct = mention_data[:acct] || mention_data['acct'])
+            username, domain = acct.split('@', 2)
+          end
+        else
+          return nil
+        end
+
+        if domain.present?
+          Actor.find_by(username: username, domain: domain)
+        else
+          Actor.find_by(username: username, local: true)
+        end
       end
 
       def serialized_status(status)
@@ -339,7 +388,7 @@ module Api
         current_user.activities.create!(
           ap_id: generate_announce_activity_ap_id(status),
           activity_type: 'Announce',
-          object: status,
+          target_ap_id: status.ap_id,
           published_at: Time.current,
           local: true,
           processed: true
@@ -392,11 +441,11 @@ module Api
       end
 
       def generate_announce_activity_ap_id(status)
-        "#{status.ap_id}#announce-#{current_user.id}-#{Time.current.to_i}"
+        "#{Rails.application.config.activitypub.base_url}/users/#{current_user.username}/activities/announce-#{current_user.id}-#{Time.current.to_i}"
       end
 
       def generate_undo_announce_activity_ap_id(status)
-        "#{status.ap_id}#undo-announce-#{current_user.id}-#{Time.current.to_i}"
+        "#{Rails.application.config.activitypub.base_url}/users/#{current_user.username}/activities/undo-announce-#{current_user.id}-#{Time.current.to_i}"
       end
     end
   end

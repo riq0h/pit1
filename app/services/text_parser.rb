@@ -38,6 +38,13 @@ class TextParser
     create_mentions_for_object(object)
   end
 
+  def create_hashtags_for_object(object)
+    hashtags.each do |hashtag_name|
+      tag = Tag.find_or_create_by(name: hashtag_name)
+      object.object_tags.find_or_create_by(tag: tag)
+    end
+  end
+
   private
 
   def parse
@@ -46,22 +53,12 @@ class TextParser
     extract_custom_emojis
   end
 
-  def create_hashtags_for_object(object)
-    hashtags.each do |hashtag_name|
-      tag = Tag.find_or_create_by(name: hashtag_name)
-      object.object_tags.find_or_create_by(tag: tag)
-    end
-  end
-
   def create_mentions_for_object(object)
     mentions.each do |mention_data|
       actor = find_actor_by_mention(mention_data)
       next unless actor
 
-      object.mentions.find_or_create_by(
-        actor: actor,
-        acct: mention_data[:acct]
-      )
+      object.mentions.find_or_create_by(actor: actor)
     end
   end
 

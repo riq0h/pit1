@@ -36,7 +36,7 @@ module Api
               max_featured_tags: 0
             },
             statuses: {
-              max_characters: 500,
+              max_characters: 9999,
               max_media_attachments: 4,
               characters_reserved_per_url: 23
             },

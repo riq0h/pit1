@@ -150,6 +150,20 @@ class SendActivityJob < ApplicationJob
   end
 
   def build_announce_activity_data(activity)
+    target_object = ActivityPubObject.find_by(ap_id: activity.target_ap_id)
+
+    cc_list = [activity.actor.followers_url]
+    tag_list = []
+
+    if target_object&.actor && !target_object.actor.local?
+      cc_list << target_object.actor.ap_id
+      tag_list << {
+        'type' => 'Mention',
+        'href' => target_object.actor.ap_id,
+        'name' => "@#{target_object.actor.username}@#{target_object.actor.domain}"
+      }
+    end
+
     {
       '@context' => Rails.application.config.activitypub.context_url,
       'id' => activity.ap_id,
@@ -158,7 +172,8 @@ class SendActivityJob < ApplicationJob
       'object' => activity.target_ap_id,
       'published' => activity.published_at.iso8601,
       'to' => [Rails.application.config.activitypub.public_collection_url],
-      'cc' => [activity.actor.followers_url]
+      'cc' => cc_list,
+      'tag' => tag_list
     }
   end
 
@@ -241,7 +256,6 @@ class SendActivityJob < ApplicationJob
     when :to
       # DMの場合、メンションされたアクターのap_idを取得
       @activity.object&.mentioned_actors&.pluck(:ap_id) || []
-
     when :cc
       []
     end
@@ -262,21 +276,21 @@ class SendActivityJob < ApplicationJob
   end
 
   def build_tags(object)
-    # メンション用タグを追加
-    tags = object.mentions.includes(:actor).map do |mention|
-      {
-        'type' => 'Mention',
-        'href' => mention.actor.ap_id,
-        'name' => "@#{mention.acct}"
-      }
-    end
-
     # ハッシュタグ用タグを追加
-    object.tags.each do |tag|
-      tags << {
+    tags = object.tags.map do |tag|
+      {
         'type' => 'Hashtag',
         'href' => "#{Rails.application.config.activitypub.base_url}/tags/#{tag.name}",
         'name' => "##{tag.name}"
+      }
+    end
+
+    # メンション用タグを追加
+    object.mentions.includes(:actor).find_each do |mention|
+      tags << {
+        'type' => 'Mention',
+        'href' => mention.actor.ap_id,
+        'name' => "@#{mention.actor.username}@#{mention.actor.domain}"
       }
     end
 

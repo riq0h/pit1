@@ -123,8 +123,8 @@ class OptimizedSearchService
 
     sql = <<~SQL.squish
       SELECT object_id
-      FROM object_search_fts
-      WHERE object_search_fts MATCH ?
+      FROM letter_post_search_fts5
+      WHERE letter_post_search_fts5 MATCH ?
       ORDER BY object_id DESC
       LIMIT ? OFFSET ?
     SQL
@@ -142,8 +142,8 @@ class OptimizedSearchService
   def try_like_search
     sql = <<~SQL.squish
       SELECT object_id
-      FROM object_search_fts
-      WHERE content_plaintext LIKE ? OR summary LIKE ?
+      FROM letter_post_search
+      WHERE content_plaintext LIKE ? OR content LIKE ?
       ORDER BY object_id DESC
       LIMIT ? OFFSET ?
     SQL
@@ -193,7 +193,7 @@ class OptimizedSearchService
 
   def fts5_table?
     result = ActiveRecord::Base.connection.execute(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='object_search_fts'"
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='letter_post_search_fts5'"
     )
     result.any?
   rescue StandardError

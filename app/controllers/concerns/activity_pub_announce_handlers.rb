@@ -31,27 +31,36 @@ module ActivityPubAnnounceHandlers
       object: target_object
     )
 
-    if existing_reblog
-      Rails.logger.info "📢 Announce already exists: #{existing_reblog.id}"
+    existing_announce_activity = target_object.activities.find_by(
+      actor: @sender,
+      activity_type: 'Announce'
+    )
+
+    if existing_reblog || existing_announce_activity
+      Rails.logger.info "📢 Announce already exists: Reblog #{existing_reblog&.id}, Activity #{existing_announce_activity&.id}"
       return
     end
 
-    # 新しいReblogを作成
-    reblog = Reblog.create!(
-      actor: @sender,
-      object: target_object
-    )
+    ActiveRecord::Base.transaction do
+      # 新しいReblogを作成
+      reblog = Reblog.create!(
+        actor: @sender,
+        object: target_object,
+        ap_id: @activity['id']
+      )
 
-    # ActivityPub Activity記録も作成
-    target_object.activities.create!(
-      actor: @sender,
-      activity_type: 'Announce',
-      ap_id: @activity['id'],
-      published_at: Time.current,
-      local: false,
-      processed: true
-    )
+      # ActivityPub Activity記録も作成
+      announce_activity = target_object.activities.create!(
+        actor: @sender,
+        activity_type: 'Announce',
+        ap_id: @activity['id'],
+        target_ap_id: target_object.ap_id, # target_ap_idを設定
+        published_at: Time.current,
+        local: false,
+        processed: true
+      )
 
-    Rails.logger.info "📢 Announce created: #{reblog.id}, reblogs_count updated to #{target_object.reload.reblogs_count}"
+      Rails.logger.info "📢 Announce created: Reblog #{reblog.id}, Activity #{announce_activity.id}, reblogs_count updated to #{target_object.reload.reblogs_count}"
+    end
   end
 end

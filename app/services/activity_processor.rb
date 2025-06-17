@@ -33,7 +33,7 @@ class ActivityProcessor
     return unless activity.object
 
     # 投稿数更新
-    activity.actor.increment_posts_count! if activity.object.object_type == 'Note'
+    activity.actor.update_posts_count! if activity.object.object_type == 'Note'
   end
 
   def process_follow_activity
@@ -121,7 +121,7 @@ class ActivityProcessor
     follow.assign_attributes(
       ap_id: activity.ap_id,
       follow_activity_ap_id: activity.ap_id,
-      accepted: !target_actor.local?
+      accepted: target_actor.local? && !target_actor.manually_approves_followers
     )
 
     follow.save!
@@ -142,7 +142,7 @@ class ActivityProcessor
     case target
     when ActivityPubObject
       target.destroy
-      target.actor.decrement_posts_count! if target.object_type == 'Note'
+      target.actor.update_posts_count! if target.object_type == 'Note'
     when Actor
       target.update!(suspended: true)
     end

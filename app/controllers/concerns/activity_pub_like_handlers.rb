@@ -25,30 +25,42 @@ module ActivityPubLikeHandlers
   end
 
   def create_or_update_like(target_object)
-    # 既存のLikeをチェック
-    existing_like = target_object.activities.find_by(
+    # 既存のLikeをチェック（ActivityとFavourite両方）
+    existing_like_activity = target_object.activities.find_by(
       actor: @sender,
       activity_type: 'Like'
     )
 
-    if existing_like
-      Rails.logger.info "❤️ Like already exists: #{existing_like.id}"
+    existing_favourite = Favourite.find_by(
+      actor: @sender,
+      object: target_object
+    )
+
+    if existing_like_activity || existing_favourite
+      Rails.logger.info "❤️ Like already exists: Activity #{existing_like_activity&.id}, Favourite #{existing_favourite&.id}"
       return
     end
 
-    # 新しいLikeを作成
-    like = target_object.activities.create!(
-      actor: @sender,
-      activity_type: 'Like',
-      ap_id: @activity['id'],
-      published_at: Time.current,
-      local: false,
-      processed: true
-    )
+    ActiveRecord::Base.transaction do
+      # 新しいLike Activityを作成
+      like_activity = target_object.activities.create!(
+        actor: @sender,
+        activity_type: 'Like',
+        ap_id: @activity['id'],
+        target_ap_id: target_object.ap_id, # target_ap_idを設定
+        published_at: Time.current,
+        local: false,
+        processed: true
+      )
 
-    # お気に入り数を更新
-    target_object.increment!(:favourites_count)
+      # 対応するFavouriteレコードを作成
+      favourite = Favourite.create!(
+        actor: @sender,
+        object: target_object,
+        ap_id: @activity['id']
+      )
 
-    Rails.logger.info "❤️ Like created: #{like.id}, favourites_count updated to #{target_object.favourites_count}"
+      Rails.logger.info "❤️ Like created: Activity #{like_activity.id}, Favourite #{favourite.id}, favourites_count updated to #{target_object.reload.favourites_count}"
+    end
   end
 end
