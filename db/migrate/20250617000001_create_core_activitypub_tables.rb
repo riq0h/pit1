@@ -29,6 +29,9 @@ class CreateCoreActivitypubTables < ActiveRecord::Migration[8.0]
       t.boolean :suspended, default: false
       t.boolean :admin, default: false
       
+      # Profile links
+      t.text :profile_links
+      
       # Social counts
       t.integer :followers_count, default: 0
       t.integer :following_count, default: 0

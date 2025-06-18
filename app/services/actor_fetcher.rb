@@ -111,8 +111,6 @@ class ActorFetcher
       following_url: actor_data['following'],
       featured_url: actor_data['featured'],
       public_key: public_key_pem,
-      icon_url: extract_image_url(actor_data['icon']),
-      header_url: extract_image_url(actor_data['image']),
       raw_data: actor_data,
       local: false,
       discoverable: actor_data['discoverable'] != false,

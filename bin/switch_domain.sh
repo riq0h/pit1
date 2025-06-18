@@ -115,8 +115,6 @@ if local_actors.any?
   
   local_actors.each do |actor|
     old_ap_id = actor.ap_id
-    old_icon_url = actor.icon_url
-    old_header_url = actor.header_url
     
     # Build update hash
     update_params = {
@@ -127,30 +125,10 @@ if local_actors.any?
       following_url: "#{new_base_url}/users/#{actor.username}/following"
     }
     
-    # Update icon_url if it exists and contains old domain
-    if old_icon_url.present? && old_icon_url.include?('/system/accounts/')
-      # Extract the filename part after /system/accounts/
-      icon_path = old_icon_url.split('/system/accounts/').last
-      update_params[:icon_url] = "#{new_base_url}/system/accounts/#{icon_path}"
-    end
-    
-    # Update header_url if it exists and contains old domain
-    if old_header_url.present? && old_header_url.include?('/system/accounts/')
-      # Extract the filename part after /system/accounts/
-      header_path = old_header_url.split('/system/accounts/').last
-      update_params[:header_url] = "#{new_base_url}/system/accounts/#{header_path}"
-    end
-    
     actor.update!(update_params)
     
     puts "  ✓ #{actor.username}を更新しました:"
     puts "    AP ID: #{old_ap_id} -> #{actor.ap_id}"
-    if old_icon_url != actor.icon_url
-      puts "    アイコン: #{old_icon_url} -> #{actor.icon_url}"
-    end
-    if old_header_url != actor.header_url
-      puts "    ヘッダー: #{old_header_url} -> #{actor.header_url}"
-    end
   end
   
   puts "すべてのローカルアクターの更新が完了しました!"
@@ -160,10 +138,7 @@ end
 EOF
     
     # Load environment variables and run database update
-    set -a
-    source .env
-    set +a
-    RAILS_ENV=development rails runner /tmp/update_actor_for_domain_switch.rb
+    run_with_env "load '/tmp/update_actor_for_domain_switch.rb'"
     
     # Clean up temporary file
     rm -f /tmp/update_actor_for_domain_switch.rb
@@ -191,7 +166,7 @@ EOF
     echo "  プロトコル: $NEW_PROTOCOL"
     
     # Check which users exist and show examples
-    FIRST_USER=$(rails runner "puts Actor.where(local: true).first&.username" 2>/dev/null)
+    FIRST_USER=$(run_with_env "puts Actor.where(local: true).first&.username" 2>/dev/null)
     if [ -n "$FIRST_USER" ]; then
       echo "  サンプルActor URL: $NEW_PROTOCOL://$NEW_DOMAIN/users/$FIRST_USER"
       echo "  サンプルWebFinger: http://localhost:3000/.well-known/webfinger?resource=acct:$FIRST_USER@$NEW_DOMAIN"

@@ -140,9 +140,6 @@ Rails.application.routes.draw do
       # Streaming (WebSocket)
       get '/streaming', to: 'streaming#index'
 
-      # Search
-      get '/search', to: 'search#index'
-
       # Domain blocks
       get '/domain_blocks', to: 'domain_blocks#index'
       post '/domain_blocks', to: 'domain_blocks#create'
@@ -150,6 +147,16 @@ Rails.application.routes.draw do
 
       # Custom emojis
       get '/custom_emojis', to: 'custom_emojis#index'
+
+      # Follow requests
+      get '/follow_requests', to: 'follow_requests#index'
+      post '/follow_requests/:id/authorize', to: 'follow_requests#authorize'
+      post '/follow_requests/:id/reject', to: 'follow_requests#reject'
+    end
+
+    namespace :v2 do
+      # 検索機能
+      get '/search', to: 'search#index'
     end
   end
 

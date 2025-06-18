@@ -40,9 +40,38 @@
 
     <!-- 自己紹介 -->
     <% if @actor.summary.present? %>
-      <div class="text-gray-700 leading-relaxed">
+      <div class="text-gray-700 leading-relaxed mb-4">
         <%= auto_link_urls(@actor.summary).html_safe %>
       </div>
+    <% end %>
+
+    <!-- プロフィールリンク -->
+    <% if @actor.profile_links.present? %>
+      <% begin %>
+        <% profile_links = JSON.parse(@actor.profile_links) %>
+        <% if profile_links.any? %>
+          <div class="space-y-2">
+            <% profile_links.each do |link| %>
+              <% if link['name'].present? && link['url'].present? %>
+                <div class="flex items-center space-x-2 text-sm">
+                  <span class="text-gray-600 font-medium min-w-0 flex-shrink-0">
+                    <%= link['name'] %>:
+                  </span>
+                  <a href="<%= link['url'] %>" 
+                     target="_blank" 
+                     rel="nofollow noopener noreferrer me" 
+                     class="text-blue-600 hover:text-blue-800 transition-colors truncate"
+                     style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                    <%= link['url'].gsub(/^https?:\/\//, '') %>
+                  </a>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+      <% rescue JSON::ParserError %>
+        <!-- JSON解析エラーの場合は何も表示しない -->
+      <% end %>
     <% end %>
   </header>
 </div>

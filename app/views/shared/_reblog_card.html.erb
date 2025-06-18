@@ -65,15 +65,15 @@
 
   <!-- 元投稿の本文 -->
   <div class="text-gray-800 leading-relaxed">
-    <div class="whitespace-pre-wrap break-words">
-      <% 
-        # 絵文字をパースしてHTMLに変換
-        parsed_content = EmojiParser.new(reblog.object.content).parse
-        # その後でURLを自動リンク化（絵文字HTML対応）
-        final_content = auto_link_urls(parsed_content)
-      %>
-      <%= final_content.html_safe %>
-    </div>
+    <% 
+      # メンション配列から外部ユーザの宛先を抽出してコンテンツの先頭に追加
+      content_with_mentions = prepend_mentions_to_content(reblog.object)
+      # 絵文字をパースしてHTMLに変換
+      parsed_content = EmojiParser.new(content_with_mentions).parse
+      # その後でURLを自動リンク化（絵文字HTML対応）
+      final_content = auto_link_urls(parsed_content)
+    %>
+    <div class="whitespace-pre-wrap break-words"><%= final_content.html_safe %></div>
   </div>
 
   <!-- 返信マーク -->

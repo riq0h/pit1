@@ -28,42 +28,58 @@ class UndoProcessor
   def undo_like
     return unless target_activity.target_ap_id
 
-    target_obj = ActivityPubObject.find_by(ap_id: target_activity.target_ap_id)
+    target_obj = find_target_object
     return unless target_obj
 
-    ActiveRecord::Base.transaction do
-      # Favouriteレコードを削除
-      favourite = Favourite.find_by(
-        actor: target_activity.actor,
-        object: target_obj
-      )
-      favourite&.destroy
-
-      # Like Activityを削除
-      target_activity.destroy
-
-      Rails.logger.info "❤️ Like undone: Activity #{target_activity.id} deleted, Favourite #{favourite&.id} deleted"
-    end
+    process_like_undo(target_obj)
   end
 
   def undo_announce
     return unless target_activity.target_ap_id
 
-    target_obj = ActivityPubObject.find_by(ap_id: target_activity.target_ap_id)
+    target_obj = find_target_object
     return unless target_obj
 
-    ActiveRecord::Base.transaction do
-      # Reblogレコードを削除
-      reblog = Reblog.find_by(
-        actor: target_activity.actor,
-        object: target_obj
-      )
-      reblog&.destroy
+    process_announce_undo(target_obj)
+  end
 
-      # Announce Activityを削除
+  def find_target_object
+    ActivityPubObject.find_by(ap_id: target_activity.target_ap_id)
+  end
+
+  def process_like_undo(target_obj)
+    ActiveRecord::Base.transaction do
+      favourite = find_favourite(target_obj)
+      favourite&.destroy
       target_activity.destroy
 
-      Rails.logger.info "📢 Announce undone: Activity #{target_activity.id} deleted, Reblog #{reblog&.id} deleted"
+      log_like_undo(favourite)
     end
+  end
+
+  def process_announce_undo(target_obj)
+    ActiveRecord::Base.transaction do
+      reblog = find_reblog(target_obj)
+      reblog&.destroy
+      target_activity.destroy
+
+      log_announce_undo(reblog)
+    end
+  end
+
+  def find_favourite(target_obj)
+    Favourite.find_by(actor: target_activity.actor, object: target_obj)
+  end
+
+  def find_reblog(target_obj)
+    Reblog.find_by(actor: target_activity.actor, object: target_obj)
+  end
+
+  def log_like_undo(favourite)
+    Rails.logger.info "❤️ Like undone: Activity #{target_activity.id} deleted, Favourite #{favourite&.id} deleted"
+  end
+
+  def log_announce_undo(reblog)
+    Rails.logger.info "📢 Announce undone: Activity #{target_activity.id} deleted, Reblog #{reblog&.id} deleted"
   end
 end

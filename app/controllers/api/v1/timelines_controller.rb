@@ -38,7 +38,6 @@ module Api
       def base_timeline_query
         query = ActivityPubObject.joins(:actor)
                                  .where(object_type: 'Note')
-                                 .where(local: true)
                                  .order('objects.id DESC')
                                  .limit(params[:limit]&.to_i || 20)
 

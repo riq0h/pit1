@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS "schema_migrations" ("version" varchar NOT NULL PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS "ar_internal_metadata" ("key" varchar NOT NULL PRIMARY KEY, "value" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
-CREATE TABLE IF NOT EXISTS "actors" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "username" varchar NOT NULL, "domain" varchar, "display_name" varchar, "summary" text, "ap_id" varchar NOT NULL, "inbox_url" varchar NOT NULL, "outbox_url" varchar NOT NULL, "followers_url" varchar, "following_url" varchar, "featured_url" varchar, "public_key" text, "private_key" text, "local" boolean DEFAULT 0 NOT NULL, "locked" boolean DEFAULT 0, "bot" boolean DEFAULT 0, "suspended" boolean DEFAULT 0, "admin" boolean DEFAULT 0, "followers_count" integer DEFAULT 0, "following_count" integer DEFAULT 0, "posts_count" integer DEFAULT 0, "raw_data" text, "actor_type" varchar DEFAULT 'Person', "discoverable" boolean DEFAULT 1, "manually_approves_followers" boolean DEFAULT 0, "password_digest" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
+CREATE TABLE IF NOT EXISTS "actors" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "username" varchar NOT NULL, "domain" varchar, "display_name" varchar, "summary" text, "ap_id" varchar NOT NULL, "inbox_url" varchar NOT NULL, "outbox_url" varchar NOT NULL, "followers_url" varchar, "following_url" varchar, "featured_url" varchar, "public_key" text, "private_key" text, "local" boolean DEFAULT 0 NOT NULL, "locked" boolean DEFAULT 0, "bot" boolean DEFAULT 0, "suspended" boolean DEFAULT 0, "admin" boolean DEFAULT 0, "profile_links" text, "followers_count" integer DEFAULT 0, "following_count" integer DEFAULT 0, "posts_count" integer DEFAULT 0, "raw_data" text, "actor_type" varchar DEFAULT 'Person', "discoverable" boolean DEFAULT 1, "manually_approves_followers" boolean DEFAULT 0, "password_digest" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
 CREATE INDEX "index_actors_on_domain" ON "actors" ("domain") /*application='Letter'*/;
 CREATE UNIQUE INDEX "index_actors_on_ap_id" ON "actors" ("ap_id") /*application='Letter'*/;
 CREATE INDEX "index_actors_on_local" ON "actors" ("local") /*application='Letter'*/;
@@ -53,8 +53,12 @@ CREATE INDEX "index_mutes_on_actor_id" ON "mutes" ("actor_id") /*application='Le
 CREATE INDEX "index_mutes_on_target_actor_id" ON "mutes" ("target_actor_id") /*application='Letter'*/;
 CREATE UNIQUE INDEX "index_mutes_on_ap_id" ON "mutes" ("ap_id") /*application='Letter'*/;
 CREATE UNIQUE INDEX "index_mutes_on_actor_id_and_target_actor_id" ON "mutes" ("actor_id", "target_actor_id") /*application='Letter'*/;
-CREATE TABLE IF NOT EXISTS "domain_blocks" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "domain" varchar NOT NULL, "reason" text, "reject_media" boolean DEFAULT 0, "reject_reports" boolean DEFAULT 0, "private_comment" boolean, "public_comment" text, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
-CREATE UNIQUE INDEX "index_domain_blocks_on_domain" ON "domain_blocks" ("domain") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "domain_blocks" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "actor_id" integer NOT NULL, "domain" varchar NOT NULL, "reason" text, "reject_media" boolean DEFAULT 0, "reject_reports" boolean DEFAULT 0, "private_comment" boolean, "public_comment" text, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_ceda607ae5"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+);
+CREATE INDEX "index_domain_blocks_on_actor_id" ON "domain_blocks" ("actor_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_domain_blocks_on_actor_id_and_domain" ON "domain_blocks" ("actor_id", "domain") /*application='Letter'*/;
 CREATE TABLE IF NOT EXISTS "favourites" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "actor_id" integer NOT NULL, "object_id" varchar NOT NULL, "ap_id" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_757549d945"
 FOREIGN KEY ("actor_id")
   REFERENCES "actors" ("id")
@@ -269,7 +273,20 @@ CREATE INDEX "index_solid_queue_processes_on_last_heartbeat_at" ON "solid_queue_
 CREATE TABLE IF NOT EXISTS "solid_queue_semaphores" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "key" varchar NOT NULL, "value" integer DEFAULT 1 NOT NULL, "expires_at" datetime(6) NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT chk_rails_solid_queue_semaphores_on_value CHECK (value > 0));
 CREATE UNIQUE INDEX "index_solid_queue_semaphores_on_key" ON "solid_queue_semaphores" ("key") /*application='Letter'*/;
 CREATE INDEX "index_solid_queue_semaphores_on_expires_at" ON "solid_queue_semaphores" ("expires_at") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "notifications" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "account_id" integer NOT NULL, "from_account_id" integer NOT NULL, "activity_type" varchar NOT NULL, "activity_id" varchar NOT NULL, "notification_type" varchar NOT NULL, "read" boolean DEFAULT 0 NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_1c0a19e3ee"
+FOREIGN KEY ("account_id")
+  REFERENCES "actors" ("id")
+, CONSTRAINT "fk_rails_a9df2835a1"
+FOREIGN KEY ("from_account_id")
+  REFERENCES "actors" ("id")
+);
+CREATE INDEX "index_notifications_on_account_id" ON "notifications" ("account_id") /*application='Letter'*/;
+CREATE INDEX "index_notifications_on_from_account_id" ON "notifications" ("from_account_id") /*application='Letter'*/;
+CREATE INDEX "index_notifications_on_account_id_and_created_at" ON "notifications" ("account_id", "created_at") /*application='Letter'*/;
+CREATE INDEX "index_notifications_on_account_id_and_notification_type" ON "notifications" ("account_id", "notification_type") /*application='Letter'*/;
+CREATE INDEX "index_notifications_on_account_id_and_read" ON "notifications" ("account_id", "read") /*application='Letter'*/;
 INSERT INTO "schema_migrations" (version) VALUES
+('20250617000011'),
 ('20250617000010'),
 ('20250617000009'),
 ('20250617000008'),

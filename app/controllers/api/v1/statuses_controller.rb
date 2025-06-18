@@ -7,6 +7,8 @@ module Api
       include StatusSerializer
       include MediaSerializer
       include MentionTagSerializer
+      include StatusActivityHandlers
+      include StatusSerializationHelper
       before_action :doorkeeper_authorize!, except: [:show]
       before_action :doorkeeper_authorize!, only: [:show], if: -> { request.authorization.present? }
       before_action :set_status, except: [:create]
@@ -181,9 +183,20 @@ module Api
       end
 
       def status_params
-        permitted_params = params.permit(:status, :in_reply_to_id, :sensitive, :spoiler_text, :visibility, :language, media_ids: [], mentions: [])
+        permitted_params = permit_status_params
+        transformed_params = transform_param_keys(permitted_params)
+        process_reply_to_id(transformed_params)
+        extract_media_and_mentions(transformed_params)
+        apply_default_visibility(transformed_params)
+        transformed_params
+      end
 
-        transformed_params = permitted_params.transform_keys do |key|
+      def permit_status_params
+        params.permit(:status, :in_reply_to_id, :sensitive, :spoiler_text, :visibility, :language, media_ids: [], mentions: [])
+      end
+
+      def transform_param_keys(permitted_params)
+        permitted_params.transform_keys do |key|
           case key
           when 'status' then 'content'
           when 'spoiler_text' then 'summary'
@@ -191,29 +204,29 @@ module Api
           else key
           end
         end
+      end
 
-        # in_reply_to_idの処理
-        if transformed_params['in_reply_to_ap_id'].present?
-          reply_id = transformed_params['in_reply_to_ap_id']
+      def process_reply_to_id(transformed_params)
+        return if transformed_params['in_reply_to_ap_id'].blank?
 
-          # ActivityPub IDが直接指定された場合はそのまま使用
-          if reply_id.start_with?('http')
-            transformed_params['in_reply_to_ap_id'] = reply_id
-          else
-            # ローカルIDの場合はAP IDに変換
-            in_reply_to = ActivityPubObject.find_by(id: reply_id)
-            transformed_params['in_reply_to_ap_id'] = in_reply_to&.ap_id
-          end
-        end
+        reply_id = transformed_params['in_reply_to_ap_id']
+        transformed_params['in_reply_to_ap_id'] = convert_reply_id_to_ap_id(reply_id)
+      end
 
-        # Set default visibility
-        transformed_params['visibility'] ||= 'public'
+      def convert_reply_id_to_ap_id(reply_id)
+        return reply_id if reply_id.start_with?('http')
 
-        # media_idsとmentionsは別途処理
+        in_reply_to = ActivityPubObject.find_by(id: reply_id)
+        in_reply_to&.ap_id
+      end
+
+      def extract_media_and_mentions(transformed_params)
         @media_ids = transformed_params.delete('media_ids')
         @mentions = transformed_params.delete('mentions')
+      end
 
-        transformed_params
+      def apply_default_visibility(transformed_params)
+        transformed_params['visibility'] ||= 'public'
       end
 
       def handle_direct_message_conversation
@@ -262,66 +275,41 @@ module Api
       end
 
       def find_actor_for_mention(mention_data)
-        if mention_data.is_a?(String)
-          # "username@domain"形式
-          username, domain = mention_data.split('@', 2)
-        elsif mention_data.is_a?(Hash)
-          username = mention_data[:username] || mention_data['username']
-          domain = mention_data[:domain] || mention_data['domain']
+        username, domain = extract_username_and_domain(mention_data)
+        return nil unless username
 
-          # acct形式
-          if username.nil? && (acct = mention_data[:acct] || mention_data['acct'])
-            username, domain = acct.split('@', 2)
-          end
+        find_actor_by_username_and_domain(username, domain)
+      end
+
+      def extract_username_and_domain(mention_data)
+        case mention_data
+        when String
+          mention_data.split('@', 2)
+        when Hash
+          extract_from_hash(mention_data)
         else
-          return nil
+          [nil, nil]
         end
+      end
 
+      def extract_from_hash(mention_data)
+        username = mention_data[:username] || mention_data['username']
+        domain = mention_data[:domain] || mention_data['domain']
+
+        if username.nil?
+          acct = mention_data[:acct] || mention_data['acct']
+          acct&.split('@', 2) || [nil, nil]
+        else
+          [username, domain]
+        end
+      end
+
+      def find_actor_by_username_and_domain(username, domain)
         if domain.present?
           Actor.find_by(username: username, domain: domain)
         else
           Actor.find_by(username: username, local: true)
         end
-      end
-
-      def serialized_status(status)
-        base_status_data(status).merge(
-          interaction_data(status),
-          content_data(status),
-          metadata_data(status)
-        )
-      end
-
-      def in_reply_to_id(status)
-        return nil if status.in_reply_to_ap_id.blank?
-
-        in_reply_to = ActivityPubObject.find_by(ap_id: status.in_reply_to_ap_id)
-        in_reply_to&.id&.to_s
-      end
-
-      def in_reply_to_account_id(status)
-        return nil if status.in_reply_to_ap_id.blank?
-
-        in_reply_to = ActivityPubObject.find_by(ap_id: status.in_reply_to_ap_id)
-        return nil unless in_reply_to&.actor
-
-        in_reply_to.actor.id.to_s
-      end
-
-      def replies_count(status)
-        ActivityPubObject.where(in_reply_to_ap_id: status.ap_id).count
-      end
-
-      def favourited_by_current_user?(status)
-        return false unless current_user
-
-        current_user.favourites.exists?(object: status)
-      end
-
-      def reblogged_by_current_user?(status)
-        return false unless current_user
-
-        current_user.reblogs.exists?(object: status)
       end
 
       def generate_activity_ap_id(status)
@@ -336,116 +324,6 @@ module Api
         local_domain = Rails.application.config.activitypub.domain
         scheme = Rails.env.production? ? 'https' : 'http'
         "#{scheme}://#{local_domain}/users/#{current_user.username}/posts/#{Letter::Snowflake.generate}"
-      end
-
-      def create_like_activity(status)
-        like_activity = current_user.activities.create!(
-          ap_id: generate_like_activity_ap_id(status),
-          activity_type: 'Like',
-          object: status,
-          target_ap_id: status.ap_id,
-          published_at: Time.current,
-          local: true,
-          processed: true
-        )
-
-        # Queue for federation delivery to the status owner
-        return unless status.actor != current_user && !status.actor.local?
-
-        SendActivityJob.perform_later(like_activity.id, [status.actor.inbox_url])
-      end
-
-      def create_undo_like_activity(status, _favourite)
-        undo_activity = current_user.activities.create!(
-          ap_id: generate_undo_like_activity_ap_id(status),
-          activity_type: 'Undo',
-          target_ap_id: generate_like_activity_ap_id(status),
-          published_at: Time.current,
-          local: true,
-          processed: true
-        )
-
-        # Queue for federation delivery to the status owner
-        return unless status.actor != current_user && !status.actor.local?
-
-        SendActivityJob.perform_later(undo_activity.id, [status.actor.inbox_url])
-      end
-
-      def generate_like_activity_ap_id(status)
-        "#{status.ap_id}#like-#{current_user.id}-#{Time.current.to_i}"
-      end
-
-      def generate_undo_like_activity_ap_id(status)
-        "#{status.ap_id}#undo-like-#{current_user.id}-#{Time.current.to_i}"
-      end
-
-      def create_announce_activity(status)
-        announce_activity = build_announce_activity(status)
-        deliver_announce_activity(announce_activity, status)
-      end
-
-      def build_announce_activity(status)
-        current_user.activities.create!(
-          ap_id: generate_announce_activity_ap_id(status),
-          activity_type: 'Announce',
-          target_ap_id: status.ap_id,
-          published_at: Time.current,
-          local: true,
-          processed: true
-        )
-      end
-
-      def deliver_announce_activity(announce_activity, status)
-        target_inboxes = collect_announce_target_inboxes(status)
-        return unless target_inboxes.any?
-
-        SendActivityJob.perform_later(announce_activity.id, target_inboxes.uniq)
-      end
-
-      def collect_announce_target_inboxes(status)
-        target_inboxes = []
-
-        # Add status owner's inbox
-        target_inboxes << status.actor.inbox_url if status.actor != current_user && !status.actor.local?
-
-        # Add follower inboxes for public announces
-        if status.visibility == 'public'
-          follower_inboxes = current_user.followers.where(local: false).pluck(:inbox_url)
-          target_inboxes.concat(follower_inboxes)
-        end
-
-        target_inboxes
-      end
-
-      def create_undo_announce_activity(status, _reblog)
-        undo_activity = build_undo_announce_activity(status)
-        deliver_undo_announce_activity(undo_activity, status)
-      end
-
-      def build_undo_announce_activity(status)
-        current_user.activities.create!(
-          ap_id: generate_undo_announce_activity_ap_id(status),
-          activity_type: 'Undo',
-          target_ap_id: generate_announce_activity_ap_id(status),
-          published_at: Time.current,
-          local: true,
-          processed: true
-        )
-      end
-
-      def deliver_undo_announce_activity(undo_activity, status)
-        target_inboxes = collect_announce_target_inboxes(status)
-        return unless target_inboxes.any?
-
-        SendActivityJob.perform_later(undo_activity.id, target_inboxes.uniq)
-      end
-
-      def generate_announce_activity_ap_id(status)
-        "#{Rails.application.config.activitypub.base_url}/users/#{current_user.username}/activities/announce-#{current_user.id}-#{Time.current.to_i}"
-      end
-
-      def generate_undo_announce_activity_ap_id(status)
-        "#{Rails.application.config.activitypub.base_url}/users/#{current_user.username}/activities/undo-announce-#{current_user.id}-#{Time.current.to_i}"
       end
     end
   end

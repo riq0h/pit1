@@ -1,0 +1,98 @@
+# frozen_string_literal: true
+
+class Notification < ApplicationRecord
+  # アソシエーション
+  belongs_to :account, class_name: 'Actor', inverse_of: :notifications
+  belongs_to :from_account, class_name: 'Actor', inverse_of: :sent_notifications
+
+  # ポリモーフィック関連（activity_type + activity_id）
+  def activity
+    return nil unless activity_type && activity_id
+
+    case activity_type
+    when 'Follow'
+      Follow.find_by(id: activity_id)
+    when 'ActivityPubObject'
+      ActivityPubObject.find_by(id: activity_id)
+    end
+  end
+
+  # 通知タイプの定義
+  TYPES = %w[
+    mention
+    status
+    reblog
+    follow
+    follow_request
+    favourite
+    poll
+    update
+  ].freeze
+
+  # バリデーション
+  validates :notification_type, inclusion: { in: TYPES }
+  validates :activity_type, presence: true
+  validates :activity_id, presence: true
+
+  # スコープ
+  scope :unread, -> { where(read: false) }
+  scope :recent, -> { order(created_at: :desc) }
+  scope :for_account, ->(account) { where(account: account) }
+  scope :of_type, ->(type) { where(notification_type: type) }
+
+  # 既読にする
+  def mark_as_read!
+    update!(read: true)
+  end
+
+  # 通知作成のクラスメソッド
+  def self.create_follow_notification(follow)
+    create!(
+      account: follow.target_actor,
+      from_account: follow.actor,
+      activity_type: 'Follow',
+      activity_id: follow.id.to_s,
+      notification_type: 'follow'
+    )
+  end
+
+  def self.create_follow_request_notification(follow)
+    create!(
+      account: follow.target_actor,
+      from_account: follow.actor,
+      activity_type: 'Follow',
+      activity_id: follow.id.to_s,
+      notification_type: 'follow_request'
+    )
+  end
+
+  def self.create_mention_notification(mention, status)
+    create!(
+      account: mention.actor,
+      from_account: status.actor,
+      activity_type: 'ActivityPubObject',
+      activity_id: status.id.to_s,
+      notification_type: 'mention'
+    )
+  end
+
+  def self.create_favourite_notification(favourite, status)
+    create!(
+      account: status.actor,
+      from_account: favourite.actor,
+      activity_type: 'ActivityPubObject',
+      activity_id: status.id.to_s,
+      notification_type: 'favourite'
+    )
+  end
+
+  def self.create_reblog_notification(reblog, original_status)
+    create!(
+      account: original_status.actor,
+      from_account: reblog.actor,
+      activity_type: 'ActivityPubObject',
+      activity_id: original_status.id.to_s,
+      notification_type: 'reblog'
+    )
+  end
+end

@@ -72,16 +72,10 @@ module Api
 
       # POST /api/v1/accounts/:id/block
       def block
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
-        return render json: { error: 'Cannot block yourself' }, status: :unprocessable_entity if @account == current_user
+        return render_block_authentication_error unless current_user
+        return render_block_self_error if @account == current_user
 
-        # Remove any existing follow relationship first
-        existing_follow = current_user.follows.find_by(target_actor: @account)
-        existing_follow&.destroy
-
-        # Create block
-        current_user.blocks.find_or_create_by(target_actor: @account)
-
+        process_block_action
         render json: serialized_relationship(@account)
       end
 
@@ -297,6 +291,23 @@ module Api
 
       def default_header_url
         '/icon.png'
+      end
+
+      def render_block_authentication_error
+        render json: { error: 'This action requires authentication' }, status: :unauthorized
+      end
+
+      def render_block_self_error
+        render json: { error: 'Cannot block yourself' }, status: :unprocessable_entity
+      end
+
+      def process_block_action
+        # Remove any existing follow relationships (both directions)
+        current_user.follows.find_by(target_actor: @account)&.destroy
+        @account.follows.find_by(target_actor: current_user)&.destroy
+
+        # Create block
+        current_user.blocks.find_or_create_by(target_actor: @account)
       end
     end
   end

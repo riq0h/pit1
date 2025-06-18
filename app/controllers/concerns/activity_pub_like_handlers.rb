@@ -25,42 +25,62 @@ module ActivityPubLikeHandlers
   end
 
   def create_or_update_like(target_object)
-    # 既存のLikeをチェック（ActivityとFavourite両方）
-    existing_like_activity = target_object.activities.find_by(
-      actor: @sender,
-      activity_type: 'Like'
-    )
+    return if like_already_exists?(target_object)
 
-    existing_favourite = Favourite.find_by(
-      actor: @sender,
-      object: target_object
-    )
+    create_new_like(target_object)
+  end
 
-    if existing_like_activity || existing_favourite
-      Rails.logger.info "❤️ Like already exists: Activity #{existing_like_activity&.id}, Favourite #{existing_favourite&.id}"
-      return
+  def like_already_exists?(target_object)
+    existing_activity = find_existing_like_activity(target_object)
+    existing_favourite = find_existing_favourite(target_object)
+
+    if existing_activity || existing_favourite
+      Rails.logger.info "❤️ Like already exists: Activity #{existing_activity&.id}, Favourite #{existing_favourite&.id}"
+      return true
     end
 
+    false
+  end
+
+  def find_existing_like_activity(target_object)
+    target_object.activities.find_by(actor: @sender, activity_type: 'Like')
+  end
+
+  def find_existing_favourite(target_object)
+    Favourite.find_by(actor: @sender, object: target_object)
+  end
+
+  def create_new_like(target_object)
     ActiveRecord::Base.transaction do
-      # 新しいLike Activityを作成
-      like_activity = target_object.activities.create!(
-        actor: @sender,
-        activity_type: 'Like',
-        ap_id: @activity['id'],
-        target_ap_id: target_object.ap_id, # target_ap_idを設定
-        published_at: Time.current,
-        local: false,
-        processed: true
-      )
+      like_activity = create_like_activity_record(target_object)
+      favourite = create_favourite_record(target_object)
 
-      # 対応するFavouriteレコードを作成
-      favourite = Favourite.create!(
-        actor: @sender,
-        object: target_object,
-        ap_id: @activity['id']
-      )
-
-      Rails.logger.info "❤️ Like created: Activity #{like_activity.id}, Favourite #{favourite.id}, favourites_count updated to #{target_object.reload.favourites_count}"
+      log_like_creation(like_activity, favourite, target_object)
     end
+  end
+
+  def create_like_activity_record(target_object)
+    target_object.activities.create!(
+      actor: @sender,
+      activity_type: 'Like',
+      ap_id: @activity['id'],
+      target_ap_id: target_object.ap_id,
+      published_at: Time.current,
+      local: false,
+      processed: true
+    )
+  end
+
+  def create_favourite_record(target_object)
+    Favourite.create!(
+      actor: @sender,
+      object: target_object,
+      ap_id: @activity['id']
+    )
+  end
+
+  def log_like_creation(like_activity, favourite, target_object)
+    Rails.logger.info "❤️ Like created: Activity #{like_activity.id}, Favourite #{favourite.id}, " \
+                      "favourites_count updated to #{target_object.reload.favourites_count}"
   end
 end

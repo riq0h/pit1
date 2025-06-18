@@ -21,7 +21,7 @@ class Activity < ApplicationRecord
   scope :remote, -> { where(local: false) }
   scope :processed, -> { where(processed: true) }
   scope :unprocessed, -> { where(processed: false) }
-  scope :delivered, -> { where(delivered_at: !nil) }
+  scope :delivered, -> { where.not(delivered_at: nil) }
   scope :undelivered, -> { where(delivered_at: nil) }
   scope :recent, -> { order(published_at: :desc) }
   scope :by_type, ->(type) { where(activity_type: type) }

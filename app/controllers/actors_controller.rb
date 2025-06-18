@@ -1,9 +1,12 @@
 # frozen_string_literal: true
 
 class ActorsController < ApplicationController
+  include ActivityPubBlockerControl
+
   skip_before_action :verify_authenticity_token
   before_action :set_actor
   before_action :ensure_activitypub_request
+  before_action :check_if_blocked_by_target, if: -> { activitypub_request? }
 
   # GET /users/:username
   # ActivityPub Actor endpoint

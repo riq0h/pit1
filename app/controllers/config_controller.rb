@@ -220,11 +220,23 @@ class ConfigController < ApplicationController
   def update_user_profile
     return true if params[:actor].blank?
 
-    actor_params = params.expect(actor: %i[summary avatar])
+    actor_params = params.expect(actor: [:summary, :avatar, { profile_links: [%i[name url]] }])
+
+    # profile_linksをJSON形式で保存
+    process_profile_links(actor_params) if actor_params[:profile_links].present?
+
     current_user.update(actor_params)
   rescue StandardError => e
     Rails.logger.error "User profile update failed: #{e.message}"
+    Rails.logger.error "Actor params: #{actor_params.inspect}"
     false
+  end
+
+  def process_profile_links(actor_params)
+    # 空のエントリを除去
+    clean_links = actor_params[:profile_links].reject { |link| link[:name].blank? && link[:url].blank? }
+    actor_params[:profile_links] = clean_links.to_json
+    Rails.logger.info "Processed profile links: #{actor_params[:profile_links]}"
   end
 
   def config_params

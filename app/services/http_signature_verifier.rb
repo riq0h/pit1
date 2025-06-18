@@ -108,8 +108,6 @@ class HttpSignatureVerifier
       followers_url: actor_data['followers'],
       following_url: actor_data['following'],
       public_key: public_key_data,
-      icon_url: actor_data.dig('icon', 'url'),
-      header_url: actor_data.dig('image', 'url'),
       raw_data: actor_data,
       local: false
     )

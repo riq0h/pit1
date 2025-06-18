@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative '../../lib/exceptions'
+
 module ActivityPubVerification
   extend ActiveSupport::Concern
 
@@ -72,7 +74,7 @@ module ActivityPubVerification
     verifier = create_signature_verifier
     return if verifier.verify!(@activity['actor'])
 
-    raise ActivityPub::SignatureError, 'Signature verification failed'
+    raise ::ActivityPub::SignatureError, 'Signature verification failed'
   end
 
   def create_signature_verifier

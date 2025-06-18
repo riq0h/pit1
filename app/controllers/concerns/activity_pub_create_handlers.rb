@@ -4,10 +4,11 @@ require_relative '../../services/html_stripper'
 
 module ActivityPubCreateHandlers
   extend ActiveSupport::Concern
+  include ActivityPubMediaHandler
+  include ActivityPubConversationHandler
 
   private
 
-  # Create Activity処理
   def handle_create_activity
     Rails.logger.info '📝 Processing Create activity'
 
@@ -40,10 +41,8 @@ module ActivityPubCreateHandlers
   def create_new_object(object_data)
     object = ActivityPubObject.create!(build_object_attributes(object_data))
 
-    # DMの場合、会話処理を実行
+    handle_media_attachments(object, object_data)
     handle_direct_message_conversation(object, object_data) if object.visibility == 'direct'
-
-    # リプライの場合、親投稿のリプライ数を更新
     update_reply_count_if_needed(object)
 
     Rails.logger.info "📝 Object created: #{object.id}"
@@ -75,7 +74,6 @@ module ActivityPubCreateHandlers
     Time.zone.parse(published_str)
   end
 
-  # 可視性判定
   def determine_visibility(object_data)
     to = Array(object_data['to'])
     cc = Array(object_data['cc'])
@@ -95,42 +93,5 @@ module ActivityPubCreateHandlers
 
     parent_object.increment!(:replies_count)
     Rails.logger.info "💬 Reply count updated for #{parent_object.ap_id}: #{parent_object.replies_count}"
-  end
-
-  def handle_direct_message_conversation(object, object_data)
-    Rails.logger.info "💬 Processing DM conversation for #{object.id}"
-
-    # 受信者（ローカルユーザ）を特定
-    to_addresses = object_data['to'] || []
-    local_recipients = find_local_recipients_from_addresses(to_addresses)
-
-    if local_recipients.empty?
-      Rails.logger.warn '⚠️ No local recipients found for DM'
-      return
-    end
-
-    # 送信者と受信者で会話を作成/取得
-    participants = [object.actor] + local_recipients
-    conversation = Conversation.find_or_create_for_actors(participants)
-
-    # ステータスを会話に関連付け
-    object.update!(conversation: conversation)
-    conversation.update_last_status!(object)
-
-    Rails.logger.info "💬 DM conversation updated: #{conversation.id}"
-  end
-
-  def find_local_recipients_from_addresses(to_addresses)
-    local_actors = []
-
-    to_addresses.each do |address|
-      # ローカルユーザのActivityPub IDかチェック
-      if address.start_with?(Rails.application.config.activitypub.base_url)
-        actor = Actor.find_by(ap_id: address, local: true)
-        local_actors << actor if actor
-      end
-    end
-
-    local_actors
   end
 end

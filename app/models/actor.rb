@@ -11,6 +11,8 @@ class Actor < ApplicationRecord
   has_many :favourites, dependent: :destroy
   has_many :reblogs, dependent: :destroy
   has_many :mentions, dependent: :destroy
+  has_many :notifications, dependent: :destroy, foreign_key: :account_id, inverse_of: :account
+  has_many :sent_notifications, dependent: :destroy, foreign_key: :from_account_id, class_name: 'Notification', inverse_of: :from_account
 
   # Active Storage統合
   has_one_attached :avatar
@@ -32,6 +34,9 @@ class Actor < ApplicationRecord
   has_many :muted_actors, through: :mutes, source: :target_actor
   has_many :muted_by, class_name: 'Mute', foreign_key: :target_actor_id, dependent: :destroy, inverse_of: :target_actor
   has_many :muting_actors, through: :muted_by, source: :actor
+
+  # Domain blocks
+  has_many :domain_blocks, dependent: :destroy
 
   # Conversations
   has_many :conversation_participants, dependent: :destroy
@@ -159,7 +164,7 @@ class Actor < ApplicationRecord
 
   # ActivityPub JSON-LD representation
   def to_activitypub(request = nil)
-    base_activitypub_data(request).merge(activitypub_links(request)).merge(activitypub_images(request)).compact
+    base_activitypub_data(request).merge(activitypub_links(request)).merge(activitypub_images(request)).merge(activitypub_attachments).compact
   end
 
   # フォロー・フォロワー数の更新
@@ -207,7 +212,7 @@ class Actor < ApplicationRecord
   def domain_blocking?(domain)
     return false unless domain
 
-    DomainBlock.exists?(domain: domain)
+    domain_blocks.exists?(domain: domain)
   end
 
   def domain_blocked_by?(actor_domain)
@@ -223,18 +228,93 @@ class Actor < ApplicationRecord
 
   # Active Storage画像URLの取得
   def avatar_url
-    return nil unless avatar.attached?
+    # ローカルユーザの場合はActiveStorageから取得
+    return Rails.application.routes.url_helpers.url_for(avatar) if local? && avatar.attached?
 
-    Rails.application.routes.url_helpers.url_for(avatar)
+    # 外部ユーザの場合はraw_dataから取得
+    extract_remote_image_url('icon')
   end
 
   def header_image_url
-    return nil unless header.attached?
+    # ローカルユーザの場合はActiveStorageから取得
+    return Rails.application.routes.url_helpers.url_for(header) if local? && header.attached?
 
-    Rails.application.routes.url_helpers.url_for(header)
+    # 外部ユーザの場合はraw_dataから取得
+    extract_remote_image_url('image')
+  end
+
+  def extract_remote_image_url(field_name)
+    return nil if raw_data.blank?
+
+    begin
+      actor_data = parse_actor_data
+      return nil unless actor_data
+
+      extract_image_url(actor_data[field_name])
+    rescue JSON::ParserError => e
+      log_parse_error(e)
+      nil
+    rescue StandardError => e
+      log_extraction_error(field_name, e)
+      nil
+    end
   end
 
   private
+
+  def parse_actor_data
+    case raw_data
+    when String
+      parse_raw_data_string(raw_data)
+    when Hash
+      raw_data
+    end
+  end
+
+  def log_parse_error(error)
+    Rails.logger.warn "Failed to parse raw_data for #{username}@#{domain}: #{error.message}"
+  end
+
+  def log_extraction_error(field_name, error)
+    Rails.logger.warn "Failed to extract #{field_name} URL for #{username}@#{domain}: #{error.message}"
+  end
+
+  # raw_data文字列をパース（JSON形式またはRuby Hash形式に対応）
+  def parse_raw_data_string(data_string)
+    # まずJSONとしてパースを試行
+    begin
+      return JSON.parse(data_string)
+    rescue JSON::ParserError
+      # JSONでない場合は、Ruby Hash文字列として安全にパースを試行
+      # evalの代わりにYAMLを使用して安全にパース
+      begin
+        if data_string.start_with?('{') && data_string.end_with?('}')
+          # Ruby Hash文字列をYAML形式に変換してパース
+          # ただし、これも完全に安全ではないため、JSON以外は受け付けない方針とする
+          Rails.logger.warn "Non-JSON data_string received: #{data_string[0..100]}..."
+          return nil
+        end
+      rescue StandardError => e
+        Rails.logger.error "Failed to parse data_string: #{e.message}"
+      end
+    end
+
+    nil
+  end
+
+  # 画像URL抽出ヘルパー
+  def extract_image_url(image_data)
+    return nil if image_data.blank?
+
+    case image_data
+    when String
+      image_data
+    when Hash
+      image_data['url'] || image_data['href']
+    when Array
+      image_data.first&.dig('url') || image_data.first&.dig('href')
+    end
+  end
 
   # ActivityPub base data
   def base_activitypub_data(request = nil)
@@ -244,7 +324,12 @@ class Actor < ApplicationRecord
     {
       '@context' => [
         Rails.application.config.activitypub.context_url,
-        'https://w3id.org/security/v1'
+        'https://w3id.org/security/v1',
+        {
+          'schema' => 'http://schema.org#',
+          'PropertyValue' => 'schema:PropertyValue',
+          'value' => 'schema:value'
+        }
       ],
       'type' => actor_type || 'Person',
       'id' => actor_url,
@@ -282,6 +367,55 @@ class Actor < ApplicationRecord
       'icon' => avatar_url ? { 'type' => 'Image', 'url' => avatar_url } : nil,
       'image' => header_image_url ? { 'type' => 'Image', 'url' => header_image_url } : nil
     }
+  end
+
+  # ActivityPub profile attachments (PropertyValue)
+  def activitypub_attachments
+    return {} if profile_links.blank?
+
+    begin
+      links = JSON.parse(profile_links)
+      attachments = links.filter_map do |link|
+        next if link['name'].blank? || link['url'].blank?
+
+        {
+          'type' => 'PropertyValue',
+          'name' => link['name'],
+          'value' => format_profile_link_value(link['url'])
+        }
+      end
+
+      attachments.empty? ? {} : { 'attachment' => attachments }
+    rescue JSON::ParserError
+      {}
+    end
+  end
+
+  # Format profile link URL as Mastodon-style HTML
+  def format_profile_link_value(url)
+    return url unless url.start_with?('http')
+
+    uri = URI.parse(url)
+    uri.host
+    uri.path
+    (uri.query ? "?#{uri.query}" : '')
+
+    # Remove common URL prefixes for display
+    display_url = url.gsub(/^https?:\/\//, '')
+
+    # Split into invisible/visible parts like Mastodon
+    if display_url.length > 30
+      # For long URLs, show domain + start of path, then ellipsis
+      visible_part = display_url[0..25]
+      invisible_part = display_url[26..]
+      "<a href=\"#{url}\" target=\"_blank\" rel=\"nofollow noopener noreferrer me\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"ellipsis\">#{visible_part}</span><span class=\"invisible\">#{invisible_part}</span></a>"
+    else
+      # For shorter URLs, just hide the protocol
+      "<a href=\"#{url}\" target=\"_blank\" rel=\"nofollow noopener noreferrer me\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"\">#{display_url}</span><span class=\"invisible\"></span></a>"
+    end
+  rescue URI::InvalidURIError
+    # If URL parsing fails, return plain link
+    "<a href=\"#{url}\" target=\"_blank\" rel=\"nofollow noopener noreferrer me\" translate=\"no\">#{url}</a>"
   end
 
   # Get base URL from request or fallback to config

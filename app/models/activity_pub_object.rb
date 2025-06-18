@@ -276,25 +276,30 @@ class ActivityPubObject < ApplicationRecord
   end
 
   def build_tag_list
-    # ハッシュタグを追加
-    tag_list = tags.map do |tag|
+    hashtag_tags = build_hashtag_tags
+    mention_tags = build_mention_tags
+
+    hashtag_tags + mention_tags
+  end
+
+  def build_hashtag_tags
+    tags.map do |tag|
       {
         'type' => 'Hashtag',
         'name' => "##{tag.name}",
         'href' => "#{Rails.application.config.activitypub.base_url}/tags/#{tag.name}"
       }
     end
+  end
 
-    # メンションされたアクターをMentionタグとして追加
-    mentions.includes(:actor).find_each do |mention|
-      tag_list << {
+  def build_mention_tags
+    mentions.includes(:actor).map do |mention|
+      {
         'type' => 'Mention',
         'name' => "@#{mention.actor.username}@#{mention.actor.domain}",
         'href' => mention.actor.ap_id
       }
     end
-
-    tag_list
   end
 
   # === バリデーション・コールバックヘルパー ===

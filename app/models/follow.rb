@@ -221,12 +221,10 @@ class Follow < ApplicationRecord
   end
 
   def generate_follow_ap_id
-    if actor&.local?
-      snowflake_id = Letter::Snowflake.generate
-      "#{Rails.application.config.activitypub.base_url}/#{snowflake_id}"
-    else
-      nil
-    end
+    return unless actor&.local?
+
+    snowflake_id = Letter::Snowflake.generate
+    "#{Rails.application.config.activitypub.base_url}/#{snowflake_id}"
   end
 
   def should_send_follow_activity?
@@ -238,7 +236,7 @@ class Follow < ApplicationRecord
     Rails.logger.info "📤 Creating and queuing Follow activity for follow #{id}"
 
     # Create Activity record
-    activity = Activity.create!(
+    Activity.create!(
       ap_id: follow_activity_ap_id,
       activity_type: 'Follow',
       actor: actor,

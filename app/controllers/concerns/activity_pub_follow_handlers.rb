@@ -45,6 +45,9 @@ module ActivityPubFollowHandlers
     # 自動承認（Follow モデルのaccept!メソッドを使用）
     follow.accept!
 
+    # フォロー通知を作成
+    Notification.create_follow_notification(follow)
+
     Rails.logger.info "✅ Follow auto-accepted: #{follow.id}"
     head :accepted
   end
