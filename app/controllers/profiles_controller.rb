@@ -56,7 +56,8 @@ class ProfilesController < ApplicationController
   def load_user_posts
     posts = load_user_post_objects
     reblogs = load_user_reblog_objects
-    timeline_items = build_user_timeline_items(posts, reblogs)
+    pinned_posts = load_pinned_posts
+    timeline_items = build_user_timeline_items(posts, reblogs, pinned_posts)
     apply_user_timeline_sorting_and_pagination(timeline_items)
   end
 
@@ -77,10 +78,16 @@ class ProfilesController < ApplicationController
           .includes(:actor, object: %i[actor media_attachments])
   end
 
-  def build_user_timeline_items(posts, reblogs)
+  def build_user_timeline_items(posts, reblogs, pinned_posts)
     timeline_items = []
 
+    # Pinned postsを先に追加（最上部に表示）
+    pinned_posts.each do |pinned_status|
+      timeline_items << build_user_pinned_timeline_item(pinned_status.object)
+    end
+
     posts.find_each do |post|
+      # Pinned postsも元の時系列位置に表示するため、重複除外は行わない
       timeline_items << build_user_post_timeline_item(post)
     end
 
@@ -109,10 +116,36 @@ class ProfilesController < ApplicationController
     }
   end
 
+  def build_user_pinned_timeline_item(post)
+    Rails.logger.info "DEBUG: Pinned post #{post.id} published_at: #{post.published_at}"
+    {
+      type: :pinned_post,
+      item: post,
+      published_at: post.published_at,
+      id: "pinned_#{post.id}"
+    }
+  end
+
+  def load_pinned_posts
+    @actor.pinned_statuses
+          .includes(object: [:actor, :media_attachments, :mentions, :tags])
+          .ordered
+  end
+
   def apply_user_timeline_sorting_and_pagination(timeline_items)
-    timeline_items.sort_by! { |item| -item[:published_at].to_i }
-    timeline_items = apply_timeline_pagination_filters(timeline_items)
-    timeline_items.take(30)
+    # Pinned statusとその他を分離
+    pinned_items = timeline_items.select { |item| item[:type] == :pinned_post }
+    other_items = timeline_items.reject { |item| item[:type] == :pinned_post }
+    
+    # その他の投稿のみを時刻順でソート
+    other_items.sort_by! { |item| -item[:published_at].to_i }
+    
+    # Pinned statusを最上部に、その後にその他の投稿を配置
+    sorted_items = pinned_items + other_items
+    
+    # ページネーション処理
+    sorted_items = apply_timeline_pagination_filters(sorted_items)
+    sorted_items.take(30)
   end
 
   def load_user_media_posts

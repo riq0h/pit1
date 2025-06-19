@@ -133,7 +133,7 @@ class FollowService
       username: actor_data['preferredUsername'],
       domain: URI.parse(actor_data['id']).host,
       display_name: actor_data['name'],
-      summary: actor_data['summary'],
+      note: actor_data['summary'],
       ap_id: actor_data['id'],
       local: false
     }
@@ -154,7 +154,8 @@ class FollowService
       actor_type: actor_data['type'] || 'Person',
       discoverable: actor_data['discoverable'],
       manually_approves_followers: actor_data['manuallyApprovesFollowers'],
-      raw_data: actor_data.to_json
+      raw_data: actor_data.to_json,
+      fields: extract_fields_from_attachments(actor_data).to_json
     }
   end
 
@@ -210,6 +211,20 @@ class FollowService
     when /gif/ then '.gif'
     when /webp/ then '.webp'
     else '.bin'
+    end
+  end
+
+  def extract_fields_from_attachments(actor_data)
+    attachments = actor_data['attachment'] || []
+    return [] unless attachments.is_a?(Array)
+
+    attachments.filter_map do |attachment|
+      next unless attachment.is_a?(Hash) && attachment['type'] == 'PropertyValue'
+
+      {
+        name: attachment['name'],
+        value: attachment['value']
+      }
     end
   end
 

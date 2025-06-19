@@ -9,7 +9,10 @@ module Api
 
       # GET /api/v1/notifications
       def index
-        @notifications = filtered_notifications.recent.limit(limit_param)
+        @notifications = filtered_notifications
+                        .recent
+                        .then { |n| apply_pagination(n) }
+                        .limit(limit_param)
 
         render json: @notifications.map { |notification| notification_json(notification) }
       end
@@ -103,7 +106,7 @@ module Api
           discoverable: true,
           group: false,
           created_at: actor.created_at.iso8601,
-          note: actor.summary || '',
+          note: actor.note || '',
           url: actor.ap_id
         }
       end
@@ -194,6 +197,22 @@ module Api
           card: nil,
           poll: nil
         }
+      end
+
+      def apply_pagination(notifications)
+        if params[:max_id].present?
+          notifications = notifications.where('notifications.id < ?', params[:max_id])
+        end
+        
+        if params[:since_id].present?
+          notifications = notifications.where('notifications.id > ?', params[:since_id])
+        end
+        
+        if params[:min_id].present?
+          notifications = notifications.where('notifications.id > ?', params[:min_id])
+        end
+        
+        notifications
       end
     end
   end

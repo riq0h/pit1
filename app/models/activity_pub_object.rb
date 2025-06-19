@@ -25,6 +25,7 @@ class ActivityPubObject < ApplicationRecord
   has_many :tags, through: :object_tags
   has_many :mentions, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
   has_many :mentioned_actors, through: :mentions, source: :actor
+  has_many :bookmarks, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
 
   # Conversations (for direct messages)
   belongs_to :conversation, optional: true
@@ -58,10 +59,16 @@ class ActivityPubObject < ApplicationRecord
 
   # === URL生成メソッド ===
   def public_url
+    return ap_id if ap_id.present? && !local?
+    return nil unless actor&.username
+    
     # Snowflake IDを使用してHTML URL生成
-    scheme = Rails.env.production? ? 'https' : 'http'
+    scheme = Rails.application.config.activitypub.scheme || (Rails.env.production? ? 'https' : 'http')
     domain = Rails.application.config.activitypub.domain
     "#{scheme}://#{domain}/@#{actor.username}/#{id}"
+  rescue => e
+    Rails.logger.warn "Failed to generate public_url for object #{id}: #{e.message}"
+    ap_id.presence || ''
   end
 
   def activitypub_url

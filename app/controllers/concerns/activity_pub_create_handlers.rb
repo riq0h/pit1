@@ -42,6 +42,7 @@ module ActivityPubCreateHandlers
     object = ActivityPubObject.create!(build_object_attributes(object_data))
 
     handle_media_attachments(object, object_data)
+    handle_mentions(object, object_data)
     handle_direct_message_conversation(object, object_data) if object.visibility == 'direct'
     update_reply_count_if_needed(object)
 
@@ -63,7 +64,7 @@ module ActivityPubCreateHandlers
       published_at: parse_published_time(object_data['published']),
       sensitive: object_data['sensitive'] || false,
       visibility: determine_visibility(object_data),
-      raw_data: object_data,
+      raw_data: object_data.to_json,
       local: false
     }
   end
@@ -83,6 +84,31 @@ module ActivityPubCreateHandlers
     return 'private' if to.include?(@target_actor.followers_url)
 
     'direct'
+  end
+
+  def handle_mentions(object, object_data)
+    tags = Array(object_data['tag'])
+    mention_tags = tags.select { |tag| tag['type'] == 'Mention' }
+    
+    mention_tags.each do |mention_tag|
+      href = mention_tag['href']
+      next unless href
+
+      # ローカルアクターかチェック
+      mentioned_actor = Actor.find_by(ap_id: href)
+      next unless mentioned_actor&.local?
+
+      # Mentionレコード作成
+      Mention.create!(
+        object: object,
+        actor: mentioned_actor,
+        ap_id: "#{object.ap_id}#mention-#{mentioned_actor.id}"
+      )
+      
+      Rails.logger.info "💬 Mention created: #{mentioned_actor.username}"
+    end
+  rescue => e
+    Rails.logger.error "Failed to handle mentions: #{e.message}"
   end
 
   def update_reply_count_if_needed(object)

@@ -8,7 +8,7 @@ class CreateCoreActivitypubTables < ActiveRecord::Migration[8.0]
       t.string :username, null: false
       t.string :domain, index: true
       t.string :display_name
-      t.text :summary
+      t.text :note
       
       # ActivityPub URLs
       t.string :ap_id, null: false, index: { unique: true }
@@ -29,8 +29,8 @@ class CreateCoreActivitypubTables < ActiveRecord::Migration[8.0]
       t.boolean :suspended, default: false
       t.boolean :admin, default: false
       
-      # Profile links
-      t.text :profile_links
+      # Profile fields
+      t.text :fields
       
       # Social counts
       t.integer :followers_count, default: 0

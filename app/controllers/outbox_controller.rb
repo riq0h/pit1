@@ -208,4 +208,28 @@ class OutboxController < ApplicationController
       }.compact
     end
   end
+
+  def build_object_tags(object)
+    tags = []
+    
+    # ハッシュタグの追加
+    object.tags.each do |tag|
+      tags << {
+        'type' => 'Hashtag',
+        'href' => "#{ENV['DOMAIN']}/tags/#{tag.name}",
+        'name' => "##{tag.name}"
+      }
+    end
+    
+    # メンションの追加
+    object.mentions.includes(:actor).each do |mention|
+      tags << {
+        'type' => 'Mention',
+        'href' => mention.actor.ap_id,
+        'name' => "@#{mention.actor.acct}"
+      }
+    end
+    
+    tags
+  end
 end

@@ -27,13 +27,19 @@ module Api
       private
 
       def application_params
-        params.require(:client_name)
-        params.require(:redirect_uris)
+        client_name = params[:client_name]
+        redirect_uris = params[:redirect_uris]
+        
+        if client_name.blank? || redirect_uris.blank?
+          raise ActionController::ParameterMissing, 'client_name and redirect_uris are required'
+        end
 
         {
-          name: params[:client_name],
-          redirect_uri: params[:redirect_uris],
-          scopes: params[:scopes] || 'read'
+          name: client_name,
+          redirect_uri: redirect_uris,
+          scopes: params[:scopes] || 'read',
+          website: params[:website],
+          confidential: false
         }
       end
 
@@ -41,18 +47,12 @@ module Api
         {
           id: application.id.to_s,
           name: application.name,
-          website: params[:website] || nil,
+          website: application.website,
           redirect_uri: application.redirect_uri,
           client_id: application.uid,
           client_secret: application.secret,
-          vapid_key: Rails.application.config.x.vapid_public_key || generate_vapid_key
+          vapid_key: ENV['VAPID_PUBLIC_KEY'] || 'not_configured'
         }
-      end
-
-      def generate_vapid_key
-        # Generate VAPID key for web push notifications
-        # This is a placeholder - in production you should generate actual VAPID keys
-        Base64.urlsafe_encode64(SecureRandom.random_bytes(65))
       end
     end
   end

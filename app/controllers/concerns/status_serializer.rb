@@ -9,8 +9,8 @@ module StatusSerializer
     {
       id: status.id.to_s,
       created_at: status.published_at.iso8601,
-      uri: status.ap_id,
-      url: status.public_url,
+      uri: status.ap_id || '',
+      url: status.public_url || status.ap_id || '',
       account: serialized_account(status.actor)
     }
   end
@@ -62,5 +62,8 @@ module StatusSerializer
 
     emojis = EmojiParser.extract_emojis(status.content)
     emojis.map(&:to_activitypub)
+  rescue => e
+    Rails.logger.warn "Failed to serialize emojis for status #{status.id}: #{e.message}"
+    []
   end
 end

@@ -220,10 +220,10 @@ class ConfigController < ApplicationController
   def update_user_profile
     return true if params[:actor].blank?
 
-    actor_params = params.expect(actor: [:summary, :avatar, { profile_links: [%i[name url]] }])
+    actor_params = params.expect(actor: [:note, :avatar, { fields: [%i[name value]] }])
 
-    # profile_linksをJSON形式で保存
-    process_profile_links(actor_params) if actor_params[:profile_links].present?
+    # fieldsをJSON形式で保存
+    process_fields(actor_params) if actor_params[:fields].present?
 
     current_user.update(actor_params)
   rescue StandardError => e
@@ -232,11 +232,11 @@ class ConfigController < ApplicationController
     false
   end
 
-  def process_profile_links(actor_params)
+  def process_fields(actor_params)
     # 空のエントリを除去
-    clean_links = actor_params[:profile_links].reject { |link| link[:name].blank? && link[:url].blank? }
-    actor_params[:profile_links] = clean_links.to_json
-    Rails.logger.info "Processed profile links: #{actor_params[:profile_links]}"
+    clean_links = actor_params[:fields].reject { |link| link[:name].blank? && link[:value].blank? }
+    actor_params[:fields] = clean_links.to_json
+    Rails.logger.info "Processed fields: #{actor_params[:fields]}"
   end
 
   def config_params

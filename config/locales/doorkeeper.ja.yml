@@ -1,0 +1,140 @@
+ja:
+  doorkeeper:
+    errors:
+      messages:
+        # Access denied
+        access_denied: "リソースオーナーまたは認証サーバがアクセス要求を拒否しました。"
+        credential_flow_not_configured: "リソースオーナーパスワード認証情報フローが失敗しました。Doorkeeper.configure.resource_owner_from_credentialsが設定されていません。"
+        invalid_client: "不正なクライアントです。クライアント認証が失敗しました。"
+        invalid_grant: "不正な認証許可です。"
+        invalid_redirect_uri: "不正なリダイレクトURIです。"
+        invalid_request: 
+          missing_param: "必要なパラメータが不足しています: %{value}"
+          request_not_authorized: "リクエストが認証されていません。認証に必要なパラメータが不足しているか不正です。"
+          unknown: "リクエストに必要なパラメータが不足している、サポートされていないパラメータが含まれている、または不正な形式です。"
+          invalid_code_challenge: "不正なcode_challengeです。PKCEのcode_challengeが正しくありません。"
+        invalid_resource_owner: "不正なリソースオーナー認証情報です。"
+        invalid_scope: "不正なスコープです。"
+        invalid_token:
+          expired: "アクセストークンが期限切れです。"
+          revoked: "アクセストークンが取り消されました。"
+          unknown: "アクセストークンが不正です。"
+        resource_owner_authenticator_not_configured: "リソースオーナーの検索に失敗しました。Doorkeeper.configure.resource_owner_authenticatorが設定されていません。"
+        server_error: "認証サーバで予期しないエラーが発生し、リクエストを処理できませんでした。"
+        temporarily_unavailable: "認証サーバが一時的に過負荷またはメンテナンス中のため、現在リクエストを処理できません。"
+        unauthorized_client: "クライアントはこの方法でのリクエストを許可されていません。"
+        unsupported_grant_type: "認証許可タイプが認証サーバでサポートされていません。"
+        unsupported_response_type: "認証サーバはこの方法でのアクセストークン発行をサポートしていません。"
+
+    flash:
+      applications:
+        create:
+          notice: 'アプリケーションが作成されました。'
+        destroy:
+          notice: 'アプリケーションが削除されました。'
+        update:
+          notice: 'アプリケーションが更新されました。'
+      authorized_applications:
+        destroy:
+          notice: 'アプリケーションが取り消されました。'
+
+    scopes:
+      read: 'アカウント情報の読み取り'
+      write: '投稿の作成と編集'
+      follow: 'フォロー関係の管理'
+      push: 'プッシュ通知の受信'
+      admin: '管理者権限'
+      'read:accounts': 'アカウント情報の読み取り'
+      'read:blocks': 'ブロック一覧の読み取り'
+      'read:bookmarks': 'ブックマーク一覧の読み取り'
+      'read:favourites': 'お気に入り一覧の読み取り'
+      'read:filters': 'フィルター一覧の読み取り'
+      'read:follows': 'フォロー一覧の読み取り'
+      'read:lists': 'リスト一覧の読み取り'
+      'read:mutes': 'ミュート一覧の読み取り'
+      'read:notifications': '通知の読み取り'
+      'read:search': '検索の実行'
+      'read:statuses': '投稿の読み取り'
+      'write:accounts': 'アカウント情報の更新'
+      'write:blocks': 'ブロックの管理'
+      'write:bookmarks': 'ブックマークの管理'
+      'write:favourites': 'お気に入りの管理'
+      'write:filters': 'フィルターの管理'
+      'write:follows': 'フォローの管理'
+      'write:lists': 'リストの管理'
+      'write:media': 'メディアのアップロード'
+      'write:mutes': 'ミュートの管理'
+      'write:notifications': '通知の管理'
+      'write:reports': '通報の送信'
+      'write:statuses': '投稿の作成'
+      'admin:read': '管理者データの読み取り'
+      'admin:write': '管理者データの更新'
+
+    layouts:
+      admin:
+        nav:
+          applications: 'アプリケーション'
+          oauth2_provider: 'OAuth2プロバイダー'
+      application:
+        title: '認証が必要です'
+
+    applications:
+      buttons:
+        authorize: '認証'
+        cancel: 'キャンセル'
+        destroy: '削除'
+        edit: '編集'
+        submit: '送信'
+      confirmations:
+        destroy: '削除してもよろしいですか？'
+      edit:
+        title: 'アプリケーションの編集'
+      form:
+        error: 'エラーが発生しました。フォームを確認してください。'
+      help:
+        native_redirect_uri: 'ローカルテスト用には %{native_redirect_uri} を使用してください'
+        redirect_uri: '各URIは1行で入力してください'
+        scopes: 'スコープはスペースで区切ってください。空白の場合はデフォルトスコープが使用されます。'
+      index:
+        application: 'アプリケーション'
+        callback_url: 'コールバックURL'
+        delete: '削除'
+        name: '名前'
+        new: '新規アプリケーション'
+        scopes: 'スコープ'
+        show: '表示'
+        title: 'アプリケーション一覧'
+      new:
+        title: '新規アプリケーション'
+      show:
+        actions: 'アクション'
+        application_id: 'クライアントID'
+        callback_urls: 'コールバックURL'
+        scopes: 'スコープ'
+        secret: 'クライアントシークレット'
+        title: 'アプリケーション: %{name}'
+
+    authorizations:
+      buttons:
+        authorize: '認証'
+        deny: '拒否'
+      error:
+        title: 'エラーが発生しました'
+      new:
+        able_to: 'このアプリケーションは以下のことができます：'
+        prompt: '%{client_name} があなたのアカウントを使用することを認証しますか？'
+        title: '認証が必要です'
+      show:
+        title: '認証コードをコピーしてアプリケーションに貼り付けてください。'
+
+    authorized_applications:
+      buttons:
+        revoke: '取り消し'
+      confirmations:
+        revoke: '取り消してもよろしいですか？'
+      index:
+        application: 'アプリケーション'
+        created_at: '認証日時'
+        date_format: '%Y-%m-%d %H:%M:%S'
+        scopes: 'スコープ'
+        title: '認証済みアプリケーション'

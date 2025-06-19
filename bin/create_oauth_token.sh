@@ -107,14 +107,12 @@ cat > tmp_create_token.rb << 'EOF'
 username = ARGV[0]
 
 begin
-  # Find user
   actor = Actor.find_by(username: username, local: true)
   unless actor
     puts "error|ユーザ '#{username}' が見つかりません"
     exit 1
   end
 
-  # Check for existing tokens
   existing_app = Doorkeeper::Application.find_by(uid: "letter_client_#{username}")
   existing_token = nil
   
@@ -138,15 +136,12 @@ begin
     puts "protocol|#{ENV['ACTIVITYPUB_PROTOCOL']}"
     puts "created_at|#{existing_token.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
   else
-    # Create or find OAuth application
     app = Doorkeeper::Application.find_or_create_by(uid: "letter_client_#{username}") do |a|
       a.name = "Letter API Client (#{username})"
-      a.secret = SecureRandom.hex(32)
       a.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
       a.scopes = "read write follow"
     end
 
-    # Create access token
     token = Doorkeeper::AccessToken.create!(
       application: app,
       resource_owner_id: actor.id,

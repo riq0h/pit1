@@ -87,7 +87,7 @@ module Api
           discoverable: true,
           group: false,
           created_at: actor.created_at.iso8601,
-          note: actor.summary || '',
+          note: actor.note || '',
           url: actor.ap_id,
           last_status_at: actor.last_status_at&.iso8601
         }

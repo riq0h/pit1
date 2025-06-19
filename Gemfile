@@ -38,6 +38,9 @@ gem 'rack-cors'                  # CORS handling
 # Background Jobs
 gem 'solid_queue' # Rails 8 solid queue for background jobs
 
+# Push Notifications
+gem 'web-push' # Web Push Protocol implementation
+
 # Utilities
 gem 'aws-sdk-s3', require: false # S3-compatible storage (Cloudflare R2)
 gem 'blurhash'                   # Image placeholder generation

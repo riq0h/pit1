@@ -33,7 +33,9 @@ module StatusSerializationHelper
       reblogs_count: status.reblogs_count || 0,
       favourites_count: status.favourites_count || 0,
       favourited: favourited_by_current_user?(status),
-      reblogged: reblogged_by_current_user?(status)
+      reblogged: reblogged_by_current_user?(status),
+      bookmarked: bookmarked_by_current_user?(status),
+      pinned: pinned_by_current_user?(status)
     }
   end
 
@@ -87,5 +89,17 @@ module StatusSerializationHelper
     return false unless current_user
 
     current_user.reblogs.exists?(object: status)
+  end
+
+  def bookmarked_by_current_user?(status)
+    return false unless current_user
+
+    current_user.bookmarks.exists?(object: status)
+  end
+
+  def pinned_by_current_user?(status)
+    return false unless current_user
+
+    current_user.pinned_statuses.exists?(object: status)
   end
 end

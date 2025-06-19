@@ -11,6 +11,13 @@ class Actor < ApplicationRecord
   has_many :favourites, dependent: :destroy
   has_many :reblogs, dependent: :destroy
   has_many :mentions, dependent: :destroy
+  has_many :bookmarks, dependent: :destroy
+  has_many :featured_tags, dependent: :destroy
+  has_many :pinned_statuses, dependent: :destroy
+  has_many :lists, dependent: :destroy
+  has_many :list_memberships, dependent: :destroy
+  has_many :filters, dependent: :destroy
+  has_many :web_push_subscriptions, dependent: :destroy
   has_many :notifications, dependent: :destroy, foreign_key: :account_id, inverse_of: :account
   has_many :sent_notifications, dependent: :destroy, foreign_key: :from_account_id, class_name: 'Notification', inverse_of: :from_account
 
@@ -335,7 +342,7 @@ class Actor < ApplicationRecord
       'id' => actor_url,
       'preferredUsername' => username,
       'name' => display_name,
-      'summary' => summary,
+      'summary' => note,
       'url' => actor_url,
       'discoverable' => discoverable,
       'manuallyApprovesFollowers' => manually_approves_followers
@@ -371,17 +378,17 @@ class Actor < ApplicationRecord
 
   # ActivityPub profile attachments (PropertyValue)
   def activitypub_attachments
-    return {} if profile_links.blank?
+    return {} if fields.blank?
 
     begin
-      links = JSON.parse(profile_links)
+      links = JSON.parse(fields)
       attachments = links.filter_map do |link|
-        next if link['name'].blank? || link['url'].blank?
+        next if link['name'].blank? || link['value'].blank?
 
         {
           'type' => 'PropertyValue',
           'name' => link['name'],
-          'value' => format_profile_link_value(link['url'])
+          'value' => format_profile_link_value(link['value'])
         }
       end
 
@@ -391,31 +398,16 @@ class Actor < ApplicationRecord
     end
   end
 
-  # Format profile link URL as Mastodon-style HTML
-  def format_profile_link_value(url)
-    return url unless url.start_with?('http')
+  # Format profile link URL as HTML link
+  def format_profile_link_value(value)
+    return value unless value.match?(/\Ahttps?:\/\//)
 
-    uri = URI.parse(url)
-    uri.host
-    uri.path
-    (uri.query ? "?#{uri.query}" : '')
-
-    # Remove common URL prefixes for display
-    display_url = url.gsub(/^https?:\/\//, '')
-
-    # Split into invisible/visible parts like Mastodon
-    if display_url.length > 30
-      # For long URLs, show domain + start of path, then ellipsis
-      visible_part = display_url[0..25]
-      invisible_part = display_url[26..]
-      "<a href=\"#{url}\" target=\"_blank\" rel=\"nofollow noopener noreferrer me\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"ellipsis\">#{visible_part}</span><span class=\"invisible\">#{invisible_part}</span></a>"
-    else
-      # For shorter URLs, just hide the protocol
-      "<a href=\"#{url}\" target=\"_blank\" rel=\"nofollow noopener noreferrer me\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"\">#{display_url}</span><span class=\"invisible\"></span></a>"
+    begin
+      domain = URI.parse(value).host rescue value
+      %(<a href="#{CGI.escapeHTML(value)}" target="_blank" rel="nofollow noopener noreferrer me">#{CGI.escapeHTML(domain)}</a>)
+    rescue URI::InvalidURIError
+      CGI.escapeHTML(value)
     end
-  rescue URI::InvalidURIError
-    # If URL parsing fails, return plain link
-    "<a href=\"#{url}\" target=\"_blank\" rel=\"nofollow noopener noreferrer me\" translate=\"no\">#{url}</a>"
   end
 
   # Get base URL from request or fallback to config

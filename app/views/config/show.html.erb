@@ -129,11 +129,11 @@
         </div>
 
         <div>
-          <%= form.label "actor[summary]", "自己紹介", 
+          <%= form.label "actor[note]", "自己紹介", 
               class: "block text-sm text-gray-700 mb-2", 
               style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-          <%= form.text_area "actor[summary]", 
-              value: current_user&.summary,
+          <%= form.text_area "actor[note]", 
+              value: current_user&.note,
               placeholder: "あなたの自己紹介を入力してください",
               rows: 4,
               class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors resize-none",
@@ -158,22 +158,22 @@
           
           <div id="profile-links-container" class="space-y-3">
             <!-- 既存のリンクがあれば表示、なければ最初の1つを表示 -->
-            <% if current_user&.profile_links.present? %>
+            <% if current_user&.fields.present? %>
               <% begin %>
-                <% existing_links = JSON.parse(current_user.profile_links) %>
+                <% existing_links = JSON.parse(current_user.fields) %>
                 <% existing_links.each_with_index do |link, index| %>
                   <div class="profile-link-item flex items-center">
                     <div class="w-24">
-                      <input type="text" name="actor[profile_links][][name]" 
+                      <input type="text" name="actor[fields][][name]" 
                              value="<%= link['name'] %>"
                              placeholder="ラベル"
                              class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
                              style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
                     </div>
                     <div class="flex-1 mx-3">
-                      <input type="url" name="actor[profile_links][][url]" 
-                             value="<%= link['url'] %>"
-                             placeholder="https://example.com"
+                      <input type="text" name="actor[fields][][value]" 
+                             value="<%= link['value'] %>"
+                             placeholder="値を入力"
                              class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
                              style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
                     </div>
@@ -190,16 +190,16 @@
                 <!-- JSON解析エラーの場合はデフォルトを表示 -->
                 <div class="profile-link-item flex items-center">
                   <div class="w-24">
-                    <input type="text" name="actor[profile_links][][name]" 
+                    <input type="text" name="actor[fields][][name]" 
                            value=""
                            placeholder="ラベル"
                            class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
                            style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
                   </div>
                   <div class="flex-1 mx-3">
-                    <input type="url" name="actor[profile_links][][url]" 
+                    <input type="text" name="actor[fields][][value]" 
                            value=""
-                           placeholder="https://example.com"
+                           placeholder="値を入力"
                            class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
                            style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
                   </div>
@@ -216,16 +216,16 @@
               <!-- 既存データがない場合のデフォルト表示 -->
               <div class="profile-link-item flex items-center">
                 <div class="w-24">
-                  <input type="text" name="actor[profile_links][][name]" 
+                  <input type="text" name="actor[fields][][name]" 
                          value=""
                          placeholder="ラベル"
                          class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
                          style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
                 </div>
                 <div class="flex-1 mx-3">
-                  <input type="url" name="actor[profile_links][][url]" 
+                  <input type="text" name="actor[fields][][value]" 
                          value=""
-                         placeholder="https://example.com"
+                         placeholder="値を入力"
                          class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
                          style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
                 </div>
@@ -528,16 +528,16 @@ function addProfileLink() {
   newItem.className = 'profile-link-item flex items-center';
   newItem.innerHTML = `
     <div class="w-24">
-      <input type="text" name="actor[profile_links][][name]" 
+      <input type="text" name="actor[fields][][name]" 
              value=""
              placeholder="ラベル"
              class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
              style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
     </div>
     <div class="flex-1 mx-3">
-      <input type="url" name="actor[profile_links][][url]" 
+      <input type="text" name="actor[fields][][value]" 
              value=""
-             placeholder="https://example.com"
+             placeholder="値を入力"
              class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
              style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
     </div>

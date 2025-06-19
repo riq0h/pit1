@@ -39,31 +39,38 @@
     </div>
 
     <!-- 自己紹介 -->
-    <% if @actor.summary.present? %>
+    <% if @actor.note.present? %>
       <div class="text-gray-700 leading-relaxed mb-4">
-        <%= auto_link_urls(@actor.summary).html_safe %>
+        <%= auto_link_urls(@actor.note).html_safe %>
       </div>
     <% end %>
 
     <!-- プロフィールリンク -->
-    <% if @actor.profile_links.present? %>
+    <% if @actor.fields.present? %>
       <% begin %>
-        <% profile_links = JSON.parse(@actor.profile_links) %>
-        <% if profile_links.any? %>
+        <% fields = JSON.parse(@actor.fields) %>
+        <% if fields.any? %>
           <div class="space-y-2">
-            <% profile_links.each do |link| %>
-              <% if link['name'].present? && link['url'].present? %>
+            <% fields.each do |link| %>
+              <% if link['name'].present? && link['value'].present? %>
                 <div class="flex items-center space-x-2 text-sm">
                   <span class="text-gray-600 font-medium min-w-0 flex-shrink-0">
                     <%= link['name'] %>:
                   </span>
-                  <a href="<%= link['url'] %>" 
-                     target="_blank" 
-                     rel="nofollow noopener noreferrer me" 
-                     class="text-blue-600 hover:text-blue-800 transition-colors truncate"
-                     style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
-                    <%= link['url'].gsub(/^https?:\/\//, '') %>
-                  </a>
+                  <% if link['value'].match?(/\Ahttps?:\/\//) %>
+                    <a href="<%= link['value'] %>" 
+                       target="_blank" 
+                       rel="nofollow noopener noreferrer me" 
+                       class="text-blue-600 hover:text-blue-800 transition-colors truncate"
+                       style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                      <%= link['value'].gsub(/^https?:\/\//, '') %>
+                    </a>
+                  <% else %>
+                    <span class="text-gray-700 truncate"
+                          style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                      <%= link['value'] %>
+                    </span>
+                  <% end %>
                 </div>
               <% end %>
             <% end %>
@@ -104,6 +111,8 @@
         <% if timeline_item.is_a?(Hash) %>
           <% if timeline_item[:type] == :post %>
             <%= render 'shared/post_card', post: timeline_item[:item] %>
+          <% elsif timeline_item[:type] == :pinned_post %>
+            <%= render 'shared/post_card', post: timeline_item[:item], pinned: true %>
           <% elsif timeline_item[:type] == :reblog %>
             <%= render 'shared/reblog_card', reblog: timeline_item[:item] %>
           <% end %>

@@ -5,6 +5,7 @@ module Api
     class TimelinesController < Api::BaseController
       include AccountSerializer
       include MediaSerializer
+      include MentionTagSerializer
       before_action :doorkeeper_authorize!, only: [:home]
 
       # GET /api/v1/timelines/home
@@ -21,6 +22,13 @@ module Api
         render json: statuses.map { |status| serialized_status(status) }
       end
 
+      # GET /api/v1/timelines/tag/:hashtag
+      def tag
+        hashtag_name = params[:hashtag]
+        statuses = build_hashtag_timeline_query(hashtag_name)
+        render json: statuses.map { |status| serialized_status(status) }
+      end
+
       private
 
       def build_home_timeline_query
@@ -32,6 +40,18 @@ module Api
       def build_public_timeline_query
         statuses = base_timeline_query.where(visibility: 'public')
         statuses = statuses.where(actors: { local: true }) if local_only?
+        apply_pagination_filters(statuses)
+      end
+
+      def build_hashtag_timeline_query(hashtag_name)
+        # ハッシュタグに関連する投稿を取得
+        tag = Tag.find_by(name: hashtag_name)
+        return ActivityPubObject.none unless tag
+
+        statuses = base_timeline_query
+                    .joins(:tags)
+                    .where(tags: { id: tag.id })
+                    .where(visibility: 'public')
         apply_pagination_filters(statuses)
       end
 
@@ -94,16 +114,22 @@ module Api
           spoiler_text: status.summary || '',
           visibility: status.visibility || 'public',
           language: 'ja',
-          uri: status.ap_id,
-          url: status.public_url,
+          uri: status.ap_id || '',
+          url: status.public_url || status.ap_id || '',
           replies_count: replies_count(status),
+          reblogs_count: status.reblogs_count || 0,
+          favourites_count: status.favourites_count || 0,
           content: status.content || '',
           reblog: nil,
           account: serialized_account(status.actor),
           media_attachments: serialized_media_attachments(status),
+          mentions: serialized_mentions(status),
+          tags: serialized_tags(status),
           emojis: [],
           card: nil,
-          poll: nil
+          poll: nil,
+          favourited: false,
+          reblogged: false
         }
       end
 

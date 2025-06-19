@@ -1,5 +1,6 @@
 <!-- ブログ記事風の投稿表示 -->
-<article class="mb-8 p-6 border border-gray-300">
+<% pinned ||= false %>
+<article class="mb-8 p-6 <%= pinned ? 'border-2 border-gray-400' : 'border border-gray-300' %>">
   <!-- 記事ヘッダー（ブログ記事のタイトル部分に相当） -->
   <header class="mb-2">
     <div class="flex items-center justify-between mb-2">
@@ -33,6 +34,9 @@
         
         <!-- 日時表示 -->
         <div class="text-sm text-gray-500 mt-1" style="font-weight: 300;">
+          <% if pinned %>
+            <span class="mr-2">固定投稿</span>
+          <% end %>
           <%= link_to post_html_path(post.actor.username, post.id), 
                       class: "hover:text-gray-700 transition-colors",
                       data: { turbo_frame: "_top" } do %>

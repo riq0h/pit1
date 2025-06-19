@@ -51,9 +51,11 @@ module Api
       # Check if token has required scopes
       if scopes.any?
         required_scopes = Doorkeeper::OAuth::Scopes.from_array(scopes)
-        token_scopes = Doorkeeper::OAuth::Scopes.from_string(doorkeeper_token.scopes)
+        token_scopes = doorkeeper_token.scopes.is_a?(Doorkeeper::OAuth::Scopes) ? 
+                      doorkeeper_token.scopes : 
+                      Doorkeeper::OAuth::Scopes.from_string(doorkeeper_token.scopes)
 
-        unless token_scopes.sufficient?(required_scopes)
+        unless required_scopes.all? { |scope| token_scopes.include?(scope) }
           render json: {
             error: 'Insufficient scope',
             required_scopes: scopes

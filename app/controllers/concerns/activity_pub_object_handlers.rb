@@ -23,10 +23,10 @@ module ActivityPubObjectHandlers
   def update_actor_profile(object_data)
     @sender.update!(
       display_name: object_data['name'],
-      summary: object_data['summary'],
+      note: object_data['summary'],
       icon_url: object_data.dig('icon', 'url'),
       header_url: object_data.dig('image', 'url'),
-      raw_data: object_data
+      raw_data: object_data.to_json
     )
     Rails.logger.info "👤 Actor updated: #{@sender.username}"
   end
@@ -46,7 +46,7 @@ module ActivityPubObjectHandlers
       content_plaintext: ActivityPub::HtmlStripper.strip(object_data['content']),
       summary: object_data['summary'],
       sensitive: object_data['sensitive'] || false,
-      raw_data: object_data
+      raw_data: object_data.to_json
     }
   end
 

@@ -102,13 +102,14 @@ class HttpSignatureVerifier
       username: username,
       domain: domain,
       display_name: actor_data['name'],
-      summary: actor_data['summary'],
+      note: actor_data['summary'],
       inbox_url: actor_data['inbox'],
       outbox_url: actor_data['outbox'],
       followers_url: actor_data['followers'],
       following_url: actor_data['following'],
       public_key: public_key_data,
-      raw_data: actor_data,
+      raw_data: actor_data.to_json,
+      fields: extract_fields_from_attachments(actor_data).to_json,
       local: false
     )
 
@@ -186,6 +187,21 @@ class HttpSignatureVerifier
   def build_custom_header(header_name)
     value = headers[header_name] || headers[header_name.titleize]
     "#{header_name.downcase}: #{value}"
+  end
+
+  # ActivityPub attachmentからfieldsを抽出
+  def extract_fields_from_attachments(actor_data)
+    attachments = actor_data['attachment'] || []
+    return [] unless attachments.is_a?(Array)
+
+    attachments.filter_map do |attachment|
+      next unless attachment.is_a?(Hash) && attachment['type'] == 'PropertyValue'
+
+      {
+        name: attachment['name'],
+        value: attachment['value']
+      }
+    end
   end
 
   # 署名検証

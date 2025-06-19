@@ -8,6 +8,7 @@ class Reblog < ApplicationRecord
 
   before_validation :set_ap_id, on: :create
   after_create :increment_reblogs_count
+  after_create :send_push_notification
   after_destroy :decrement_reblogs_count
 
   private
@@ -25,5 +26,9 @@ class Reblog < ApplicationRecord
 
   def decrement_reblogs_count
     object.decrement!(:reblogs_count)
+  end
+
+  def send_push_notification
+    WebPushNotificationService.notification_for_reblog(self)
   end
 end

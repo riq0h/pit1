@@ -143,14 +143,14 @@ create_account() {
     # Get display name (optional)
     read -p "表示名 (オプション): " display_name
     
-    # Get summary (optional)
-    read -p "プロフィール (オプション): " summary
+    # Get note (optional)
+    read -p "プロフィール (オプション): " note
     
     echo ""
     print_info "入力内容を確認してください:"
     echo "  ユーザ名: $username"
     echo "  表示名: ${display_name:-'未設定'}"
-    echo "  プロフィール: ${summary:-'未設定'}"
+    echo "  プロフィール: ${note:-'未設定'}"
     echo ""
     
     read -p "この内容でアカウントを作成しますか? (y/N): " -n 1 -r
@@ -171,7 +171,7 @@ create_account() {
         username: '$username',
         password: '$password',
         display_name: '$display_name',
-        summary: '$summary',
+        note: '$note',
         local: true,
         discoverable: true,
         manually_approves_followers: false

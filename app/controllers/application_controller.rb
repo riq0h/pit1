@@ -4,7 +4,7 @@ class ApplicationController < ActionController::Base
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   # allow_browser versions: :modern
 
-  protect_from_forgery with: :exception, unless: :activitypub_request?
+  protect_from_forgery with: :exception, unless: -> { activitypub_request? || api_request? }
   before_action :set_locale
 
   # 認証ヘルパーメソッドをビューでも使用可能にする
@@ -17,6 +17,10 @@ class ApplicationController < ActionController::Base
       request.content_type == 'application/ld+json' ||
       request.headers['Accept']&.include?('application/activity+json') ||
       request.headers['Accept']&.include?('application/ld+json')
+  end
+
+  def api_request?
+    request.path.start_with?('/api/')
   end
 
   # 現在ログイン中のユーザを取得

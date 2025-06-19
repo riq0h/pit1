@@ -19,6 +19,7 @@ class CreateMediaAndFiles < ActiveRecord::Migration[8.0]
       t.integer :height
       t.string :blurhash
       t.text :description
+      t.text :metadata
       
       # Processing status
       t.string :processing_status, default: 'pending'

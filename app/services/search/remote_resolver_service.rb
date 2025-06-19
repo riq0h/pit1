@@ -62,7 +62,7 @@ module Search
         username: username,
         domain: domain,
         display_name: data['name'],
-        summary: data['summary'],
+        note: data['summary'],
         ap_id: data['id'],
         inbox_url: data['inbox'],
         outbox_url: data['outbox'],
@@ -75,6 +75,7 @@ module Search
         bot: data['type'] == 'Service',
         discoverable: data['discoverable'] || false,
         raw_data: data.to_json,
+        fields: extract_fields_from_attachments(data).to_json,
         actor_type: data['type']
       )
     end
@@ -211,6 +212,20 @@ module Search
       return 'audio' if content_type&.start_with?('audio/')
 
       'document'
+    end
+
+    def extract_fields_from_attachments(actor_data)
+      attachments = actor_data['attachment'] || []
+      return [] unless attachments.is_a?(Array)
+
+      attachments.filter_map do |attachment|
+        next unless attachment.is_a?(Hash) && attachment['type'] == 'PropertyValue'
+
+        {
+          name: attachment['name'],
+          value: attachment['value']
+        }
+      end
     end
 
     def account_query?(query)

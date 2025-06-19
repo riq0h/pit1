@@ -103,7 +103,7 @@ class ActorFetcher
       username: username,
       domain: domain,
       display_name: actor_data['name'],
-      summary: actor_data['summary'],
+      note: actor_data['summary'],
       actor_type: actor_data['type'],
       inbox_url: actor_data['inbox'],
       outbox_url: actor_data['outbox'],
@@ -111,11 +111,27 @@ class ActorFetcher
       following_url: actor_data['following'],
       featured_url: actor_data['featured'],
       public_key: public_key_pem,
-      raw_data: actor_data,
+      raw_data: actor_data.to_json,
+      fields: extract_fields_from_attachments(actor_data).to_json,
       local: false,
       discoverable: actor_data['discoverable'] != false,
       manually_approves_followers: actor_data['manuallyApprovesFollowers'] == true
     }
+  end
+
+  # ActivityPub attachmentからfieldsを抽出
+  def extract_fields_from_attachments(actor_data)
+    attachments = actor_data['attachment'] || []
+    return [] unless attachments.is_a?(Array)
+
+    attachments.filter_map do |attachment|
+      next unless attachment.is_a?(Hash) && attachment['type'] == 'PropertyValue'
+
+      {
+        name: attachment['name'],
+        value: attachment['value']
+      }
+    end
   end
 
   # 画像URL抽出（icon/header）

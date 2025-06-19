@@ -34,6 +34,9 @@ class Notification < ApplicationRecord
   validates :activity_type, presence: true
   validates :activity_id, presence: true
 
+  # コールバック
+  after_create :send_push_notification
+
   # スコープ
   scope :unread, -> { where(read: false) }
   scope :recent, -> { order(created_at: :desc) }
@@ -94,5 +97,27 @@ class Notification < ApplicationRecord
       activity_id: original_status.id.to_s,
       notification_type: 'reblog'
     )
+  end
+
+  private
+
+  def send_push_notification
+    case notification_type
+    when 'follow'
+      WebPushNotificationService.notification_for_follow(from_account, account)
+    when 'mention'
+      status = activity
+      WebPushNotificationService.notification_for_mention(status, account) if status
+    when 'favourite'
+      status = activity
+      favourite = Favourite.find_by(actor: from_account, object: status)
+      WebPushNotificationService.notification_for_favourite(favourite) if favourite && status
+    when 'reblog'
+      status = activity
+      reblog = Reblog.find_by(actor: from_account, object: status)
+      WebPushNotificationService.notification_for_reblog(reblog) if reblog && status
+    end
+  rescue => e
+    Rails.logger.error "Failed to send push notification: #{e.message}"
   end
 end

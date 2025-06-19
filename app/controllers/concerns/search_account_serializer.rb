@@ -20,13 +20,13 @@ module SearchAccountSerializer
       discoverable: actor.discoverable || false,
       group: false,
       created_at: actor.created_at.iso8601,
-      note: actor.summary || ''
+      note: actor.note || ''
     }
   end
 
   def additional_account_data(actor)
     {
-      url: actor.public_url,
+      url: actor.public_url || actor.ap_id || '',
       avatar: actor.avatar_url || '/icon.png',
       avatar_static: actor.avatar_url || '/icon.png',
       header: actor.header_image_url || '/icon.png',

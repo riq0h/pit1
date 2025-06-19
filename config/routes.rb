@@ -1,12 +1,4 @@
 Rails.application.routes.draw do
-  # OAuth 2.0 endpoints (Doorkeeper)
-  scope :oauth do
-    get '/authorize' => 'oauth/authorizations#new', as: :oauth_authorization
-    post '/authorize' => 'oauth/authorizations#create'
-    delete '/authorize' => 'oauth/authorizations#destroy'
-    post '/token' => 'oauth/tokens#create', as: :oauth_token
-    post '/revoke' => 'oauth/tokens#revoke', as: :oauth_revoke
-  end
   # Health check endpoint
   get 'up' => 'rails/health#show', :as => :rails_health_check
 
@@ -94,10 +86,15 @@ Rails.application.routes.draw do
 
       # Accounts
       get '/accounts/verify_credentials', to: 'accounts#verify_credentials'
+      patch '/accounts/update_credentials', to: 'accounts#update_credentials'
+      get '/accounts/relationships', to: 'accounts#relationships'
+      get '/accounts/search', to: 'accounts#search'
+      get '/accounts/lookup', to: 'accounts#lookup'
       get '/accounts/:id', to: 'accounts#show'
       get '/accounts/:id/statuses', to: 'accounts#statuses'
       get '/accounts/:id/followers', to: 'accounts#followers'
       get '/accounts/:id/following', to: 'accounts#following'
+      get '/accounts/:id/featured_tags', to: 'accounts#featured_tags'
       post '/accounts/:id/follow', to: 'accounts#follow'
       post '/accounts/:id/unfollow', to: 'accounts#unfollow'
       post '/accounts/:id/block', to: 'accounts#block'
@@ -107,6 +104,7 @@ Rails.application.routes.draw do
 
       # Statuses
       get '/statuses/:id', to: 'statuses#show'
+      get '/statuses/:id/context', to: 'statuses#context'
       post '/statuses', to: 'statuses#create'
       delete '/statuses/:id', to: 'statuses#destroy'
       put '/statuses/:id', to: 'statuses#update'
@@ -114,7 +112,18 @@ Rails.application.routes.draw do
       post '/statuses/:id/unfavourite', to: 'statuses#unfavourite'
       post '/statuses/:id/reblog', to: 'statuses#reblog'
       post '/statuses/:id/unreblog', to: 'statuses#unreblog'
+      get '/statuses/:id/reblogged_by', to: 'statuses#reblogged_by'
+      get '/statuses/:id/favourited_by', to: 'statuses#favourited_by'
+      post '/statuses/:id/pin', to: 'statuses#pin'
+      post '/statuses/:id/unpin', to: 'statuses#unpin'
+      post '/statuses/:id/bookmark', to: 'statuses#bookmark'
+      post '/statuses/:id/unbookmark', to: 'statuses#unbookmark'
 
+      # Tags
+      get '/tags/:id', to: 'tags#show'
+      post '/tags/:id/follow', to: 'tags#follow'
+      post '/tags/:id/unfollow', to: 'tags#unfollow'
+      
       # Timelines
       get '/timelines/home', to: 'timelines#home'
       get '/timelines/public', to: 'timelines#public'
@@ -148,28 +157,126 @@ Rails.application.routes.draw do
       # Custom emojis
       get '/custom_emojis', to: 'custom_emojis#index'
 
+      # Bookmarks
+      get '/bookmarks', to: 'bookmarks#index'
+
+      # Favourites
+      get '/favourites', to: 'favourites#index'
+
       # Follow requests
       get '/follow_requests', to: 'follow_requests#index'
       post '/follow_requests/:id/authorize', to: 'follow_requests#authorize'
       post '/follow_requests/:id/reject', to: 'follow_requests#reject'
+      
+      # Markers
+      get '/markers', to: 'markers#index'
+      post '/markers', to: 'markers#create'
+      
+      # Lists
+      get '/lists', to: 'lists#index'
+      post '/lists', to: 'lists#create'
+      get '/lists/:id', to: 'lists#show'
+      put '/lists/:id', to: 'lists#update'
+      delete '/lists/:id', to: 'lists#destroy'
+      get '/lists/:id/accounts', to: 'lists#accounts'
+      post '/lists/:id/accounts', to: 'lists#add_accounts'
+      delete '/lists/:id/accounts', to: 'lists#remove_accounts'
+      
+      # Featured tags
+      get '/featured_tags', to: 'featured_tags#index'
+      post '/featured_tags', to: 'featured_tags#create'
+      delete '/featured_tags/:id', to: 'featured_tags#destroy'
+      get '/featured_tags/suggestions', to: 'featured_tags#suggestions'
+
+      # Followed tags
+      get '/followed_tags', to: 'followed_tags#index'
+      
+      # Suggestions
+      get '/suggestions', to: 'suggestions#index'
+      delete '/suggestions/:id', to: 'suggestions#destroy'
+      
+      # Trends
+      get '/trends', to: 'trends#index'
+      get '/trends/tags', to: 'trends#tags'
+      get '/trends/statuses', to: 'trends#statuses'
+      get '/trends/links', to: 'trends#links'
+      
+      # Filters
+      get '/filters', to: 'filters#index'
+      post '/filters', to: 'filters#create'
+      get '/filters/:id', to: 'filters#show'
+      put '/filters/:id', to: 'filters#update'
+      delete '/filters/:id', to: 'filters#destroy'
+      
+      # Preferences
+      get '/preferences', to: 'preferences#show'
+      
+      # Announcements
+      get '/announcements', to: 'announcements#index'
+      post '/announcements/:id/dismiss', to: 'announcements#dismiss'
+      
+      # Push subscriptions
+      namespace :push do
+        get '/subscription', to: 'subscription#show'
+        post '/subscription', to: 'subscription#create'
+        put '/subscription', to: 'subscription#update'
+        delete '/subscription', to: 'subscription#destroy'
+      end
+
+      # Admin APIs
+      namespace :admin do
+        get '/dashboard', to: 'dashboard#show'
+        
+        resources :accounts, only: [:index, :show, :destroy] do
+          member do
+            post :enable
+            post :suspend
+          end
+        end
+        
+        resources :reports, only: [:index, :show] do
+          member do
+            post :assign_to_self
+            post :unassign
+            post :resolve
+            post :reopen
+          end
+        end
+      end
     end
 
     namespace :v2 do
       # 検索機能
       get '/search', to: 'search#index'
+      
+      # Instance (v2)
+      get '/instance', to: 'instance#show'
+      
+      # Suggestions (v2)
+      get '/suggestions', to: 'suggestions#index'
+      
+      # Trends (v2)
+      get '/trends/tags', to: 'trends#tags'
+      get '/trends/statuses', to: 'trends#statuses'
+      get '/trends/links', to: 'trends#links'
+      
+      # Filters (v2)
+      get '/filters', to: 'filters#index'
+      post '/filters', to: 'filters#create'
+      get '/filters/:id', to: 'filters#show'
+      put '/filters/:id', to: 'filters#update'
+      delete '/filters/:id', to: 'filters#destroy'
+      
+      # Media (v2)
+      post '/media', to: 'media#create'
     end
   end
 
   # ================================
   # OAuth 2.0 Routes
   # ================================
-
-  namespace :oauth do
-    get '/authorize', to: 'authorizations#new'
-    post '/authorize', to: 'authorizations#create'
-    post '/token', to: 'tokens#create'
-    post '/revoke', to: 'tokens#revoke'
-  end
+  
+  use_doorkeeper
 
   # ================================
   # Admin Routes

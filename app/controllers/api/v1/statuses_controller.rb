@@ -9,6 +9,7 @@ module Api
       include MentionTagSerializer
       include StatusActivityHandlers
       include StatusSerializationHelper
+      include TextLinkingHelper
       before_action :doorkeeper_authorize!, except: [:show]
       before_action :doorkeeper_authorize!, only: [:show], if: -> { request.authorization.present? }
       before_action :set_status, except: [:create]
@@ -16,6 +17,17 @@ module Api
       # GET /api/v1/statuses/:id
       def show
         render json: serialized_status(@status)
+      end
+
+      # GET /api/v1/statuses/:id/context
+      def context
+        ancestors = build_ancestors(@status)
+        descendants = build_descendants(@status)
+        
+        render json: {
+          ancestors: ancestors.map { |status| serialized_status(status) },
+          descendants: descendants.map { |status| serialized_status(status) }
+        }
       end
 
       # POST /api/v1/statuses
@@ -43,6 +55,7 @@ module Api
 
         if favourite.persisted?
           create_like_activity(@status)
+          create_favourite_notification(favourite, @status)
           render json: serialized_status(@status)
         else
           render json: { error: 'Failed to favourite status' }, status: :unprocessable_entity
@@ -71,10 +84,27 @@ module Api
 
         if reblog.persisted?
           create_announce_activity(@status)
+          create_reblog_notification(reblog, @status)
           render json: serialized_status(@status)
         else
           render json: { error: 'Failed to reblog status' }, status: :unprocessable_entity
         end
+      end
+
+      # GET /api/v1/statuses/:id/reblogged_by
+      def reblogged_by
+        limit = [params.fetch(:limit, 40).to_i, 80].min
+        reblogs = @status.reblogs.includes(:actor).limit(limit)
+        accounts = reblogs.map(&:actor)
+        render json: accounts.map { |account| serialized_account(account) }
+      end
+
+      # GET /api/v1/statuses/:id/favourited_by
+      def favourited_by
+        limit = [params.fetch(:limit, 40).to_i, 80].min
+        favourites = @status.favourites.includes(:actor).limit(limit)
+        accounts = favourites.map(&:actor)
+        render json: accounts.map { |account| serialized_account(account) }
       end
 
       # POST /api/v1/statuses/:id/unreblog
@@ -87,6 +117,60 @@ module Api
           create_undo_announce_activity(@status, reblog)
           reblog.destroy
         end
+
+        render json: serialized_status(@status)
+      end
+
+      # POST /api/v1/statuses/:id/pin
+      def pin
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render json: { error: 'You can only pin your own statuses' }, status: :unprocessable_entity unless @status.actor == current_user
+
+        # Mastodonの制限: 最大5個まで
+        if current_user.pinned_statuses.count >= 5
+          return render json: { error: 'You have already pinned the maximum number of statuses' }, status: :unprocessable_entity
+        end
+
+        pinned_status = current_user.pinned_statuses.find_or_create_by(object: @status)
+
+        if pinned_status.persisted?
+          render json: serialized_status(@status)
+        else
+          render json: { error: 'Failed to pin status' }, status: :unprocessable_entity
+        end
+      end
+
+      # POST /api/v1/statuses/:id/unpin
+      def unpin
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+
+        pinned_status = current_user.pinned_statuses.find_by(object: @status)
+        pinned_status&.destroy
+
+        render json: serialized_status(@status)
+      end
+
+      # POST /api/v1/statuses/:id/bookmark
+      def bookmark
+        doorkeeper_authorize! :write
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+
+        bookmark = current_user.bookmarks.find_or_create_by(object: @status)
+
+        if bookmark.persisted?
+          render json: serialized_status(@status)
+        else
+          render json: { error: 'Failed to bookmark status' }, status: :unprocessable_entity
+        end
+      end
+
+      # POST /api/v1/statuses/:id/unbookmark
+      def unbookmark
+        doorkeeper_authorize! :write
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+
+        bookmark = current_user.bookmarks.find_by(object: @status)
+        bookmark&.destroy
 
         render json: serialized_status(@status)
       end
@@ -153,16 +237,30 @@ module Api
       end
 
       def deliver_create_activity(create_activity)
+        # メンションされたアクター（外部）のinboxは常に配信対象
+        mentioned_inboxes = @status.mentioned_actors.where(local: false).pluck(:inbox_url)
+        all_inboxes = mentioned_inboxes.dup
+
         case @status.visibility
         when 'public'
-          # Get follower inboxes for public posts
+          # Public投稿：フォロワー + メンションされたアクター
           follower_inboxes = current_user.followers.where(local: false).pluck(:inbox_url)
-          SendActivityJob.perform_later(create_activity.id, follower_inboxes.uniq) if follower_inboxes.any?
+          all_inboxes.concat(follower_inboxes)
+        when 'unlisted'
+          # Unlisted投稿：フォロワー + メンションされたアクター
+          follower_inboxes = current_user.followers.where(local: false).pluck(:inbox_url)
+          all_inboxes.concat(follower_inboxes)
+        when 'private', 'followers_only'
+          # フォロワー限定：フォロワー + メンションされたアクター
+          follower_inboxes = current_user.followers.where(local: false).pluck(:inbox_url)
+          all_inboxes.concat(follower_inboxes)
         when 'direct'
-          # DMの場合はメンションされたアクター（外部）のinboxに配信
-          mentioned_inboxes = @status.mentioned_actors.where(local: false).pluck(:inbox_url)
-          SendActivityJob.perform_later(create_activity.id, mentioned_inboxes.uniq) if mentioned_inboxes.any?
+          # DM：メンションされたアクターのみ（既に all_inboxes に含まれている）
         end
+
+        # 重複を除去して配信
+        unique_inboxes = all_inboxes.uniq.compact
+        SendActivityJob.perform_later(create_activity.id, unique_inboxes) if unique_inboxes.any?
       end
 
       def attach_media_to_status
@@ -257,6 +355,9 @@ module Api
           parser = TextParser.new(@status.content)
           parser.process_for_object(@status)
         end
+
+        # メンション処理後、contentをHTMLリンクに変換
+        convert_mentions_to_html_links
       end
 
       def process_explicit_mentions(mentions_param)
@@ -324,6 +425,50 @@ module Api
         local_domain = Rails.application.config.activitypub.domain
         scheme = Rails.env.production? ? 'https' : 'http'
         "#{scheme}://#{local_domain}/users/#{current_user.username}/posts/#{Letter::Snowflake.generate}"
+      end
+
+      def build_ancestors(status)
+        return [] unless status.in_reply_to_ap_id.present?
+        
+        ancestors = []
+        current_status = status
+        
+        while current_status.in_reply_to_ap_id.present?
+          parent = ActivityPubObject.find_by(ap_id: current_status.in_reply_to_ap_id)
+          break unless parent
+          
+          ancestors.unshift(parent)
+          current_status = parent
+        end
+        
+        ancestors
+      end
+
+      def build_descendants(status)
+        ActivityPubObject.where(in_reply_to_ap_id: status.ap_id)
+                         .order(:published_at)
+                         .limit(20)
+      end
+
+      def create_favourite_notification(favourite, status)
+        return if favourite.actor == status.actor
+
+        Notification.create_favourite_notification(favourite, status)
+      end
+
+      def create_reblog_notification(reblog, status)
+        return if reblog.actor == status.actor
+
+        Notification.create_reblog_notification(reblog, status)
+      end
+
+      def convert_mentions_to_html_links
+        return if @status.content.blank?
+        return if @status.content.include?('<a ') # 既にHTMLリンクが含まれている場合はスキップ
+
+        # @username@domain 形式のメンションをHTMLリンクに変換
+        updated_content = apply_mention_links(@status.content)
+        @status.update_column(:content, updated_content) if updated_content != @status.content
       end
     end
   end

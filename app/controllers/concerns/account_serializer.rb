@@ -11,6 +11,7 @@ module AccountSerializer
              .merge(count_attributes(account))
              .merge(metadata_attributes)
 
+    result[:fields] = account_fields(account)
     result.merge!(self_account_attributes(account)) if is_self
     result
   end
@@ -26,8 +27,9 @@ module AccountSerializer
       discoverable: account.discoverable || false,
       group: false,
       created_at: account.created_at.iso8601,
-      note: account.summary || '',
-      url: account.public_url
+      note: account.note || '',
+      url: account.public_url || account.ap_id || '',
+      uri: account.ap_id || ''
     }
   end
 
@@ -57,6 +59,23 @@ module AccountSerializer
     }
   end
 
+  def account_fields(account)
+    return [] if account.fields.blank?
+
+    begin
+      fields = JSON.parse(account.fields)
+      fields.map do |field|
+        {
+          name: field['name'] || '',
+          value: format_field_value(field['value'] || ''),
+          verified_at: nil
+        }
+      end
+    rescue JSON::ParserError
+      []
+    end
+  end
+
   def account_acct(account)
     account.local? ? account.username : account.full_username
   end
@@ -75,8 +94,8 @@ module AccountSerializer
         privacy: 'public',
         sensitive: false,
         language: 'ja',
-        note: account.summary || '',
-        fields: []
+        note: account.note || '',
+        fields: account_fields(account)
       }
     }
   end
@@ -87,5 +106,21 @@ module AccountSerializer
 
   def default_header_url
     '/icon.png'
+  end
+
+  def format_field_value(value)
+    return '' if value.blank?
+    
+    # URLの場合はHTMLリンクとして返す
+    if value.match?(/\Ahttps?:\/\//)
+      domain = URI.parse(value).host rescue value
+      %(<a href="#{CGI.escapeHTML(value)}" target="_blank" rel="nofollow noopener noreferrer me">#{CGI.escapeHTML(domain)}</a>)
+    else
+      # プレーンテキストの場合はHTMLエスケープして返す
+      CGI.escapeHTML(value)
+    end
+  rescue URI::InvalidURIError
+    # URLの解析に失敗した場合はプレーンテキストとして扱う
+    CGI.escapeHTML(value)
   end
 end

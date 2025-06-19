@@ -4,9 +4,13 @@ module Api
   module V1
     class AccountsController < Api::BaseController
       include AccountSerializer
+      include StatusSerializationHelper
+      include MediaSerializer
+      include MentionTagSerializer
       before_action :doorkeeper_authorize!, except: [:show]
       before_action :doorkeeper_authorize!, only: [:show], if: -> { request.authorization.present? }
-      before_action :set_account, except: %i[verify_credentials]
+      before_action :set_account, only: %i[show statuses followers following follow unfollow block unblock mute unmute]
+      before_action :set_account_for_featured_tags, only: [:featured_tags]
 
       # GET /api/v1/accounts/verify_credentials
       def verify_credentials
@@ -31,25 +35,78 @@ module Api
 
       # GET /api/v1/accounts/:id/statuses
       def statuses
-        statuses = @account.objects
-                           .where(object_type: 'Note')
-                           .where(local: true)
-                           .order(published_at: :desc)
-                           .limit(20)
+        pinned_only = params[:pinned] == 'true'
+        exclude_replies = params[:exclude_replies] == 'true'
+        exclude_reblogs = params[:exclude_reblogs] == 'true'
+        limit = [params.fetch(:limit, 20).to_i, 40].min
+
+        if pinned_only
+          # Pinned statusesのみを返す
+          pinned_statuses = @account.pinned_statuses
+                                   .includes(object: [:actor, :media_attachments, :mentions, :tags])
+                                   .ordered
+                                   .limit(limit)
+          statuses = pinned_statuses.map(&:object)
+        else
+          # 通常の投稿一覧（pinned statusesを最上部に表示）
+          base_query = @account.objects.where(object_type: 'Note')
+          
+          # ローカル投稿とリモート投稿の両方を含める
+          base_query = base_query.where(local: [true, false])
+          
+          # リプライ除外
+          if exclude_replies
+            base_query = base_query.where(in_reply_to_ap_id: nil)
+          end
+          
+          # 通常の投稿を取得（ページネーション対応）
+          regular_statuses = base_query.order(published_at: :desc)
+          regular_statuses = apply_timeline_pagination(regular_statuses)
+          regular_statuses = regular_statuses.limit(limit)
+          
+          # Pinned statusesを取得（self-viewの場合のみ）
+          if current_user == @account
+            pinned_objects = @account.pinned_statuses
+                                    .includes(object: [:actor, :media_attachments, :mentions, :tags])
+                                    .ordered
+                                    .map(&:object)
+            
+            # Pinned statusesを除いた通常投稿
+            regular_statuses = regular_statuses.where.not(id: pinned_objects.map(&:id)) if pinned_objects.any?
+            
+            # Pinned statusesを先頭に配置
+            statuses = pinned_objects + regular_statuses.to_a
+          else
+            statuses = regular_statuses
+          end
+          
+          # 制限数に切り詰める
+          statuses = statuses.first(limit)
+        end
 
         render json: statuses.map { |status| serialized_status(status) }
       end
 
       # GET /api/v1/accounts/:id/followers
       def followers
-        followers = @account.followers.limit(40)
-        render json: followers.map { |follower| serialized_account(follower) }
+        if @account.local?
+          followers = @account.followers.limit(40)
+          render json: followers.map { |follower| serialized_account(follower) }
+        else
+          # 外部アカウントの場合は空配列を返す（クライアントが外部サーバから直接取得するため）
+          render json: []
+        end
       end
 
       # GET /api/v1/accounts/:id/following
       def following
-        following = @account.followed_actors.limit(40)
-        render json: following.map { |followed| serialized_account(followed) }
+        if @account.local?
+          following = @account.followed_actors.limit(40)
+          render json: following.map { |followed| serialized_account(followed) }
+        else
+          # 外部アカウントの場合は空配列を返す（クライアントが外部サーバから直接取得するため）
+          render json: []
+        end
       end
 
       # POST /api/v1/accounts/:id/follow
@@ -112,6 +169,77 @@ module Api
         render json: serialized_relationship(@account)
       end
 
+      # GET /api/v1/accounts/search
+      def search
+        return unless doorkeeper_authorize! :read
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+
+        query = params[:q].to_s.strip
+        limit = [params.fetch(:limit, 40).to_i, 80].min
+        resolve = params[:resolve] == 'true'
+        
+        return render json: [] if query.blank?
+
+        accounts = search_accounts(query, limit, resolve)
+        render json: accounts.map { |account| serialized_account(account) }
+      end
+
+      # GET /api/v1/accounts/:id/featured_tags
+      def featured_tags
+        featured_tags = @account.featured_tags.includes(:tag).recent
+        render json: featured_tags.map { |featured_tag| serialized_featured_tag(featured_tag) }
+      end
+
+      # GET /api/v1/accounts/lookup
+      def lookup
+        return unless doorkeeper_authorize! :read
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+
+        acct = params[:acct].to_s.strip
+        return render json: { error: 'Missing acct parameter' }, status: :unprocessable_entity if acct.blank?
+
+        account = lookup_account(acct)
+        if account
+          render json: serialized_account(account)
+        else
+          render json: { error: 'Record not found' }, status: :not_found
+        end
+      end
+
+      # GET /api/v1/accounts/relationships
+      def relationships
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        
+        account_ids = Array(params[:id]).map(&:to_i)
+        accounts = Actor.where(id: account_ids)
+        
+        # すべての要求されたIDに対してrelationshipを返す（存在しないものは空のrelationship）
+        relationships = account_ids.map do |id|
+          account = accounts.find { |a| a.id == id }
+          if account
+            serialized_relationship(account)
+          else
+            # 存在しないアカウントの場合、デフォルトrelationshipを返す
+            {
+              id: id.to_s,
+              following: false,
+              followed_by: false,
+              showing_reblogs: true,
+              notifying: false,
+              requested: false,
+              blocking: false,
+              blocked_by: false,
+              domain_blocking: false,
+              muting: false,
+              muting_notifications: false,
+              endorsed: false
+            }
+          end
+        end
+        
+        render json: relationships
+      end
+
       private
 
       def cannot_follow_self?
@@ -158,10 +286,13 @@ module Api
 
       def set_account
         @account = Actor.find(params[:id])
+      rescue ActiveRecord::RecordNotFound
+        render json: { error: 'Record not found' }, status: :not_found
       end
 
       def account_params
-        params.permit(:display_name, :summary, :locked, :bot, :discoverable, :avatar, :header)
+        params.permit(:display_name, :note, :locked, :bot, :discoverable, :avatar, :header, 
+                     fields_attributes: [:name, :value])
       end
 
       # Active Storage版の画像アップロード処理
@@ -183,6 +314,7 @@ module Api
         File.extname(filename).downcase.delete('.')
       end
 
+
       def render_unauthorized
         render json: { error: 'This action requires authentication' }, status: :unauthorized
       end
@@ -193,7 +325,20 @@ module Api
       end
 
       def update_account_attributes
-        if current_user.update(account_params.except(:avatar, :header))
+        update_params = account_params.except(:avatar, :header, :fields_attributes)
+        
+        # fields_attributesをfieldsに変換
+        if params.key?(:fields_attributes)
+          fields = params[:fields_attributes].values.map do |field|
+            {
+              'name' => field[:name].to_s.strip,
+              'value' => field[:value].to_s.strip
+            }
+          end.select { |field| field['name'].present? || field['value'].present? }
+          update_params[:fields] = fields.to_json
+        end
+        
+        if current_user.update(update_params)
           render json: serialized_account(current_user, is_self: true)
         else
           render_validation_error
@@ -211,32 +356,6 @@ module Api
         file&.respond_to?(:tempfile)
       end
 
-      def serialized_status(status)
-        {
-          id: status.id.to_s,
-          created_at: status.published_at.iso8601,
-          in_reply_to_id: nil,
-          in_reply_to_account_id: nil,
-          sensitive: status.sensitive || false,
-          spoiler_text: status.summary || '',
-          visibility: status.visibility || 'public',
-          language: 'ja',
-          uri: status.ap_id,
-          url: status.public_url,
-          replies_count: 0,
-          reblogs_count: 0,
-          favourites_count: 0,
-          content: status.content || '',
-          reblog: nil,
-          account: serialized_account(status.actor),
-          media_attachments: [],
-          mentions: [],
-          tags: [],
-          emojis: [],
-          card: nil,
-          poll: nil
-        }
-      end
 
       def serialized_relationship(account)
         return {} unless current_user
@@ -308,6 +427,75 @@ module Api
 
         # Create block
         current_user.blocks.find_or_create_by(target_actor: @account)
+      end
+
+      def search_accounts(query, limit, resolve = false)
+        # ローカル検索を実行
+        local_accounts = Actor.where(
+          'username LIKE ? OR display_name LIKE ?',
+          "%#{query}%", "%#{query}%"
+        ).limit(limit)
+
+        # resolveがtrueで、ローカル結果が少ない場合はWebFinger解決を試行
+        if resolve && local_accounts.count < limit && query.include?('@')
+          remote_account = resolve_remote_account(query)
+          if remote_account && !local_accounts.include?(remote_account)
+            local_accounts = [remote_account] + local_accounts.to_a
+          end
+        end
+
+        local_accounts
+      end
+
+      def lookup_account(acct)
+        if acct.include?('@')
+          username, domain = acct.split('@', 2)
+          # まずローカルDBから検索
+          actor = Actor.find_by(username: username, domain: domain)
+          
+          # 見つからない場合はWebFinger解決を試行
+          unless actor
+            actor = resolve_remote_account(acct)
+          end
+          
+          actor
+        else
+          Actor.find_by(username: acct, local: true)
+        end
+      end
+
+      def resolve_remote_account(query)
+        resolver = Search::RemoteResolverService.new
+        resolver.resolve_remote_account(query)
+      end
+
+      def set_account_for_featured_tags
+        @account = Actor.find(params[:id])
+      end
+
+      def serialized_featured_tag(featured_tag)
+        {
+          id: featured_tag.id.to_s,
+          name: featured_tag.name,
+          statuses_count: featured_tag.statuses_count,
+          last_status_at: featured_tag.last_status_at&.iso8601
+        }
+      end
+
+      def apply_timeline_pagination(query)
+        if params[:max_id].present?
+          query = query.where('objects.id < ?', params[:max_id])
+        end
+        
+        if params[:since_id].present?
+          query = query.where('objects.id > ?', params[:since_id])
+        end
+        
+        if params[:min_id].present?
+          query = query.where('objects.id > ?', params[:min_id])
+        end
+        
+        query
       end
     end
   end

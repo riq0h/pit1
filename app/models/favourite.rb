@@ -6,8 +6,11 @@ class Favourite < ApplicationRecord
 
   validates :actor_id, uniqueness: { scope: :object_id }
 
+  scope :recent, -> { order(created_at: :desc) }
+
   before_validation :set_ap_id, on: :create
   after_create :increment_favourites_count
+  after_create :send_push_notification
   after_destroy :decrement_favourites_count
 
   private
@@ -25,5 +28,9 @@ class Favourite < ApplicationRecord
 
   def decrement_favourites_count
     object.decrement!(:favourites_count)
+  end
+
+  def send_push_notification
+    WebPushNotificationService.notification_for_favourite(self)
   end
 end

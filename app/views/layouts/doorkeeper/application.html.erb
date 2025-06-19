@@ -1,23 +1,51 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <title><%= t('doorkeeper.layouts.application.title') %></title>
   <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <%= stylesheet_link_tag "doorkeeper/application" %>
+  <title><%= content_for?(:title) ? yield(:title) + ' - Letter' : 'Letter' %></title>
   <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Custom Styles -->
+  <style>
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      font-weight: 300;
+    }
+  </style>
 </head>
-<body>
-<div id="container">
-  <%- if flash[:notice].present? %>
-    <div class="alert alert-info">
-      <%= flash[:notice] %>
-    </div>
-  <% end -%>
+<body class="bg-white text-gray-900">
+  <div class="min-h-screen">
+    <%- if flash[:notice].present? %>
+      <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+        <div class="flex">
+          <div class="ml-3">
+            <p class="text-sm text-blue-700"><%= flash[:notice] %></p>
+          </div>
+        </div>
+      </div>
+    <% end -%>
 
-  <%= yield %>
-</div>
+    <%- if flash[:alert].present? %>
+      <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
+        <div class="flex">
+          <div class="ml-3">
+            <p class="text-sm text-red-700"><%= flash[:alert] %></p>
+          </div>
+        </div>
+      </div>
+    <% end -%>
+
+    <%= yield %>
+  </div>
 </body>
 </html>
