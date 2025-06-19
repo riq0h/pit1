@@ -56,8 +56,14 @@
       content_with_mentions = prepend_mentions_to_content(post)
       # 絵文字をパースしてHTMLに変換
       parsed_content = EmojiParser.new(content_with_mentions).parse
-      # その後でURLを自動リンク化（絵文字HTML対応）
-      final_content = auto_link_urls(parsed_content)
+      
+      # ローカル投稿の場合のみURLを自動リンク化
+      # リモート投稿は既にHTMLリンクとして送信されているため、そのまま使用
+      if post.local?
+        final_content = auto_link_urls(parsed_content)
+      else
+        final_content = parsed_content
+      end
     %>
     <div class="whitespace-pre-wrap break-words"><%= final_content.html_safe %></div>
   </div>
