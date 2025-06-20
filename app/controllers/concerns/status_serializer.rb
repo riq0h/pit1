@@ -2,65 +2,38 @@
 
 module StatusSerializer
   extend ActiveSupport::Concern
+  include TextLinkingHelper
 
   private
 
-  def base_status_data(status)
-    {
-      id: status.id.to_s,
-      created_at: status.published_at.iso8601,
-      uri: status.ap_id || '',
-      url: status.public_url || status.ap_id || '',
-      account: serialized_account(status.actor)
-    }
-  end
-
-  def interaction_data(status)
-    {
-      replies_count: replies_count(status),
-      reblogs_count: status.reblogs_count || 0,
-      favourites_count: status.favourites_count || 0,
-      favourited: favourited_by_current_user?(status),
-      reblogged: reblogged_by_current_user?(status)
-    }
-  end
-
-  def content_data(status)
-    parsed_content = parse_content_with_emojis(status.content || '')
-
-    {
-      content: parsed_content,
-      sensitive: status.sensitive || false,
-      spoiler_text: status.summary || '',
-      visibility: status.visibility || 'public',
-      language: 'ja'
-    }
-  end
-
-  def metadata_data(status)
-    {
-      in_reply_to_id: in_reply_to_id(status),
-      in_reply_to_account_id: in_reply_to_account_id(status),
-      media_attachments: serialized_media_attachments(status),
-      mentions: serialized_mentions(status),
-      tags: serialized_tags(status),
-      reblog: nil,
-      emojis: serialized_emojis(status),
-      card: nil,
-      poll: nil
-    }
-  end
 
   def parse_content_with_emojis(content)
     return content if content.blank?
 
-    EmojiParser.parse_text(content)
+    EmojiParser.new(content).parse
+  end
+
+  def parse_content_links_only(content)
+    return content if content.blank?
+    
+    # URLリンク化のみ行い、絵文字はショートコードのまま
+    # API: クライアント側でemojis配列を使って絵文字処理
+    # フロントエンド: 後続でparse_content_with_emojisを呼び出し
+    auto_link_urls(content)
+  end
+
+  def parse_content_for_frontend(content)
+    return content if content.blank?
+    
+    # フロントエンド用：URLリンク化 + 絵文字HTML変換を一括処理
+    content_with_links = auto_link_urls(content)
+    EmojiParser.new(content_with_links).parse
   end
 
   def serialized_emojis(status)
     return [] if status.content.blank?
 
-    emojis = EmojiParser.extract_emojis(status.content)
+    emojis = EmojiParser.new(status.content).emojis_used
     emojis.map(&:to_activitypub)
   rescue => e
     Rails.logger.warn "Failed to serialize emojis for status #{status.id}: #{e.message}"

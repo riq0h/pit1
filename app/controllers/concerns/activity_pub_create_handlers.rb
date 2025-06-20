@@ -43,6 +43,7 @@ module ActivityPubCreateHandlers
 
     handle_media_attachments(object, object_data)
     handle_mentions(object, object_data)
+    handle_emojis(object, object_data)
     handle_direct_message_conversation(object, object_data) if object.visibility == 'direct'
     update_reply_count_if_needed(object)
 
@@ -109,6 +110,46 @@ module ActivityPubCreateHandlers
     end
   rescue => e
     Rails.logger.error "Failed to handle mentions: #{e.message}"
+  end
+
+  def handle_emojis(object, object_data)
+    tags = Array(object_data['tag'])
+    emoji_tags = tags.select { |tag| tag['type'] == 'Emoji' }
+    
+    emoji_tags.each do |emoji_tag|
+      shortcode = emoji_tag['name']&.gsub(/^:|:$/, '')
+      icon_url = emoji_tag.dig('icon', 'url')
+      
+      next unless shortcode.present? && icon_url.present?
+
+      remote_domain = extract_domain_from_uri(object.ap_id)
+      next unless remote_domain
+
+      existing_emoji = CustomEmoji.find_by(shortcode: shortcode, domain: remote_domain)
+      
+      unless existing_emoji
+        CustomEmoji.create!(
+          shortcode: shortcode,
+          domain: remote_domain,
+          image_url: icon_url,
+          visible_in_picker: false,
+          disabled: false
+        )
+        
+        Rails.logger.info "🎨 Remote emoji created: :#{shortcode}: from #{remote_domain}"
+      end
+    end
+  rescue => e
+    Rails.logger.error "Failed to handle emojis: #{e.message}"
+  end
+
+  def extract_domain_from_uri(uri)
+    return nil unless uri
+    
+    parsed_uri = URI.parse(uri)
+    parsed_uri.host
+  rescue URI::InvalidURIError
+    nil
   end
 
   def update_reply_count_if_needed(object)

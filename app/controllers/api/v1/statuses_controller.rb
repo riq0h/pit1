@@ -466,8 +466,16 @@ module Api
         return if @status.content.blank?
         return if @status.content.include?('<a ') # 既にHTMLリンクが含まれている場合はスキップ
 
-        # @username@domain 形式のメンションをHTMLリンクに変換
+        # 投稿作成時にすべての処理を行う（フロントエンド処理を簡素化するため）
+        # 1. @username@domain 形式のメンションをHTMLリンクに変換
         updated_content = apply_mention_links(@status.content)
+        
+        # 2. URLをHTMLリンクに変換  
+        updated_content = apply_url_links(updated_content)
+        
+        # 3. 絵文字をHTMLに変換
+        updated_content = EmojiParser.new(updated_content).parse
+        
         @status.update_column(:content, updated_content) if updated_content != @status.content
       end
     end

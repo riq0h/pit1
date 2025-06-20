@@ -70,7 +70,7 @@ class CustomEmoji < ApplicationRecord
       shortcode: shortcode,
       url: image_url,
       static_url: static_url,
-      visible_in_picker: true,
+      visible_in_picker: visible_in_picker,
       category: category_id
     }
   end

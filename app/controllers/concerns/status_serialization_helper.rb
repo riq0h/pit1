@@ -2,6 +2,11 @@
 
 module StatusSerializationHelper
   extend ActiveSupport::Concern
+  include AccountSerializer
+  include MediaSerializer
+  include MentionTagSerializer
+  include TextLinkingHelper
+  include StatusSerializer
 
   private
 
@@ -42,7 +47,7 @@ module StatusSerializationHelper
   def content_data(status)
     {
       spoiler_text: status.summary || '',
-      content: status.content || '',
+      content: parse_content_links_only(status.content || ''),
       account: serialized_account(status.actor),
       reblog: nil
     }
@@ -53,7 +58,7 @@ module StatusSerializationHelper
       media_attachments: serialized_media_attachments(status),
       mentions: serialized_mentions(status),
       tags: serialized_tags(status),
-      emojis: [],
+      emojis: serialized_emojis(status),
       card: nil,
       poll: nil
     }
@@ -102,4 +107,5 @@ module StatusSerializationHelper
 
     current_user.pinned_statuses.exists?(object: status)
   end
+
 end

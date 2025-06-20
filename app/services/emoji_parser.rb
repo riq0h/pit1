@@ -30,16 +30,28 @@ class EmojiParser
     shortcodes = extract_emoji_shortcodes
     return [] if shortcodes.empty?
 
-    CustomEmoji.enabled.visible.where(shortcode: shortcodes, domain: nil)
+    normalized_shortcodes = shortcodes.map(&:downcase)
+
+    local_emojis = CustomEmoji.enabled.visible.where(shortcode: normalized_shortcodes, domain: nil)
+    remote_emojis = CustomEmoji.enabled.remote.where(shortcode: normalized_shortcodes)
+    
+    (local_emojis + remote_emojis).uniq(&:shortcode)
   end
 
   private
 
   def find_emoji(shortcode)
-    # ローカル絵文字を優先して検索
-    @local_emojis[shortcode] ||= CustomEmoji.enabled
-                                            .visible
-                                            .find_by(shortcode: shortcode, domain: nil)
+    normalized_shortcode = shortcode.downcase
+    
+    @local_emojis[normalized_shortcode] ||= CustomEmoji.enabled
+                                                       .visible
+                                                       .find_by(shortcode: normalized_shortcode, domain: nil)
+    
+    return @local_emojis[normalized_shortcode] if @local_emojis[normalized_shortcode]
+    
+    @remote_emojis[normalized_shortcode] ||= CustomEmoji.enabled
+                                                        .remote
+                                                        .find_by(shortcode: normalized_shortcode)
   end
 
   def build_emoji_html(emoji)

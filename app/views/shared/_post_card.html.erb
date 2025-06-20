@@ -52,18 +52,9 @@
   <!-- 記事本文 -->
   <div class="text-gray-800 leading-relaxed">
     <% 
-      # メンション配列から外部ユーザの宛先を抽出してコンテンツの先頭に追加
-      content_with_mentions = prepend_mentions_to_content(post)
-      # 絵文字をパースしてHTMLに変換
-      parsed_content = EmojiParser.new(content_with_mentions).parse
-      
-      # ローカル投稿の場合のみURLを自動リンク化
-      # リモート投稿は既にHTMLリンクとして送信されているため、そのまま使用
-      if post.local?
-        final_content = auto_link_urls(parsed_content)
-      else
-        final_content = parsed_content
-      end
+      # 最適化された処理：メンションは投稿時/受信時に既にリンク化済み
+      # URLリンク化 + 絵文字HTML変換を一括処理
+      final_content = parse_content_for_frontend(post.content)
     %>
     <div class="whitespace-pre-wrap break-words"><%= final_content.html_safe %></div>
   </div>

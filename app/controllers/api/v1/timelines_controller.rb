@@ -4,6 +4,7 @@ module Api
   module V1
     class TimelinesController < Api::BaseController
       include AccountSerializer
+      include StatusSerializer
       include MediaSerializer
       include MentionTagSerializer
       before_action :doorkeeper_authorize!, only: [:home]
@@ -119,13 +120,13 @@ module Api
           replies_count: replies_count(status),
           reblogs_count: status.reblogs_count || 0,
           favourites_count: status.favourites_count || 0,
-          content: status.content || '',
+          content: parse_content_links_only(status.content || ''),
           reblog: nil,
           account: serialized_account(status.actor),
           media_attachments: serialized_media_attachments(status),
           mentions: serialized_mentions(status),
           tags: serialized_tags(status),
-          emojis: [],
+          emojis: serialized_emojis(status),
           card: nil,
           poll: nil,
           favourited: false,

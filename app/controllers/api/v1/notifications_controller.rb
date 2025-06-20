@@ -3,6 +3,7 @@
 module Api
   module V1
     class NotificationsController < Api::BaseController
+      include StatusSerializer
       before_action :doorkeeper_authorize!, only: %i[index show clear dismiss]
       before_action :require_user!, only: %i[index show clear dismiss]
       before_action :set_notification, only: %i[show dismiss]
@@ -174,7 +175,7 @@ module Api
           language: status.language,
           uri: status.ap_id,
           url: status.url || status.ap_id,
-          content: status.content || '',
+          content: parse_content_links_only(status.content || ''),
           account: account_json(status.actor)
         }
       end
@@ -187,13 +188,13 @@ module Api
         }
       end
 
-      def status_metadata(_status)
+      def status_metadata(status)
         {
           reblog: nil,
           media_attachments: [],
           mentions: [],
           tags: [],
-          emojis: [],
+          emojis: serialized_emojis(status),
           card: nil,
           poll: nil
         }

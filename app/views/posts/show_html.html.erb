@@ -44,12 +44,9 @@
   <!-- 記事本文 -->
   <div class="text-gray-800 leading-relaxed mb-4">
     <% 
-      # メンション配列から外部ユーザの宛先を抽出してコンテンツの先頭に追加
-      content_with_mentions = prepend_mentions_to_content(@post)
-      # 絵文字をパースしてHTMLに変換
-      parsed_content = EmojiParser.new(content_with_mentions).parse
-      # その後でURLを自動リンク化（絵文字HTML対応）
-      final_content = auto_link_urls(parsed_content)
+      # 最適化された処理：メンションは投稿時/受信時に既にリンク化済み
+      # URLリンク化 + 絵文字HTML変換を一括処理
+      final_content = parse_content_for_frontend(@post.content)
     %>
     <div class="whitespace-pre-wrap break-words"><%= final_content.html_safe %></div>
   </div>
@@ -144,15 +141,11 @@
           <!-- 記事本文 -->
           <div class="text-gray-800 leading-relaxed">
             <% 
-              # メンション配列から外部ユーザの宛先を抽出してコンテンツの先頭に追加
-              reply_content_with_mentions = prepend_mentions_to_content(reply)
-              # 絵文字をパースしてHTMLに変換
-              parsed_reply_content = EmojiParser.new(reply_content_with_mentions).parse
-              # その後でURLを自動リンク化（絵文字HTML対応）
-              final_reply_content = auto_link_urls(parsed_reply_content)
-              # サニタイズして安全なHTMLタグのみ許可
+              # 最適化された処理：メンションは投稿時/受信時に既にリンク化済み
+              # URLリンク化 + 絵文字HTML変換を一括処理
+              final_reply_content = parse_content_for_frontend(reply.content)
             %>
-            <div class="whitespace-pre-wrap break-words"><%= sanitize(final_reply_content, tags: %w[a p br img], attributes: %w[href target src alt title class draggable]) %></div>
+            <div class="whitespace-pre-wrap break-words"><%= final_reply_content.html_safe %></div>
           </div>
 
           <!-- メディア添付 -->

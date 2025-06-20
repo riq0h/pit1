@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module ApplicationHelper
-  include TextLinkingHelper
   include MentionProcessingHelper
+  include StatusSerializer
 
   def background_color
     load_instance_config['background_color'] || '#fdfbfb'

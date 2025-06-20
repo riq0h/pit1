@@ -18,7 +18,7 @@ module TextLinkingHelper
   private
 
   def escape_and_format_text(text)
-    plain_text = strip_tags(text).strip
+    plain_text = ActionView::Base.full_sanitizer.sanitize(text).strip
     ERB::Util.html_escape(plain_text).gsub("\n", '<br>')
   end
 
@@ -43,7 +43,41 @@ module TextLinkingHelper
   end
 
   def apply_url_links_to_html(html_text)
-    html_text
+    # HTMLタグの外側にあるURLのみをリンク化する
+    # 既存のaタグ、imgタグなどを壊さないように注意深く処理
+    
+    # まず、既存のHTMLタグ位置を記録
+    tags = []
+    html_text.scan(/<[^>]+>/) { |match| tags << { content: match, start: $~.begin(0), end: $~.end(0) } }
+    
+    # URLパターンを探してリンク化（ただし、既存のタグ内は除外）
+    url_pattern = /(https?:\/\/[^\s<>]+)/
+    result = html_text.dup
+    offset = 0
+    
+    html_text.scan(url_pattern) do |url|
+      url_start = $~.begin(0)
+      url_end = $~.end(0)
+      
+      # このURLが既存のHTMLタグ内にないかチェック
+      inside_tag = tags.any? do |tag|
+        url_start >= tag[:start] && url_end <= tag[:end]
+      end
+      
+      unless inside_tag
+        # リンク化
+        linked_url = "<a href=\"#{url[0]}\" target=\"_blank\" rel=\"noopener noreferrer\" " \
+                     "class=\"text-blue-600 hover:text-blue-800 underline\">#{url[0]}</a>"
+        
+        # オフセットを考慮して置換
+        actual_start = url_start + offset
+        actual_end = url_end + offset
+        result[actual_start...actual_end] = linked_url
+        offset += linked_url.length - url[0].length
+      end
+    end
+    
+    result
   end
 
   def apply_mention_links_to_html(html_text)
