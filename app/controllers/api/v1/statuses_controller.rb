@@ -464,17 +464,22 @@ module Api
 
       def convert_mentions_to_html_links
         return if @status.content.blank?
-        return if @status.content.include?('<a ') # 既にHTMLリンクが含まれている場合はスキップ
-
-        # 投稿作成時にすべての処理を行う（フロントエンド処理を簡素化するため）
-        # 1. @username@domain 形式のメンションをHTMLリンクに変換
-        updated_content = apply_mention_links(@status.content)
         
-        # 2. URLをHTMLリンクに変換  
-        updated_content = apply_url_links(updated_content)
-        
-        # 3. 絵文字をHTMLに変換
-        updated_content = EmojiParser.new(updated_content).parse
+        # 絵文字変換は常に実行（外部からのHTMLコンテンツにもショートコードが含まれる可能性）
+        if @status.content.include?('<a ')
+          # 既にHTMLリンクが含まれている場合は絵文字変換のみ
+          updated_content = EmojiParser.new(@status.content).parse
+        else
+          # プレーンテキストの場合は全処理
+          # 1. URLをHTMLリンクに変換（プレーンテキストから）
+          updated_content = apply_url_links(@status.content)
+          
+          # 2. @username@domain 形式のメンションをHTMLリンクに変換（HTML対応版）
+          updated_content = apply_mention_links_to_html(updated_content)
+          
+          # 3. 絵文字をHTMLに変換
+          updated_content = EmojiParser.new(updated_content).parse
+        end
         
         @status.update_column(:content, updated_content) if updated_content != @status.content
       end

@@ -7,7 +7,7 @@ module ActivityBuilders
     end
 
     def build
-      hashtag_tags + mention_tags
+      hashtag_tags + mention_tags + emoji_tags
     end
 
     private
@@ -31,5 +31,24 @@ module ActivityBuilders
         }
       end
     end
+
+    def emoji_tags
+      return [] unless @object.content.present?
+
+      emojis = EmojiParser.new(@object.content).emojis_used
+      emojis.map do |emoji|
+        {
+          'type' => 'Emoji',
+          'id' => "#{Rails.application.config.activitypub.base_url}/emojis/#{emoji.shortcode}",
+          'name' => ":#{emoji.shortcode}:",
+          'icon' => {
+            'type' => 'Image',
+            'mediaType' => 'image/png',
+            'url' => emoji.image_url
+          }
+        }
+      end
+    end
+
   end
 end

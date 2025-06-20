@@ -117,7 +117,6 @@ class ProfilesController < ApplicationController
   end
 
   def build_user_pinned_timeline_item(post)
-    Rails.logger.info "DEBUG: Pinned post #{post.id} published_at: #{post.published_at}"
     {
       type: :pinned_post,
       item: post,

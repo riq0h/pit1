@@ -63,7 +63,7 @@ class ObjectsController < ApplicationController
       'id' => object.ap_id,
       'type' => object.object_type,
       'attributedTo' => object.actor.ap_id,
-      'content' => object.content,
+      'content' => build_activitypub_content(object.content),
       'published' => object.published_at.iso8601,
       'url' => object.public_url
     }
@@ -75,7 +75,7 @@ class ObjectsController < ApplicationController
       'to' => build_audience(object, :to),
       'cc' => build_audience(object, :cc),
       'attachment' => build_attachments(object),
-      'tag' => build_tags(object),
+      'tag' => ActivityBuilders::TagBuilder.new(object).build,
       'summary' => object.summary,
       'sensitive' => object.sensitive?,
       'replies' => build_replies_collection(object),
@@ -151,6 +151,14 @@ class ObjectsController < ApplicationController
         'blurhash' => attachment.blurhash
       }.compact
     end
+  end
+
+  def build_activitypub_content(content)
+    return content if content.blank?
+    
+    # ActivityPub配信用: 絵文字HTMLをショートコードに戻す
+    # Mastodonは content でショートコード、tag配列で絵文字メタデータを期待
+    content.gsub(/<img[^>]*alt=":([^"]+):"[^>]*\/>/, ':\1:')
   end
 
   def build_absolute_media_url(attachment)

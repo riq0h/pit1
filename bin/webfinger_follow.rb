@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 
 # WebFingerから外部アクターを作成してフォローするスクリプト
-# 使用例: rails runner scripts/webfinger_follow.rb test5 riq0h@mystech.ink
+# 使用例: rails runner bin/webfinger_follow.rb test5 username@example.com
 
 require 'net/http'
 require 'json'
@@ -125,6 +125,6 @@ if ARGV.length >= 2
     puts '✗ Could not create external actor'
   end
 else
-  puts 'Usage: rails runner scripts/webfinger_follow.rb <local_username> <target_username@domain>'
-  puts 'Example: rails runner scripts/webfinger_follow.rb test5 riq0h@mystech.ink'
+  puts 'Usage: rails runner bin/webfinger_follow.rb <local_username> <target_username@domain>'
+  puts 'Example: rails runner bin/webfinger_follow.rb test5 username@example.com'
 end

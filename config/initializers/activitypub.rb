@@ -16,7 +16,7 @@ Rails.application.configure do
   # プロトコル設定
   config.activitypub.protocol = ENV.fetch('ACTIVITYPUB_PROTOCOL') do
     if Rails.env.development?
-      'http'
+      'https'
     else
       'https'
     end

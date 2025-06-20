@@ -16,18 +16,24 @@ module StatusSerializer
   def parse_content_links_only(content)
     return content if content.blank?
     
-    # URLリンク化のみ行い、絵文字はショートコードのまま
-    # API: クライアント側でemojis配列を使って絵文字処理
-    # フロントエンド: 後続でparse_content_with_emojisを呼び出し
-    auto_link_urls(content)
+    # API用: 絵文字HTMLがあればショートコードに戻す
+    # クライアント側でemojis配列を使って絵文字処理
+    content.gsub(/<img[^>]*alt=":([^"]+):"[^>]*\/>/, ':\1:')
   end
 
   def parse_content_for_frontend(content)
     return content if content.blank?
     
-    # フロントエンド用：URLリンク化 + 絵文字HTML変換を一括処理
-    content_with_links = auto_link_urls(content)
-    EmojiParser.new(content_with_links).parse
+    # フロントエンド用: 絵文字HTMLタグが既にある場合はそのまま、ない場合は変換
+    # ローカル投稿: 既にHTML形式で保存済み → そのまま表示
+    # 外部投稿: ショートコードの可能性 → 変換が必要
+    if content.include?('<img') && content.include?('custom-emoji')
+      # 既に絵文字がHTMLで変換済み
+      content
+    else
+      # ショートコードがあれば変換
+      EmojiParser.new(content).parse
+    end
   end
 
   def serialized_emojis(status)
