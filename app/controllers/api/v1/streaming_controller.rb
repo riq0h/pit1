@@ -17,7 +17,7 @@ module Api
         response.headers['Access-Control-Allow-Headers'] = 'Authorization'
 
         stream = params[:stream] || 'user'
-        
+
         begin
           case stream
           when 'user'
@@ -46,34 +46,32 @@ module Api
       def stream_user_events
         # ユーザ固有のイベントストリーム
         send_heartbeat
-        
+
         last_status_id = ActivityPubObject.where(local: true, object_type: 'Note').maximum(:id) || 0
         last_notification_id = current_user.notifications.maximum(:id) || 0
-        
+
         loop do
           sleep 2 # 2秒間隔でポーリング
-          
+
           # 新しい投稿をチェック
           new_statuses = ActivityPubObject.where(local: true, object_type: 'Note')
-                                         .where('id > ?', last_status_id)
-                                         .order(:id)
-          
+                                          .where('id > ?', last_status_id)
+                                          .order(:id)
+
           new_statuses.each do |status|
             # ホームタイムラインに表示される投稿かチェック
-            if should_include_in_home_timeline?(status)
-              send_event('update', serialize_status_for_streaming(status))
-            end
+            send_event('update', serialize_status_for_streaming(status)) if should_include_in_home_timeline?(status)
             last_status_id = status.id
           end
-          
+
           # 新しい通知をチェック
           new_notifications = current_user.notifications.where('id > ?', last_notification_id).order(:id)
-          
+
           new_notifications.each do |notification|
             send_event('notification', serialize_notification_for_streaming(notification))
             last_notification_id = notification.id
           end
-          
+
           # 定期的なハートビート
           send_heartbeat
         end
@@ -81,22 +79,22 @@ module Api
 
       def stream_public_events
         send_heartbeat
-        
+
         last_status_id = ActivityPubObject.where(local: true, object_type: 'Note').maximum(:id) || 0
-        
+
         loop do
           sleep 3 # 3秒間隔でポーリング
-          
+
           new_statuses = ActivityPubObject.where(local: true, object_type: 'Note')
-                                         .where('id > ?', last_status_id)
-                                         .where(visibility: 'public')
-                                         .order(:id)
-          
+                                          .where('id > ?', last_status_id)
+                                          .where(visibility: 'public')
+                                          .order(:id)
+
           new_statuses.each do |status|
             send_event('update', serialize_status_for_streaming(status))
             last_status_id = status.id
           end
-          
+
           send_heartbeat
         end
       end
@@ -108,32 +106,30 @@ module Api
 
       def stream_hashtag_events(local_only = false)
         hashtag = params[:tag]
-        return unless hashtag.present?
-        
+        return if hashtag.blank?
+
         send_heartbeat
-        
+
         last_status_id = ActivityPubObject.joins(:tags)
-                                         .where(tags: { name: hashtag.downcase })
-                                         .maximum(:id) || 0
-        
+                                          .where(tags: { name: hashtag.downcase })
+                                          .maximum(:id) || 0
+
         loop do
           sleep 3
-          
+
           query = ActivityPubObject.joins(:tags)
-                                  .where(tags: { name: hashtag.downcase })
-                                  .where('activity_pub_objects.id > ?', last_status_id)
-          
+                                   .where(tags: { name: hashtag.downcase })
+                                   .where('activity_pub_objects.id > ?', last_status_id)
+
           query = query.where(local: true) if local_only
-          
+
           new_statuses = query.order(:id)
-          
+
           new_statuses.each do |status|
-            if status.visibility == 'public'
-              send_event('update', serialize_status_for_streaming(status))
-            end
+            send_event('update', serialize_status_for_streaming(status)) if status.visibility == 'public'
             last_status_id = status.id
           end
-          
+
           send_heartbeat
         end
       end
@@ -141,25 +137,25 @@ module Api
       def stream_list_events(list_id)
         list = current_user.lists.find_by(id: list_id)
         return unless list
-        
+
         send_heartbeat
-        
+
         member_actor_ids = list.members.pluck(:id)
         last_status_id = ActivityPubObject.where(actor_id: member_actor_ids).maximum(:id) || 0
-        
+
         loop do
           sleep 2
-          
+
           new_statuses = ActivityPubObject.where(actor_id: member_actor_ids)
-                                         .where('id > ?', last_status_id)
-                                         .where(object_type: 'Note')
-                                         .order(:id)
-          
+                                          .where('id > ?', last_status_id)
+                                          .where(object_type: 'Note')
+                                          .order(:id)
+
           new_statuses.each do |status|
             send_event('update', serialize_status_for_streaming(status))
             last_status_id = status.id
           end
-          
+
           send_heartbeat
         end
       end
@@ -167,16 +163,16 @@ module Api
       def should_include_in_home_timeline?(status)
         # ホームタイムラインの表示ロジック
         return false unless status.object_type == 'Note'
-        
+
         # 自分の投稿
         return true if status.actor_id == current_user.id
-        
+
         # フォローしているユーザの投稿
         return true if current_user.following.exists?(id: status.actor_id)
-        
+
         # メンションされている投稿
         return true if status.mentions.exists?(actor_id: current_user.id)
-        
+
         false
       end
 

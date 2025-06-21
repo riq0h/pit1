@@ -33,7 +33,7 @@ module ActivityBuilders
     end
 
     def emoji_tags
-      return [] unless @object.content.present?
+      return [] if @object.content.blank?
 
       emojis = EmojiParser.new(@object.content).emojis_used
       emojis.map do |emoji|
@@ -49,6 +49,5 @@ module ActivityBuilders
         }
       end
     end
-
   end
 end

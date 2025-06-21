@@ -23,9 +23,12 @@ module Api
         begin
           media_attachment = create_media_attachment(file)
           render json: serialized_media_attachment(media_attachment), status: :created
+        rescue ActiveRecord::RecordInvalid => e
+          Rails.logger.error "Media upload validation failed: #{e.message}"
+          render json: { error: e.record.errors.full_messages.join(', ') }, status: :unprocessable_entity
         rescue StandardError => e
           Rails.logger.error "Media upload failed: #{e.message}"
-          render json: { error: 'Media upload failed', details: e.message }, status: :unprocessable_entity
+          render json: { error: e.message }, status: :unprocessable_entity
         end
       end
 

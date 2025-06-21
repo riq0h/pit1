@@ -79,11 +79,9 @@ class ProfilesController < ApplicationController
   end
 
   def build_user_timeline_items(posts, reblogs, pinned_posts)
-    timeline_items = []
-
     # Pinned postsを先に追加（最上部に表示）
-    pinned_posts.each do |pinned_status|
-      timeline_items << build_user_pinned_timeline_item(pinned_status.object)
+    timeline_items = pinned_posts.map do |pinned_status|
+      build_user_pinned_timeline_item(pinned_status.object)
     end
 
     posts.find_each do |post|
@@ -127,7 +125,7 @@ class ProfilesController < ApplicationController
 
   def load_pinned_posts
     @actor.pinned_statuses
-          .includes(object: [:actor, :media_attachments, :mentions, :tags])
+          .includes(object: %i[actor media_attachments mentions tags])
           .ordered
   end
 
@@ -135,13 +133,13 @@ class ProfilesController < ApplicationController
     # Pinned statusとその他を分離
     pinned_items = timeline_items.select { |item| item[:type] == :pinned_post }
     other_items = timeline_items.reject { |item| item[:type] == :pinned_post }
-    
+
     # その他の投稿のみを時刻順でソート
     other_items.sort_by! { |item| -item[:published_at].to_i }
-    
+
     # Pinned statusを最上部に、その後にその他の投稿を配置
     sorted_items = pinned_items + other_items
-    
+
     # ページネーション処理
     sorted_items = apply_timeline_pagination_filters(sorted_items)
     sorted_items.take(30)

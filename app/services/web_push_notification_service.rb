@@ -13,9 +13,9 @@ class WebPushNotificationService
 
   def self.send_to_subscription(subscription, notification_type, title, body, options = {})
     payload = subscription.push_payload(notification_type, title, body, options)
-    
+
     Rails.logger.info "📱 Sending push notification for #{subscription.actor.username}: #{payload.to_json}"
-    
+
     begin
       # web-push gem を使用した実際のプッシュ通知送信
       WebPush.payload_send(

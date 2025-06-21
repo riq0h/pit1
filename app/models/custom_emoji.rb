@@ -40,16 +40,11 @@ class CustomEmoji < ApplicationRecord
     if remote?
       self[:image_url]
     elsif image.attached?
-      blob_url = Rails.application.routes.url_helpers.url_for(image)
-
-      # 正しいドメインに置換（環境変数を直接読み込み）
-      actual_domain = read_actual_domain
-      if actual_domain && actual_domain != 'localhost:3000'
-        protocol = read_actual_protocol
-        blob_url.gsub('http://localhost:3000', "#{protocol}://#{actual_domain}")
-                .gsub('https://localhost:3000', "#{protocol}://#{actual_domain}")
+      # Cloudflare R2のカスタムドメインを使用
+      if ENV['S3_ENABLED'] == 'true' && ENV['S3_ALIAS_HOST'].present?
+        "https://#{ENV.fetch('S3_ALIAS_HOST', nil)}/#{image.blob.key}"
       else
-        blob_url
+        Rails.application.routes.url_helpers.url_for(image)
       end
     end
   end

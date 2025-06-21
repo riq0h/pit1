@@ -45,6 +45,10 @@ class Actor < ApplicationRecord
   # Domain blocks
   has_many :domain_blocks, dependent: :destroy
 
+  # Account notes
+  has_many :account_notes, dependent: :destroy
+  has_many :account_notes_received, class_name: 'AccountNote', foreign_key: :target_actor_id, dependent: :destroy
+
   # Conversations
   has_many :conversation_participants, dependent: :destroy
   has_many :conversations, through: :conversation_participants
@@ -236,18 +240,32 @@ class Actor < ApplicationRecord
   # Active Storage画像URLの取得
   def avatar_url
     # ローカルユーザの場合はActiveStorageから取得
-    return Rails.application.routes.url_helpers.url_for(avatar) if local? && avatar.attached?
-
-    # 外部ユーザの場合はraw_dataから取得
-    extract_remote_image_url('icon')
+    if local? && avatar.attached?
+      # Cloudflare R2のカスタムドメインを使用
+      if ENV['S3_ENABLED'] == 'true' && ENV['S3_ALIAS_HOST'].present?
+        "https://#{ENV.fetch('S3_ALIAS_HOST', nil)}/#{avatar.blob.key}"
+      else
+        Rails.application.routes.url_helpers.url_for(avatar)
+      end
+    else
+      # 外部ユーザの場合はraw_dataから取得
+      extract_remote_image_url('icon')
+    end
   end
 
   def header_image_url
     # ローカルユーザの場合はActiveStorageから取得
-    return Rails.application.routes.url_helpers.url_for(header) if local? && header.attached?
-
-    # 外部ユーザの場合はraw_dataから取得
-    extract_remote_image_url('image')
+    if local? && header.attached?
+      # Cloudflare R2のカスタムドメインを使用
+      if ENV['S3_ENABLED'] == 'true' && ENV['S3_ALIAS_HOST'].present?
+        "https://#{ENV.fetch('S3_ALIAS_HOST', nil)}/#{header.blob.key}"
+      else
+        Rails.application.routes.url_helpers.url_for(header)
+      end
+    else
+      # 外部ユーザの場合はraw_dataから取得
+      extract_remote_image_url('image')
+    end
   end
 
   def extract_remote_image_url(field_name)
@@ -403,7 +421,11 @@ class Actor < ApplicationRecord
     return value unless value.match?(/\Ahttps?:\/\//)
 
     begin
-      domain = URI.parse(value).host rescue value
+      domain = begin
+        URI.parse(value).host
+      rescue StandardError
+        value
+      end
       %(<a href="#{CGI.escapeHTML(value)}" target="_blank" rel="nofollow noopener noreferrer me">#{CGI.escapeHTML(domain)}</a>)
     rescue URI::InvalidURIError
       CGI.escapeHTML(value)

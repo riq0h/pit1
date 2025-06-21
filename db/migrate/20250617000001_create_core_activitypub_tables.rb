@@ -81,6 +81,9 @@ class CreateCoreActivitypubTables < ActiveRecord::Migration[8.0]
       t.integer :reblogs_count, default: 0
       t.integer :favourites_count, default: 0
       
+      # Edit tracking
+      t.datetime :edited_at, index: true
+      
       t.timestamps
     end
 
@@ -112,5 +115,28 @@ class CreateCoreActivitypubTables < ActiveRecord::Migration[8.0]
       
       t.timestamps
     end
+
+    # Status Edit History table
+    create_table :status_edits, id: :string do |t|
+      t.references :object, foreign_key: true, type: :string, null: false, index: true
+      
+      # Snapshot of content at edit time
+      t.text :content
+      t.text :content_plaintext
+      t.text :summary
+      t.boolean :sensitive, default: false
+      t.string :language
+      
+      # Media attachments at edit time
+      t.json :media_ids
+      t.json :media_descriptions
+      
+      # Poll data at edit time
+      t.json :poll_options
+      
+      t.datetime :created_at, null: false, index: true
+    end
+
+    add_index :status_edits, [:object_id, :created_at]
   end
 end

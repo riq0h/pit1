@@ -200,7 +200,7 @@ class OutboxController < ApplicationController
       {
         'type' => 'Document',
         'mediaType' => attachment.content_type,
-        'url' => attachment.remote_url,
+        'url' => build_attachment_url(attachment),
         'name' => attachment.description || attachment.file_name,
         'width' => attachment.width,
         'height' => attachment.height,
@@ -209,27 +209,40 @@ class OutboxController < ApplicationController
     end
   end
 
+  def build_attachment_url(attachment)
+    # ローカルファイルの場合はurlメソッドを使用
+    return attachment.url if attachment.file.attached?
+
+    # リモートURLがある場合は相対URLを絶対URLに変換
+    return nil if attachment.remote_url.blank?
+
+    if attachment.remote_url.start_with?('/')
+      base_url = Rails.application.config.activitypub.base_url
+      "#{base_url}#{attachment.remote_url}"
+    else
+      attachment.remote_url
+    end
+  end
+
   def build_object_tags(object)
-    tags = []
-    
     # ハッシュタグの追加
-    object.tags.each do |tag|
-      tags << {
+    tags = object.tags.map do |tag|
+      {
         'type' => 'Hashtag',
-        'href' => "#{ENV['DOMAIN']}/tags/#{tag.name}",
+        'href' => "#{ENV.fetch('DOMAIN', nil)}/tags/#{tag.name}",
         'name' => "##{tag.name}"
       }
     end
-    
+
     # メンションの追加
-    object.mentions.includes(:actor).each do |mention|
+    object.mentions.includes(:actor).find_each do |mention|
       tags << {
         'type' => 'Mention',
         'href' => mention.actor.ap_id,
         'name' => "@#{mention.actor.acct}"
       }
     end
-    
+
     tags
   end
 end

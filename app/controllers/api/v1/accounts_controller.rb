@@ -9,7 +9,7 @@ module Api
       include MentionTagSerializer
       before_action :doorkeeper_authorize!, except: [:show]
       before_action :doorkeeper_authorize!, only: [:show], if: -> { request.authorization.present? }
-      before_action :set_account, only: %i[show statuses followers following follow unfollow block unblock mute unmute]
+      before_action :set_account, only: %i[show statuses followers following follow unfollow block unblock mute unmute note]
       before_action :set_account_for_featured_tags, only: [:featured_tags]
 
       # GET /api/v1/accounts/verify_credentials
@@ -38,48 +38,50 @@ module Api
         pinned_only = params[:pinned] == 'true'
         exclude_replies = params[:exclude_replies] == 'true'
         exclude_reblogs = params[:exclude_reblogs] == 'true'
+        only_media = params[:only_media] == 'true'
         limit = [params.fetch(:limit, 20).to_i, 40].min
 
         if pinned_only
           # Pinned statusesのみを返す
           pinned_statuses = @account.pinned_statuses
-                                   .includes(object: [:actor, :media_attachments, :mentions, :tags])
-                                   .ordered
-                                   .limit(limit)
+                                    .includes(object: %i[actor media_attachments mentions tags])
+                                    .ordered
+                                    .limit(limit)
           statuses = pinned_statuses.map(&:object)
         else
           # 通常の投稿一覧（pinned statusesを最上部に表示）
           base_query = @account.objects.where(object_type: 'Note')
-          
+
           # ローカル投稿とリモート投稿の両方を含める
           base_query = base_query.where(local: [true, false])
-          
+
           # リプライ除外
-          if exclude_replies
-            base_query = base_query.where(in_reply_to_ap_id: nil)
-          end
-          
+          base_query = base_query.where(in_reply_to_ap_id: nil) if exclude_replies
+
+          # メディア添付のみ
+          base_query = base_query.joins(:media_attachments).distinct if only_media
+
           # 通常の投稿を取得（ページネーション対応）
           regular_statuses = base_query.order(published_at: :desc)
           regular_statuses = apply_timeline_pagination(regular_statuses)
           regular_statuses = regular_statuses.limit(limit)
-          
+
           # Pinned statusesを取得（self-viewの場合のみ）
           if current_user == @account
             pinned_objects = @account.pinned_statuses
-                                    .includes(object: [:actor, :media_attachments, :mentions, :tags])
-                                    .ordered
-                                    .map(&:object)
-            
+                                     .includes(object: %i[actor media_attachments mentions tags])
+                                     .ordered
+                                     .map(&:object)
+
             # Pinned statusesを除いた通常投稿
             regular_statuses = regular_statuses.where.not(id: pinned_objects.map(&:id)) if pinned_objects.any?
-            
+
             # Pinned statusesを先頭に配置
             statuses = pinned_objects + regular_statuses.to_a
           else
             statuses = regular_statuses
           end
-          
+
           # 制限数に切り詰める
           statuses = statuses.first(limit)
         end
@@ -177,7 +179,7 @@ module Api
         query = params[:q].to_s.strip
         limit = [params.fetch(:limit, 40).to_i, 80].min
         resolve = params[:resolve] == 'true'
-        
+
         return render json: [] if query.blank?
 
         accounts = search_accounts(query, limit, resolve)
@@ -209,10 +211,10 @@ module Api
       # GET /api/v1/accounts/relationships
       def relationships
         return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
-        
+
         account_ids = Array(params[:id]).map(&:to_i)
         accounts = Actor.where(id: account_ids)
-        
+
         # すべての要求されたIDに対してrelationshipを返す（存在しないものは空のrelationship）
         relationships = account_ids.map do |id|
           account = accounts.find { |a| a.id == id }
@@ -236,8 +238,26 @@ module Api
             }
           end
         end
-        
+
         render json: relationships
+      end
+
+      # POST /api/v1/accounts/:id/note
+      def note
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+
+        comment = params[:comment] || ''
+
+        if comment.blank?
+          current_user.account_notes.find_by(target_actor: @account)&.destroy
+        else
+          note = current_user.account_notes.find_or_initialize_by(target_actor: @account)
+          note.comment = comment
+
+          return render json: { error: 'Failed to save note', details: note.errors.full_messages }, status: :unprocessable_entity unless note.save
+        end
+
+        render json: serialized_relationship(@account)
       end
 
       private
@@ -291,8 +311,8 @@ module Api
       end
 
       def account_params
-        params.permit(:display_name, :note, :locked, :bot, :discoverable, :avatar, :header, 
-                     fields_attributes: [:name, :value])
+        params.permit(:display_name, :note, :locked, :bot, :discoverable, :avatar, :header,
+                      fields_attributes: %i[name value])
       end
 
       # Active Storage版の画像アップロード処理
@@ -314,7 +334,6 @@ module Api
         File.extname(filename).downcase.delete('.')
       end
 
-
       def render_unauthorized
         render json: { error: 'This action requires authentication' }, status: :unauthorized
       end
@@ -326,7 +345,7 @@ module Api
 
       def update_account_attributes
         update_params = account_params.except(:avatar, :header, :fields_attributes)
-        
+
         # fields_attributesをfieldsに変換
         if params.key?(:fields_attributes)
           fields = params[:fields_attributes].values.map do |field|
@@ -337,7 +356,7 @@ module Api
           end.select { |field| field['name'].present? || field['value'].present? }
           update_params[:fields] = fields.to_json
         end
-        
+
         if current_user.update(update_params)
           render json: serialized_account(current_user, is_self: true)
         else
@@ -355,7 +374,6 @@ module Api
       def valid_upload?(file)
         file&.respond_to?(:tempfile)
       end
-
 
       def serialized_relationship(account)
         return {} unless current_user
@@ -398,9 +416,11 @@ module Api
         }
       end
 
-      def additional_relationship_data(_account)
+      def additional_relationship_data(account)
+        note = current_user.account_notes.find_by(target_actor: account)
         {
-          endorsed: false
+          endorsed: false,
+          note: note&.comment || ''
         }
       end
 
@@ -439,9 +459,7 @@ module Api
         # resolveがtrueで、ローカル結果が少ない場合はWebFinger解決を試行
         if resolve && local_accounts.count < limit && query.include?('@')
           remote_account = resolve_remote_account(query)
-          if remote_account && !local_accounts.include?(remote_account)
-            local_accounts = [remote_account] + local_accounts.to_a
-          end
+          local_accounts = [remote_account] + local_accounts.to_a if remote_account && local_accounts.exclude?(remote_account)
         end
 
         local_accounts
@@ -452,12 +470,10 @@ module Api
           username, domain = acct.split('@', 2)
           # まずローカルDBから検索
           actor = Actor.find_by(username: username, domain: domain)
-          
+
           # 見つからない場合はWebFinger解決を試行
-          unless actor
-            actor = resolve_remote_account(acct)
-          end
-          
+          actor ||= resolve_remote_account(acct)
+
           actor
         else
           Actor.find_by(username: acct, local: true)
@@ -483,18 +499,12 @@ module Api
       end
 
       def apply_timeline_pagination(query)
-        if params[:max_id].present?
-          query = query.where('objects.id < ?', params[:max_id])
-        end
-        
-        if params[:since_id].present?
-          query = query.where('objects.id > ?', params[:since_id])
-        end
-        
-        if params[:min_id].present?
-          query = query.where('objects.id > ?', params[:min_id])
-        end
-        
+        query = query.where(objects: { id: ...(params[:max_id]) }) if params[:max_id].present?
+
+        query = query.where('objects.id > ?', params[:since_id]) if params[:since_id].present?
+
+        query = query.where('objects.id > ?', params[:min_id]) if params[:min_id].present?
+
         query
       end
     end

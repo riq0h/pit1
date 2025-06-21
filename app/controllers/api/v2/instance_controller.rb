@@ -23,7 +23,7 @@ module Api
             blurhash: nil,
             versions: {}
           },
-          languages: ['ja', 'en'],
+          languages: %w[ja en],
           configuration: configuration_data,
           registrations: {
             enabled: true,
@@ -62,7 +62,7 @@ module Api
           media_attachments: {
             supported_mime_types: [
               'image/jpeg',
-              'image/png', 
+              'image/png',
               'image/gif',
               'image/heic',
               'image/heif',
@@ -89,17 +89,17 @@ module Api
               'audio/3gpp',
               'video/x-ms-asf'
             ],
-            image_size_limit: 10485760,
-            image_matrix_limit: 16777216,
-            video_size_limit: 41943040,
+            image_size_limit: 10_485_760,
+            image_matrix_limit: 16_777_216,
+            video_size_limit: 41_943_040,
             video_frame_rate_limit: 60,
-            video_matrix_limit: 2304000
+            video_matrix_limit: 2_304_000
           },
           polls: {
             max_options: 4,
             max_characters_per_option: 50,
             min_expiration: 300,
-            max_expiration: 2629746
+            max_expiration: 2_629_746
           }
         }
       end

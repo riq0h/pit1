@@ -63,5 +63,16 @@ class CreateSocialRelationships < ActiveRecord::Migration[8.0]
     end
 
     add_index :domain_blocks, [:actor_id, :domain], unique: true
+
+    # Account notes
+    create_table :account_notes, id: :integer do |t|
+      t.references :actor, foreign_key: true, type: :integer, null: false, index: true
+      t.references :target_actor, foreign_key: { to_table: :actors }, type: :integer, null: false, index: true
+      t.text :comment, null: false, default: ''
+      
+      t.timestamps
+    end
+
+    add_index :account_notes, [:actor_id, :target_actor_id], unique: true
   end
 end

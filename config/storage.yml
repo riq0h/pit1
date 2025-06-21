@@ -14,6 +14,7 @@ cloudflare_r2:
   secret_access_key: <%= ENV['R2_SECRET_ACCESS_KEY'] %>
   region: auto
   bucket: <%= ENV['S3_BUCKET'] %>
+  public: true
   request_checksum_calculation: "when_required"
   response_checksum_validation: "when_required"
 

@@ -90,7 +90,7 @@ module ActivityPubCreateHandlers
   def handle_mentions(object, object_data)
     tags = Array(object_data['tag'])
     mention_tags = tags.select { |tag| tag['type'] == 'Mention' }
-    
+
     mention_tags.each do |mention_tag|
       href = mention_tag['href']
       next unless href
@@ -105,47 +105,47 @@ module ActivityPubCreateHandlers
         actor: mentioned_actor,
         ap_id: "#{object.ap_id}#mention-#{mentioned_actor.id}"
       )
-      
+
       Rails.logger.info "💬 Mention created: #{mentioned_actor.username}"
     end
-  rescue => e
+  rescue StandardError => e
     Rails.logger.error "Failed to handle mentions: #{e.message}"
   end
 
   def handle_emojis(object, object_data)
     tags = Array(object_data['tag'])
     emoji_tags = tags.select { |tag| tag['type'] == 'Emoji' }
-    
+
     emoji_tags.each do |emoji_tag|
       shortcode = emoji_tag['name']&.gsub(/^:|:$/, '')
       icon_url = emoji_tag.dig('icon', 'url')
-      
+
       next unless shortcode.present? && icon_url.present?
 
       remote_domain = extract_domain_from_uri(object.ap_id)
       next unless remote_domain
 
       existing_emoji = CustomEmoji.find_by(shortcode: shortcode, domain: remote_domain)
-      
-      unless existing_emoji
-        CustomEmoji.create!(
-          shortcode: shortcode,
-          domain: remote_domain,
-          image_url: icon_url,
-          visible_in_picker: false,
-          disabled: false
-        )
-        
-        Rails.logger.info "🎨 Remote emoji created: :#{shortcode}: from #{remote_domain}"
-      end
+
+      next if existing_emoji
+
+      CustomEmoji.create!(
+        shortcode: shortcode,
+        domain: remote_domain,
+        image_url: icon_url,
+        visible_in_picker: false,
+        disabled: false
+      )
+
+      Rails.logger.info "🎨 Remote emoji created: :#{shortcode}: from #{remote_domain}"
     end
-  rescue => e
+  rescue StandardError => e
     Rails.logger.error "Failed to handle emojis: #{e.message}"
   end
 
   def extract_domain_from_uri(uri)
     return nil unless uri
-    
+
     parsed_uri = URI.parse(uri)
     parsed_uri.host
   rescue URI::InvalidURIError

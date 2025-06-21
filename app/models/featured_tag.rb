@@ -14,10 +14,8 @@ class FeaturedTag < ApplicationRecord
   end
 
   def decrement_status_count!
-    decrement!(:statuses_count) if statuses_count > 0
+    decrement!(:statuses_count) if statuses_count.positive?
   end
 
-  def name
-    tag.name
-  end
+  delegate :name, to: :tag
 end

@@ -29,10 +29,8 @@ module Api
       def application_params
         client_name = params[:client_name]
         redirect_uris = params[:redirect_uris]
-        
-        if client_name.blank? || redirect_uris.blank?
-          raise ActionController::ParameterMissing, 'client_name and redirect_uris are required'
-        end
+
+        raise ActionController::ParameterMissing, 'client_name and redirect_uris are required' if client_name.blank? || redirect_uris.blank?
 
         {
           name: client_name,

@@ -20,14 +20,14 @@ module Api
 
         # タグを作成または取得
         tag = Tag.find_or_create_by(name: tag_name)
-        
+
         # 既にfeaturedされているかチェック
         existing_featured_tag = current_user.featured_tags.find_by(tag: tag)
         return render json: serialized_featured_tag(existing_featured_tag) if existing_featured_tag
 
         # Featured tagを作成
         featured_tag = current_user.featured_tags.build(tag: tag)
-        
+
         if featured_tag.save
           # 既存の投稿でこのタグを使っている数をカウント
           update_featured_tag_count(featured_tag)
@@ -83,15 +83,15 @@ module Api
       def update_featured_tag_count(featured_tag)
         # ユーザの投稿でこのタグが使われている数をカウント
         count = current_user.objects
-                           .joins(:object_tags)
-                           .where(object_tags: { tag: featured_tag.tag })
-                           .count
+                            .joins(:object_tags)
+                            .where(object_tags: { tag: featured_tag.tag })
+                            .count
 
         last_status = current_user.objects
-                                 .joins(:object_tags)
-                                 .where(object_tags: { tag: featured_tag.tag })
-                                 .order(published_at: :desc)
-                                 .first
+                                  .joins(:object_tags)
+                                  .where(object_tags: { tag: featured_tag.tag })
+                                  .order(published_at: :desc)
+                                  .first
 
         featured_tag.update!(
           statuses_count: count,

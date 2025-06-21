@@ -5,7 +5,7 @@ module Api
     class ListsController < Api::BaseController
       before_action :doorkeeper_authorize!
       before_action :require_user!
-      before_action :set_list, only: [:show, :update, :destroy, :accounts, :add_accounts, :remove_accounts]
+      before_action :set_list, only: %i[show update destroy accounts add_accounts remove_accounts]
 
       # GET /api/v1/lists
       def index
@@ -13,21 +13,21 @@ module Api
         render json: lists.map { |list| serialized_list(list) }
       end
 
-      # POST /api/v1/lists
-      def create
-        list = current_user.lists.build(list_params)
-        
-        if list.save
-          render json: serialized_list(list)
-        else
-          render json: { error: 'Validation failed', details: list.errors.full_messages }, 
-                 status: :unprocessable_entity
-        end
-      end
-
       # GET /api/v1/lists/:id
       def show
         render json: serialized_list(@list)
+      end
+
+      # POST /api/v1/lists
+      def create
+        list = current_user.lists.build(list_params)
+
+        if list.save
+          render json: serialized_list(list)
+        else
+          render json: { error: 'Validation failed', details: list.errors.full_messages },
+                 status: :unprocessable_entity
+        end
       end
 
       # PUT /api/v1/lists/:id
@@ -35,7 +35,7 @@ module Api
         if @list.update(list_params)
           render json: serialized_list(@list)
         else
-          render json: { error: 'Validation failed', details: @list.errors.full_messages }, 
+          render json: { error: 'Validation failed', details: @list.errors.full_messages },
                  status: :unprocessable_entity
         end
       end
@@ -50,7 +50,7 @@ module Api
       def accounts
         limit = [params[:limit].to_i, 40].min
         limit = 20 if limit <= 0
-        
+
         accounts = @list.members.limit(limit)
         render json: accounts.map { |account| serialized_account(account) }
       end
@@ -58,13 +58,11 @@ module Api
       # POST /api/v1/lists/:id/accounts
       def add_accounts
         account_ids = Array(params[:account_ids])
-        
-        if account_ids.blank?
-          return render json: { error: 'No account IDs provided' }, status: :unprocessable_entity
-        end
+
+        return render json: { error: 'No account IDs provided' }, status: :unprocessable_entity if account_ids.blank?
 
         accounts = Actor.where(id: account_ids)
-        
+
         accounts.each do |account|
           @list.add_member!(account)
         end
@@ -75,13 +73,11 @@ module Api
       # DELETE /api/v1/lists/:id/accounts
       def remove_accounts
         account_ids = Array(params[:account_ids])
-        
-        if account_ids.blank?
-          return render json: { error: 'No account IDs provided' }, status: :unprocessable_entity
-        end
+
+        return render json: { error: 'No account IDs provided' }, status: :unprocessable_entity if account_ids.blank?
 
         accounts = Actor.where(id: account_ids)
-        
+
         accounts.each do |account|
           @list.remove_member!(account)
         end

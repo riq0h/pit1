@@ -75,6 +75,8 @@ class ActivitiesController < ApplicationController
       add_like_activity_data(base_data, activity)
     when 'Delete'
       add_delete_activity_data(base_data, activity)
+    when 'Update'
+      add_update_activity_data(base_data, activity)
     when 'Undo'
       add_undo_activity_data(base_data, activity)
     else
@@ -116,6 +118,16 @@ class ActivitiesController < ApplicationController
     base_data.merge('object' => activity.target_ap_id)
   end
 
+  def add_update_activity_data(base_data, activity)
+    return base_data unless activity.object
+
+    base_data.merge(
+      'object' => build_updated_object(activity.object),
+      'to' => build_activity_audience(activity.object, :to),
+      'cc' => build_activity_audience(activity.object, :cc)
+    )
+  end
+
   def add_undo_activity_data(base_data, activity)
     base_data.merge('object' => activity.target_ap_id)
   end
@@ -135,6 +147,64 @@ class ActivitiesController < ApplicationController
       'summary' => object.summary,
       'inReplyTo' => object.in_reply_to_ap_id
     }.compact
+  end
+
+  def build_updated_object(object)
+    updated_data = {
+      '@context' => 'https://www.w3.org/ns/activitystreams',
+      'id' => object.ap_id,
+      'type' => object.object_type,
+      'attributedTo' => object.actor.ap_id,
+      'content' => object.content,
+      'published' => object.published_at.iso8601,
+      'url' => object.public_url,
+      'to' => build_activity_audience(object, :to),
+      'cc' => build_activity_audience(object, :cc),
+      'sensitive' => object.sensitive?,
+      'summary' => object.summary,
+      'inReplyTo' => object.in_reply_to_ap_id,
+      'attachment' => build_object_attachments(object),
+      'tag' => build_object_tags(object)
+    }
+
+    # 編集済みの場合はupdatedフィールドを追加
+    updated_data['updated'] = object.edited_at.iso8601 if object.edited?
+
+    updated_data.compact
+  end
+
+  def build_object_attachments(object)
+    object.media_attachments.map do |attachment|
+      {
+        'type' => 'Document',
+        'mediaType' => attachment.content_type,
+        'url' => attachment.url,
+        'name' => attachment.description || attachment.file_name,
+        'width' => attachment.width,
+        'height' => attachment.height,
+        'blurhash' => attachment.blurhash
+      }.compact
+    end
+  end
+
+  def build_object_tags(object)
+    hashtag_tags = object.tags.map do |tag|
+      {
+        'type' => 'Hashtag',
+        'href' => "#{Rails.application.config.activitypub.base_url}/tags/#{tag.name}",
+        'name' => "##{tag.name}"
+      }
+    end
+
+    mention_tags = object.mentions.map do |mention|
+      {
+        'type' => 'Mention',
+        'href' => mention.actor.ap_id,
+        'name' => "@#{mention.actor.full_username}"
+      }
+    end
+
+    hashtag_tags + mention_tags
   end
 
   def build_activity_audience(object, type)

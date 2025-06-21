@@ -6,7 +6,7 @@ module Api
       class SubscriptionController < Api::BaseController
         before_action :doorkeeper_authorize!
         before_action :require_user!
-        before_action :set_subscription, only: [:show, :update, :destroy]
+        before_action :set_subscription, only: %i[show update destroy]
 
         # GET /api/v1/push/subscription
         def show
@@ -20,7 +20,7 @@ module Api
         # POST /api/v1/push/subscription
         def create
           subscription_params = extract_subscription_params
-          
+
           return render_validation_error('Missing required subscription data') if subscription_params.nil?
 
           @subscription = current_user.web_push_subscriptions.find_or_initialize_by(
@@ -36,9 +36,9 @@ module Api
           if @subscription.save
             render json: serialized_subscription(@subscription), status: :created
           else
-            render json: { 
-              error: 'Validation failed', 
-              details: @subscription.errors.full_messages 
+            render json: {
+              error: 'Validation failed',
+              details: @subscription.errors.full_messages
             }, status: :unprocessable_entity
           end
         end
@@ -52,9 +52,9 @@ module Api
             if @subscription.save
               render json: serialized_subscription(@subscription)
             else
-              render json: { 
-                error: 'Validation failed', 
-                details: @subscription.errors.full_messages 
+              render json: {
+                error: 'Validation failed',
+                details: @subscription.errors.full_messages
               }, status: :unprocessable_entity
             end
           else
@@ -80,7 +80,7 @@ module Api
 
         def extract_subscription_params
           subscription_data = params[:subscription]
-          return nil unless subscription_data&.dig(:endpoint) && subscription_data&.dig(:keys)
+          return nil unless subscription_data&.dig(:endpoint) && subscription_data[:keys]
 
           {
             endpoint: subscription_data[:endpoint],
@@ -94,7 +94,7 @@ module Api
         def extract_alerts
           alerts_params = params.dig(:data, :alerts) || {}
           default_alerts = WebPushSubscription.new.default_alerts
-          
+
           # Strong Parametersを適切に処理
           permitted_alerts = alerts_params.permit(*default_alerts.keys)
           default_alerts.merge(permitted_alerts.to_h)

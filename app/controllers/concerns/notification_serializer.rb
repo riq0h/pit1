@@ -2,7 +2,7 @@
 
 module NotificationSerializer
   extend ActiveSupport::Concern
-  
+
   included do
     include StatusSerializationHelper
     include MediaSerializer

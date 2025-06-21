@@ -29,13 +29,11 @@ module Api
         # 既にフォローしていないリモートユーザから推奨
         already_following_ids = current_user.following.pluck(:id)
 
-        suggested_actors = Actor.remote
-                                .where.not(id: already_following_ids)
-                                .where('followers_count > ?', 0) # ある程度人気のあるアカウント
-                                .order('followers_count DESC, created_at DESC')
-                                .limit(limit)
-
-        suggested_actors
+        Actor.remote
+             .where.not(id: already_following_ids)
+             .where('followers_count > ?', 0) # ある程度人気のあるアカウント
+             .order('followers_count DESC, created_at DESC')
+             .limit(limit)
       end
 
       def serialized_suggestion(actor)

@@ -9,7 +9,7 @@ module Api
       def show
         tag_name = params[:id]
         tag = Tag.find_by(name: tag_name)
-        
+
         if tag
           render json: serialized_hashtag_with_following(tag)
         else
@@ -30,10 +30,10 @@ module Api
 
         tag_name = params[:id]
         tag = find_or_create_tag(tag_name)
-        
+
         # フォロー関係を作成（重複チェック付き）
         follow_tag = current_user.followed_tags.find_or_create_by(tag: tag)
-        
+
         render json: serialized_hashtag_with_following(tag, following: true)
       end
 
@@ -44,7 +44,7 @@ module Api
 
         tag_name = params[:id]
         tag = Tag.find_by(name: tag_name)
-        
+
         if tag
           # フォロー関係を削除
           current_user.followed_tags.where(tag: tag).destroy_all
@@ -68,8 +68,8 @@ module Api
       end
 
       def serialized_hashtag_with_following(tag, following: nil)
-        following_status = following || (current_user && current_user.followed_tags.exists?(tag: tag))
-        
+        following_status = following || current_user&.followed_tags&.exists?(tag: tag)
+
         {
           name: tag.name,
           url: "#{request.base_url}/tags/#{tag.name}",

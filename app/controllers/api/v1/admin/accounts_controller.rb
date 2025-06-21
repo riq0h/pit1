@@ -43,7 +43,7 @@ module Api
         # DELETE /api/v1/admin/accounts/:id
         def destroy
           return render_error('Cannot delete local admin account', 403) if @account.local? && @account.admin?
-          
+
           @account.destroy!
           render json: {}
         end
@@ -58,7 +58,7 @@ module Api
 
         def require_admin!
           return if current_user&.admin?
-          
+
           render json: { error: 'Admin access required' }, status: :forbidden
         end
 

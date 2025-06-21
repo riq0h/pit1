@@ -7,17 +7,25 @@ module MediaSerializer
 
   def serialized_media_attachments(status)
     return [] unless status.respond_to?(:media_attachments) && status.media_attachments
-    
+
     status.media_attachments.map { |media| serialize_single_media_attachment(media) }
-  rescue => e
+  rescue StandardError => e
     Rails.logger.warn "Failed to serialize media attachments for status #{status.id}: #{e.message}"
     []
   end
 
   def serialize_single_media_attachment(media)
-    media_url = media.url rescue nil
-    preview_url = media.preview_url rescue nil
-    
+    media_url = begin
+      media.url
+    rescue StandardError
+      nil
+    end
+    preview_url = begin
+      media.preview_url
+    rescue StandardError
+      nil
+    end
+
     {
       id: media.id.to_s,
       type: media.media_type,

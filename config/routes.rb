@@ -101,10 +101,13 @@ Rails.application.routes.draw do
       post '/accounts/:id/unblock', to: 'accounts#unblock'
       post '/accounts/:id/mute', to: 'accounts#mute'
       post '/accounts/:id/unmute', to: 'accounts#unmute'
+      post '/accounts/:id/note', to: 'accounts#note'
 
       # Statuses
       get '/statuses/:id', to: 'statuses#show'
       get '/statuses/:id/context', to: 'statuses#context'
+      get '/statuses/:id/history', to: 'statuses#history'
+      get '/statuses/:id/source', to: 'statuses#source'
       post '/statuses', to: 'statuses#create'
       delete '/statuses/:id', to: 'statuses#destroy'
       put '/statuses/:id', to: 'statuses#update'

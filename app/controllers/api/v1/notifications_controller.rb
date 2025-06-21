@@ -11,9 +11,9 @@ module Api
       # GET /api/v1/notifications
       def index
         @notifications = filtered_notifications
-                        .recent
-                        .then { |n| apply_pagination(n) }
-                        .limit(limit_param)
+                         .recent
+                         .then { |n| apply_pagination(n) }
+                         .limit(limit_param)
 
         render json: @notifications.map { |notification| notification_json(notification) }
       end
@@ -201,18 +201,12 @@ module Api
       end
 
       def apply_pagination(notifications)
-        if params[:max_id].present?
-          notifications = notifications.where('notifications.id < ?', params[:max_id])
-        end
-        
-        if params[:since_id].present?
-          notifications = notifications.where('notifications.id > ?', params[:since_id])
-        end
-        
-        if params[:min_id].present?
-          notifications = notifications.where('notifications.id > ?', params[:min_id])
-        end
-        
+        notifications = notifications.where(notifications: { id: ...(params[:max_id]) }) if params[:max_id].present?
+
+        notifications = notifications.where('notifications.id > ?', params[:since_id]) if params[:since_id].present?
+
+        notifications = notifications.where('notifications.id > ?', params[:min_id]) if params[:min_id].present?
+
         notifications
       end
     end

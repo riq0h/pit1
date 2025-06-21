@@ -11,7 +11,7 @@ module ActivityBuilders
         {
           'type' => 'Document',
           'mediaType' => attachment.content_type,
-          'url' => attachment.remote_url,
+          'url' => attachment.url,
           'name' => attachment.description || attachment.file_name,
           'width' => attachment.width,
           'height' => attachment.height,

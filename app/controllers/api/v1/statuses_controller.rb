@@ -23,7 +23,7 @@ module Api
       def context
         ancestors = build_ancestors(@status)
         descendants = build_descendants(@status)
-        
+
         render json: {
           ancestors: ancestors.map { |status| serialized_status(status) },
           descendants: descendants.map { |status| serialized_status(status) }
@@ -35,12 +35,11 @@ module Api
         return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
 
         @status = build_status_object
+        attach_media_to_status if @media_ids&.any?
 
         if @status.save
           process_mentions_and_tags
-          attach_media_to_status if @media_ids&.any?
           handle_direct_message_conversation if @status.visibility == 'direct'
-          create_activity_for_status
           render json: serialized_status(@status), status: :created
         else
           render_validation_error(@status)
@@ -180,7 +179,12 @@ module Api
         return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
         return render json: { error: 'Not authorized' }, status: :forbidden unless @status.actor == current_user
 
-        if @status.update(status_params)
+        edit_params = build_edit_params
+
+        if @status.perform_edit!(edit_params)
+          # メンションやタグの再処理
+          process_mentions_and_tags_for_edit if edit_params[:content]
+
           render json: serialized_status(@status)
         else
           render json: { error: 'Validation failed', details: @status.errors.full_messages },
@@ -188,20 +192,35 @@ module Api
         end
       end
 
+      # GET /api/v1/statuses/:id/history
+      def history
+        edits = @status.status_edits.order(:created_at) # 古いものから新しい順
+        edit_versions = edits.map { |edit| build_edit_version(edit) }
+
+        # 現在の状態を最後に追加（完全な編集履歴）
+        current_version = build_current_version
+        all_versions = edit_versions + [current_version]
+
+        render json: all_versions
+      end
+
+      # GET /api/v1/statuses/:id/source
+      def source
+        doorkeeper_authorize! :read
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render json: { error: 'Not authorized' }, status: :forbidden unless @status.actor == current_user
+
+        render json: {
+          id: @status.id.to_s,
+          text: @status.content || '',
+          spoiler_text: @status.summary || ''
+        }
+      end
+
       # DELETE /api/v1/statuses/:id
       def destroy
         return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
         return render json: { error: 'Not authorized' }, status: :forbidden unless @status.actor == current_user
-
-        # Create Delete activity
-        current_user.activities.create!(
-          ap_id: generate_delete_activity_ap_id(@status),
-          activity_type: 'Delete',
-          target_ap_id: @status.ap_id,
-          published_at: Time.current,
-          local: true,
-          processed: true
-        )
 
         @status.destroy
         render json: serialized_status(@status)
@@ -222,50 +241,9 @@ module Api
         )
       end
 
-      def create_activity_for_status
-        create_activity = current_user.activities.create!(
-          ap_id: generate_activity_ap_id(@status),
-          activity_type: 'Create',
-          object: @status,
-          published_at: Time.current,
-          local: true,
-          processed: true
-        )
-
-        # Queue for federation delivery to followers
-        deliver_create_activity(create_activity)
-      end
-
-      def deliver_create_activity(create_activity)
-        # メンションされたアクター（外部）のinboxは常に配信対象
-        mentioned_inboxes = @status.mentioned_actors.where(local: false).pluck(:inbox_url)
-        all_inboxes = mentioned_inboxes.dup
-
-        case @status.visibility
-        when 'public'
-          # Public投稿：フォロワー + メンションされたアクター
-          follower_inboxes = current_user.followers.where(local: false).pluck(:inbox_url)
-          all_inboxes.concat(follower_inboxes)
-        when 'unlisted'
-          # Unlisted投稿：フォロワー + メンションされたアクター
-          follower_inboxes = current_user.followers.where(local: false).pluck(:inbox_url)
-          all_inboxes.concat(follower_inboxes)
-        when 'private', 'followers_only'
-          # フォロワー限定：フォロワー + メンションされたアクター
-          follower_inboxes = current_user.followers.where(local: false).pluck(:inbox_url)
-          all_inboxes.concat(follower_inboxes)
-        when 'direct'
-          # DM：メンションされたアクターのみ（既に all_inboxes に含まれている）
-        end
-
-        # 重複を除去して配信
-        unique_inboxes = all_inboxes.uniq.compact
-        SendActivityJob.perform_later(create_activity.id, unique_inboxes) if unique_inboxes.any?
-      end
-
       def attach_media_to_status
         media_attachments = current_user.media_attachments.where(id: @media_ids, object_id: nil)
-        media_attachments.update_all(object_id: @status.id)
+        @status.media_attachments = media_attachments
       end
 
       def render_validation_error(object)
@@ -422,25 +400,24 @@ module Api
       end
 
       def generate_status_ap_id
-        local_domain = Rails.application.config.activitypub.domain
-        scheme = Rails.env.production? ? 'https' : 'http'
-        "#{scheme}://#{local_domain}/users/#{current_user.username}/posts/#{Letter::Snowflake.generate}"
+        base_url = Rails.application.config.activitypub.base_url
+        "#{base_url}/users/#{current_user.username}/posts/#{Letter::Snowflake.generate}"
       end
 
       def build_ancestors(status)
-        return [] unless status.in_reply_to_ap_id.present?
-        
+        return [] if status.in_reply_to_ap_id.blank?
+
         ancestors = []
         current_status = status
-        
+
         while current_status.in_reply_to_ap_id.present?
           parent = ActivityPubObject.find_by(ap_id: current_status.in_reply_to_ap_id)
           break unless parent
-          
+
           ancestors.unshift(parent)
           current_status = parent
         end
-        
+
         ancestors
       end
 
@@ -464,24 +441,75 @@ module Api
 
       def convert_mentions_to_html_links
         return if @status.content.blank?
-        
-        # 絵文字変換は常に実行（外部からのHTMLコンテンツにもショートコードが含まれる可能性）
-        if @status.content.include?('<a ')
-          # 既にHTMLリンクが含まれている場合は絵文字変換のみ
-          updated_content = EmojiParser.new(@status.content).parse
-        else
-          # プレーンテキストの場合は全処理
-          # 1. URLをHTMLリンクに変換（プレーンテキストから）
-          updated_content = apply_url_links(@status.content)
-          
-          # 2. @username@domain 形式のメンションをHTMLリンクに変換（HTML対応版）
-          updated_content = apply_mention_links_to_html(updated_content)
-          
-          # 3. 絵文字をHTMLに変換
-          updated_content = EmojiParser.new(updated_content).parse
-        end
-        
+        return if @status.content.include?('<a ') # 既にHTMLリンクが含まれている場合はスキップ
+
+        # プレーンテキストの場合のみリンク化処理
+        # 1. URLをHTMLリンクに変換
+        updated_content = apply_url_links(@status.content)
+
+        # 2. @username@domain 形式のメンションをHTMLリンクに変換（HTML対応版）
+        updated_content = apply_mention_links_to_html(updated_content)
+
+        # 絵文字はショートコードのままで保存（Mastodon API標準に準拠）
+        # フロントエンド表示時とemojis配列で適切に処理
+
         @status.update_column(:content, updated_content) if updated_content != @status.content
+      end
+
+      def build_edit_params
+        edit_params = {}
+        edit_params[:content] = params[:status] if params.key?(:status)
+        edit_params[:summary] = params[:spoiler_text] if params.key?(:spoiler_text)
+        edit_params[:sensitive] = params[:sensitive] if params.key?(:sensitive)
+        edit_params[:language] = params[:language] if params.key?(:language)
+
+        # media_idsパラメータは常に設定（空配列の場合もメディア削除として処理）
+        edit_params[:media_ids] = params[:media_ids] || []
+
+        edit_params
+      end
+
+      def process_mentions_and_tags_for_edit
+        # 既存のメンションとタグを削除
+        @status.mentions.destroy_all
+        @status.object_tags.destroy_all
+
+        # 新しい内容でメンションとタグを再処理
+        process_mentions_and_tags
+      end
+
+      def build_current_version
+        # 現在バージョンの作成時刻は最新の編集時刻、または履歴の最新時刻より後に設定
+        latest_edit_time = @status.status_edits.maximum(:created_at)
+        current_time = if latest_edit_time
+                         [latest_edit_time + 1.second, @status.edited_at || @status.published_at].max
+                       else
+                         @status.edited_at || @status.published_at
+                       end
+
+        {
+          content: @status.content || '',
+          spoiler_text: @status.summary || '',
+          sensitive: @status.sensitive || false,
+          created_at: current_time.iso8601,
+          account: serialized_account(@status.actor),
+          media_attachments: serialized_media_attachments(@status),
+          emojis: [],
+          tags: @status.tags.map { |tag| { name: tag.name, url: '#' } }
+        }
+      end
+
+      def build_edit_version(edit)
+        {
+          content: edit.content || '',
+          spoiler_text: edit.summary || '',
+          sensitive: edit.sensitive || false,
+          created_at: edit.created_at.iso8601,
+          account: serialized_account(@status.actor),
+          media_attachments: edit.media_attachments_data,
+          emojis: [],
+          tags: []
+        }
       end
     end
   end

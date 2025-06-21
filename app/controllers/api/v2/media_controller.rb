@@ -12,7 +12,7 @@ module Api
 
         begin
           media_attachment = create_media_attachment(file)
-          
+
           # Mastodon v2仕様: 画像は同期、動画・音声は非同期処理
           if media_attachment.image?
             render json: serialized_media_attachment(media_attachment), status: :ok

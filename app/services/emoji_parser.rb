@@ -34,7 +34,7 @@ class EmojiParser
 
     local_emojis = CustomEmoji.enabled.visible.where(shortcode: normalized_shortcodes, domain: nil)
     remote_emojis = CustomEmoji.enabled.remote.where(shortcode: normalized_shortcodes)
-    
+
     (local_emojis + remote_emojis).uniq(&:shortcode)
   end
 
@@ -42,13 +42,13 @@ class EmojiParser
 
   def find_emoji(shortcode)
     normalized_shortcode = shortcode.downcase
-    
+
     @local_emojis[normalized_shortcode] ||= CustomEmoji.enabled
                                                        .visible
                                                        .find_by(shortcode: normalized_shortcode, domain: nil)
-    
+
     return @local_emojis[normalized_shortcode] if @local_emojis[normalized_shortcode]
-    
+
     @remote_emojis[normalized_shortcode] ||= CustomEmoji.enabled
                                                         .remote
                                                         .find_by(shortcode: normalized_shortcode)

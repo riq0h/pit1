@@ -110,13 +110,17 @@ module AccountSerializer
 
   def format_field_value(value)
     return '' if value.blank?
-    
+
     # 既にHTMLリンクが含まれている場合はそのまま返す（外部から受信した場合）
     if value.include?('<a href=')
       value
     elsif value.match?(/\Ahttps?:\/\//)
       # プレーンなURLの場合はHTMLリンクとして返す（ローカルで設定した場合）
-      domain = URI.parse(value).host rescue value
+      domain = begin
+        URI.parse(value).host
+      rescue StandardError
+        value
+      end
       %(<a href="#{CGI.escapeHTML(value)}" target="_blank" rel="nofollow noopener noreferrer me">#{CGI.escapeHTML(domain)}</a>)
     else
       # プレーンテキストの場合はHTMLエスケープして返す

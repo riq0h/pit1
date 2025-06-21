@@ -64,10 +64,10 @@ class WebPushSubscription < ApplicationRecord
   private
 
   def default_icon
-    Rails.application.config.activitypub.base_url + '/favicon.ico'
+    "#{Rails.application.config.activitypub.base_url}/favicon.ico"
   end
 
   def default_badge
-    Rails.application.config.activitypub.base_url + '/favicon.ico'
+    "#{Rails.application.config.activitypub.base_url}/favicon.ico"
   end
 end

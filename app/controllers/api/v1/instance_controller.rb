@@ -9,7 +9,7 @@ module Api
         response.headers['Deprecation'] = 'true'
         response.headers['Sunset'] = 'Tue, 31 Dec 2024 23:59:59 GMT'
         response.headers['Link'] = '</api/v2/instance>; rel="successor-version"'
-        
+
         render json: instance_info
       end
 

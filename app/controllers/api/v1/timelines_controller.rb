@@ -50,9 +50,9 @@ module Api
         return ActivityPubObject.none unless tag
 
         statuses = base_timeline_query
-                    .joins(:tags)
-                    .where(tags: { id: tag.id })
-                    .where(visibility: 'public')
+                   .joins(:tags)
+                   .where(tags: { id: tag.id })
+                   .where(visibility: 'public')
         apply_pagination_filters(statuses)
       end
 

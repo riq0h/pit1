@@ -22,6 +22,7 @@ module StatusSerializationHelper
     {
       id: status.id.to_s,
       created_at: status.published_at&.iso8601 || status.created_at.iso8601,
+      edited_at: status.edited_at&.iso8601,
       uri: status.ap_id,
       url: status.url || status.ap_id,
       visibility: status.visibility,
@@ -107,5 +108,4 @@ module StatusSerializationHelper
 
     current_user.pinned_statuses.exists?(object: status)
   end
-
 end

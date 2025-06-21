@@ -117,7 +117,7 @@ class Notification < ApplicationRecord
       reblog = Reblog.find_by(actor: from_account, object: status)
       WebPushNotificationService.notification_for_reblog(reblog) if reblog && status
     end
-  rescue => e
+  rescue StandardError => e
     Rails.logger.error "Failed to send push notification: #{e.message}"
   end
 end

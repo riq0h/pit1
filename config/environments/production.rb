@@ -23,6 +23,11 @@ Rails.application.configure do
 
   # Store uploaded files - use Cloudflare R2 if S3_ENABLED=true, otherwise local storage
   config.active_storage.service = ENV['S3_ENABLED'] == 'true' ? :cloudflare_r2 : :local
+  
+  # Set custom host for Active Storage URLs when using Cloudflare R2
+  if ENV['S3_ENABLED'] == 'true' && ENV['S3_ALIAS_HOST'].present?
+    config.active_storage.resolve_model_to_route = :rails_storage_proxy
+  end
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   config.assume_ssl = true

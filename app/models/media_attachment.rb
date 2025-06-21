@@ -103,19 +103,31 @@ class MediaAttachment < ApplicationRecord
 
   def preview_url
     # Active Storageファイルが添付されている場合
-    return Rails.application.routes.url_helpers.url_for(file) if file.attached?
-
-    # リモートファイルの場合
-    return remote_url if image? && remote_url.present?
-
-    # デフォルトのプレビューアイコン
-    default_preview_icon_url
+    if file.attached?
+      # Cloudflare R2のカスタムドメインを使用
+      if ENV['S3_ENABLED'] == 'true' && ENV['S3_ALIAS_HOST'].present?
+        "https://#{ENV.fetch('S3_ALIAS_HOST', nil)}/#{file.blob.key}"
+      else
+        Rails.application.routes.url_helpers.url_for(file)
+      end
+    elsif image? && remote_url.present?
+      # リモートファイルの場合
+      remote_url
+    else
+      # デフォルトのプレビューアイコン
+      default_preview_icon_url
+    end
   end
 
   # Active Storageファイルまたはリモートファイルの公開URL
   def url
     if file.attached?
-      Rails.application.routes.url_helpers.url_for(file)
+      # Cloudflare R2のカスタムドメインを使用
+      if ENV['S3_ENABLED'] == 'true' && ENV['S3_ALIAS_HOST'].present?
+        "https://#{ENV.fetch('S3_ALIAS_HOST', nil)}/#{file.blob.key}"
+      else
+        Rails.application.routes.url_helpers.url_for(file)
+      end
     else
       remote_url
     end

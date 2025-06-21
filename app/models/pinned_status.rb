@@ -2,7 +2,7 @@
 
 class PinnedStatus < ApplicationRecord
   belongs_to :actor
-  belongs_to :object, class_name: 'ActivityPubObject', foreign_key: :object_id, primary_key: :id
+  belongs_to :object, class_name: 'ActivityPubObject', primary_key: :id
 
   validates :actor_id, uniqueness: { scope: :object_id }
   validates :position, presence: true, numericality: { greater_than_or_equal_to: 0 }

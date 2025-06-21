@@ -17,7 +17,7 @@ class ActivityPubObject < ApplicationRecord
 
   # === アソシエーション ===
   belongs_to :actor, inverse_of: :objects
-  has_many :activities, dependent: :destroy, inverse_of: :object
+  has_many :activities, dependent: :destroy, foreign_key: :object_ap_id, primary_key: :ap_id, inverse_of: :object
   has_many :favourites, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
   has_many :reblogs, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
   has_many :media_attachments, dependent: :destroy, inverse_of: :object, foreign_key: :object_id, primary_key: :id
@@ -26,6 +26,7 @@ class ActivityPubObject < ApplicationRecord
   has_many :mentions, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
   has_many :mentioned_actors, through: :mentions, source: :actor
   has_many :bookmarks, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
+  has_many :status_edits, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
 
   # Conversations (for direct messages)
   belongs_to :conversation, optional: true
@@ -61,12 +62,12 @@ class ActivityPubObject < ApplicationRecord
   def public_url
     return ap_id if ap_id.present? && !local?
     return nil unless actor&.username
-    
+
     # Snowflake IDを使用してHTML URL生成
     scheme = Rails.application.config.activitypub.scheme || (Rails.env.production? ? 'https' : 'http')
     domain = Rails.application.config.activitypub.domain
     "#{scheme}://#{domain}/@#{actor.username}/#{id}"
-  rescue => e
+  rescue StandardError => e
     Rails.logger.warn "Failed to generate public_url for object #{id}: #{e.message}"
     ap_id.presence || ''
   end
@@ -123,6 +124,14 @@ class ActivityPubObject < ApplicationRecord
     in_reply_to_ap_id.present?
   end
 
+  def edited?
+    edited_at.present?
+  end
+
+  def edits_count
+    status_edits.count
+  end
+
   def root_conversation
     return self unless reply?
 
@@ -146,7 +155,7 @@ class ActivityPubObject < ApplicationRecord
   end
 
   def base_activitypub_data
-    {
+    data = {
       '@context' => Rails.application.config.activitypub.context_url,
       'id' => ap_id,
       'type' => object_type,
@@ -155,6 +164,11 @@ class ActivityPubObject < ApplicationRecord
       'published' => published_at.iso8601,
       'url' => public_url
     }
+
+    # 編集済みの場合はupdatedフィールドを追加
+    data['updated'] = edited_at.iso8601 if edited?
+
+    data
   end
 
   def extended_activitypub_data
@@ -210,6 +224,50 @@ class ActivityPubObject < ApplicationRecord
     # HTMLサニタイズ済みコンテンツとして扱う
     ActionController::Base.helpers.sanitize(content, tags: %w[p br strong em a],
                                                      attributes: %w[href])
+  end
+
+  # 編集前のスナップショットを作成
+  def create_edit_snapshot!
+    StatusEdit.create_snapshot(self)
+  end
+
+  # 編集を実行
+  def perform_edit!(params)
+    # 編集前の状態を保存
+    create_edit_snapshot!
+
+    update_attributes = {}
+    update_attributes[:content] = params[:content] if params.key?(:content)
+    update_attributes[:summary] = params[:summary] if params.key?(:summary)
+    update_attributes[:sensitive] = params[:sensitive] if params.key?(:sensitive)
+    update_attributes[:language] = params[:language] if params.key?(:language)
+    update_attributes[:edited_at] = Time.current
+
+    if update!(update_attributes)
+      # メディア添付の更新
+      if params.key?(:media_ids)
+        if params[:media_ids].present?
+          # 既存のメディアと新しいメディアの両方を考慮
+          existing_media = media_attachments.where(id: params[:media_ids])
+          new_media = actor.media_attachments.where(id: params[:media_ids], object_id: nil)
+          all_requested_media = (existing_media + new_media).uniq
+
+          self.media_attachments = all_requested_media
+        else
+          # メディアIDが空の場合は関連付けを解除（レコードは保持）
+          current_media = media_attachments.to_a
+          current_media.each { |media| media.update!(object_id: nil) }
+          association(:media_attachments).reset
+        end
+      end
+
+      # ActivityPub配信用のUpdate活動を作成
+      create_update_activity if local?
+
+      true
+    else
+      false
+    end
   end
 
   private
@@ -272,9 +330,9 @@ class ActivityPubObject < ApplicationRecord
     media_attachments.map do |attachment|
       {
         'type' => 'Document',
-        'mediaType' => attachment.mime_type,
-        'url' => attachment.file_url,
-        'name' => attachment.description || attachment.filename,
+        'mediaType' => attachment.content_type,
+        'url' => attachment.url,
+        'name' => attachment.description || attachment.file_name,
         'width' => attachment.width,
         'height' => attachment.height,
         'blurhash' => attachment.blurhash
@@ -358,9 +416,7 @@ class ActivityPubObject < ApplicationRecord
   end
 
   def base_url
-    scheme = Rails.env.production? ? 'https' : 'http'
-    domain = Rails.application.config.activitypub.domain
-    "#{scheme}://#{domain}"
+    Rails.application.config.activitypub.base_url
   end
 
   def extract_plaintext
@@ -390,11 +446,13 @@ class ActivityPubObject < ApplicationRecord
   end
 
   def requires_content?
+    return false if media_attachments.any?
+
     %w[Note Article].include?(object_type)
   end
 
   def create_activity
-    Activity.create!(
+    activity = Activity.create!(
       ap_id: "#{ap_id}#create",
       activity_type: 'Create',
       actor: actor,
@@ -402,6 +460,9 @@ class ActivityPubObject < ApplicationRecord
       published_at: published_at,
       local: true
     )
+
+    # ActivityPub配信をキュー
+    queue_activity_delivery(activity)
   end
 
   def create_delete_activity
@@ -426,5 +487,50 @@ class ActivityPubObject < ApplicationRecord
     actor.update_posts_count! if actor.present?
   rescue StandardError => e
     Rails.logger.error "Failed to update actor posts count: #{e.message}"
+  end
+
+  private
+
+  # Update活動を作成してActivityPub配信
+  def create_update_activity
+    activity = Activity.create!(
+      ap_id: "#{ap_id}#update-#{Time.current.to_i}",
+      activity_type: 'Update',
+      actor: actor,
+      object_ap_id: ap_id,
+      published_at: Time.current,
+      local: true
+    )
+
+    # ActivityPub配信をキューに追加
+    queue_activity_delivery(activity)
+  end
+
+  # ActivityPub配信をキューする
+  def queue_activity_delivery(activity)
+    # メンションされたアクター（外部）のinboxは常に配信対象
+    mentioned_inboxes = mentioned_actors.where(local: false).pluck(:inbox_url)
+    all_inboxes = mentioned_inboxes.dup
+
+    case visibility
+    when 'public'
+      # Public投稿：フォロワー + メンションされたアクター
+      follower_inboxes = actor.followers.where(local: false).pluck(:inbox_url)
+      all_inboxes.concat(follower_inboxes)
+    when 'unlisted'
+      # Unlisted投稿：フォロワー + メンションされたアクター
+      follower_inboxes = actor.followers.where(local: false).pluck(:inbox_url)
+      all_inboxes.concat(follower_inboxes)
+    when 'private', 'followers_only'
+      # フォロワー限定：フォロワー + メンションされたアクター
+      follower_inboxes = actor.followers.where(local: false).pluck(:inbox_url)
+      all_inboxes.concat(follower_inboxes)
+    when 'direct'
+      # DM：メンションされたアクターのみ（既に all_inboxes に含まれている）
+    end
+
+    # 重複を除去して配信
+    unique_inboxes = all_inboxes.uniq.compact
+    SendActivityJob.perform_later(activity.id, unique_inboxes) if unique_inboxes.any?
   end
 end

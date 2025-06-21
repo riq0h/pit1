@@ -5,12 +5,17 @@ module Api
     class FiltersController < Api::BaseController
       before_action :doorkeeper_authorize!
       before_action :require_user!
-      before_action :set_filter, only: [:show, :update, :destroy]
+      before_action :set_filter, only: %i[show update destroy]
 
       # GET /api/v2/filters
       def index
         filters = current_user.filters.active.recent
         render json: filters.map { |filter| serialized_filter_v2(filter) }
+      end
+
+      # GET /api/v2/filters/:id
+      def show
+        render json: serialized_filter_v2(@filter)
       end
 
       # POST /api/v2/filters
@@ -28,14 +33,9 @@ module Api
 
           render json: serialized_filter_v2(filter)
         else
-          render json: { error: 'Validation failed', details: filter.errors.full_messages }, 
+          render json: { error: 'Validation failed', details: filter.errors.full_messages },
                  status: :unprocessable_entity
         end
-      end
-
-      # GET /api/v2/filters/:id
-      def show
-        render json: serialized_filter_v2(@filter)
       end
 
       # PUT /api/v2/filters/:id
@@ -54,7 +54,7 @@ module Api
 
           render json: serialized_filter_v2(@filter)
         else
-          render json: { error: 'Validation failed', details: @filter.errors.full_messages }, 
+          render json: { error: 'Validation failed', details: @filter.errors.full_messages },
                  status: :unprocessable_entity
         end
       end

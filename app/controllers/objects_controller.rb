@@ -58,7 +58,7 @@ class ObjectsController < ApplicationController
   end
 
   def build_base_object_data(object)
-    {
+    base_data = {
       '@context' => 'https://www.w3.org/ns/activitystreams',
       'id' => object.ap_id,
       'type' => object.object_type,
@@ -67,6 +67,11 @@ class ObjectsController < ApplicationController
       'published' => object.published_at.iso8601,
       'url' => object.public_url
     }
+
+    # 編集済みの場合はupdatedフィールドを追加
+    base_data['updated'] = object.edited_at.iso8601 if object.edited?
+
+    base_data
   end
 
   def build_extended_object_data(object)
@@ -155,14 +160,19 @@ class ObjectsController < ApplicationController
 
   def build_activitypub_content(content)
     return content if content.blank?
-    
+
     # ActivityPub配信用: 絵文字HTMLをショートコードに戻す
     # Mastodonは content でショートコード、tag配列で絵文字メタデータを期待
     content.gsub(/<img[^>]*alt=":([^"]+):"[^>]*\/>/, ':\1:')
   end
 
   def build_absolute_media_url(attachment)
-    # 相対URLを絶対URLに変換
+    # ローカルファイルの場合はurlメソッドを使用
+    return attachment.url if attachment.file.attached?
+
+    # リモートURLがある場合は相対URLを絶対URLに変換
+    return nil if attachment.remote_url.blank?
+
     if attachment.remote_url.start_with?('/')
       # .envから設定されたActivityPubドメインを使用
       base_url = Rails.application.config.activitypub.base_url

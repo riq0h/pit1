@@ -37,17 +37,87 @@ module ActivityPubObjectHandlers
     return unless object&.actor == @sender
 
     object.update!(build_update_attributes(object_data))
+
+    # メディア添付の更新処理
+    update_object_attachments(object, object_data)
+
     Rails.logger.info "📝 Object updated: #{object.id}"
   end
 
   def build_update_attributes(object_data)
-    {
+    update_attrs = {
       content: object_data['content'],
       content_plaintext: ActivityPub::HtmlStripper.strip(object_data['content']),
       summary: object_data['summary'],
       sensitive: object_data['sensitive'] || false,
       raw_data: object_data.to_json
     }
+
+    # updated フィールドがある場合は edited_at を設定
+    if object_data['updated'].present?
+      update_attrs[:edited_at] = Time.zone.parse(object_data['updated'])
+      Rails.logger.info "📝 Setting edited_at to #{object_data['updated']}"
+    end
+
+    update_attrs
+  end
+
+  def update_object_attachments(object, object_data)
+    attachments = object_data['attachment']
+    return unless attachments.is_a?(Array)
+
+    Rails.logger.info "📎 Updating #{attachments.length} attachments for object #{object.id}"
+
+    # 既存のメディア添付を削除
+    object.media_attachments.destroy_all
+
+    # 新しいメディア添付を作成
+    attachments.each do |attachment|
+      next unless attachment.is_a?(Hash) && attachment['type'] == 'Document'
+
+      create_remote_media_attachment(object, attachment)
+    end
+  end
+
+  def create_remote_media_attachment(object, attachment_data)
+    url = attachment_data['url']
+    file_name = extract_filename_from_url(url)
+    media_type = determine_media_type_from_content_type(attachment_data['mediaType'])
+
+    media_attrs = {
+      actor: object.actor,
+      object: object,
+      remote_url: url,
+      content_type: attachment_data['mediaType'],
+      media_type: media_type,
+      file_name: file_name,
+      file_size: 1,
+      description: attachment_data['name'],
+      width: attachment_data['width'],
+      height: attachment_data['height'],
+      blurhash: attachment_data['blurhash']
+    }
+
+    MediaAttachment.create!(media_attrs)
+    Rails.logger.info "📎 Created remote media attachment: #{url}"
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.warn "⚠️ Failed to create media attachment: #{e.message}"
+  end
+
+  def extract_filename_from_url(url)
+    uri = URI.parse(url)
+    filename = File.basename(uri.path)
+    filename.presence || 'unknown_file'
+  rescue URI::InvalidURIError
+    'unknown_file'
+  end
+
+  def determine_media_type_from_content_type(content_type)
+    return 'image' if content_type&.start_with?('image/')
+    return 'video' if content_type&.start_with?('video/')
+    return 'audio' if content_type&.start_with?('audio/')
+
+    'document'
   end
 
   # Delete Activity処理
