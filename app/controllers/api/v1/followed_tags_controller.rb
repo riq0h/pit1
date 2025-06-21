@@ -8,9 +8,31 @@ module Api
 
       # GET /api/v1/followed_tags
       def index
-        # TODO: フォローしているタグ機能の実装
-        # Letterでは現在タグフォロー機能は未実装のため、空配列を返す
-        render json: []
+        limit = [params.fetch(:limit, 100).to_i, 200].min
+        followed_tags = current_user.followed_tags.includes(:tag).recent.limit(limit)
+        
+        tags = followed_tags.map do |followed_tag|
+          {
+            name: followed_tag.tag.name,
+            url: "#{request.base_url}/tags/#{followed_tag.tag.name}",
+            history: build_hashtag_history(followed_tag.tag),
+            following: true
+          }
+        end
+        
+        render json: tags
+      end
+      
+      private
+      
+      def build_hashtag_history(tag)
+        [
+          {
+            day: Time.current.beginning_of_day.to_i.to_s,
+            uses: (tag.usage_count || 0).to_s,
+            accounts: '1'
+          }
+        ]
       end
     end
   end

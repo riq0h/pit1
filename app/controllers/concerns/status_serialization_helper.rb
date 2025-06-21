@@ -25,7 +25,7 @@ module StatusSerializationHelper
       edited_at: status.edited_at&.iso8601,
       uri: status.ap_id,
       url: status.url || status.ap_id,
-      visibility: status.visibility,
+      visibility: status.visibility || 'public',
       language: status.language,
       sensitive: status.sensitive?
     }
@@ -41,7 +41,9 @@ module StatusSerializationHelper
       favourited: favourited_by_current_user?(status),
       reblogged: reblogged_by_current_user?(status),
       bookmarked: bookmarked_by_current_user?(status),
-      pinned: pinned_by_current_user?(status)
+      pinned: pinned_by_current_user?(status),
+      quotes_count: status.quotes_of_this.count,
+      quoted: quoted_by_current_user?(status)
     }
   end
 
@@ -50,7 +52,8 @@ module StatusSerializationHelper
       spoiler_text: status.summary || '',
       content: parse_content_links_only(status.content || ''),
       account: serialized_account(status.actor),
-      reblog: nil
+      reblog: nil,
+      quote: build_quote_data(status)
     }
   end
 
@@ -61,7 +64,7 @@ module StatusSerializationHelper
       tags: serialized_tags(status),
       emojis: serialized_emojis(status),
       card: nil,
-      poll: nil
+      poll: serialize_poll(status)
     }
   end
 
@@ -107,5 +110,41 @@ module StatusSerializationHelper
     return false unless current_user
 
     current_user.pinned_statuses.exists?(object: status)
+  end
+
+  def quoted_by_current_user?(status)
+    return false unless current_user
+
+    current_user.quote_posts.exists?(quoted_object: status)
+  end
+
+  def build_quote_data(status)
+    quote_post = status.quote_posts.first
+    return nil unless quote_post
+
+    {
+      id: quote_post.quoted_object.id.to_s,
+      created_at: quote_post.quoted_object.published_at&.iso8601,
+      uri: quote_post.quoted_object.ap_id,
+      url: quote_post.quoted_object.public_url,
+      content: parse_content_links_only(quote_post.quoted_object.content || ''),
+      account: serialized_account(quote_post.quoted_object.actor),
+      shallow_quote: quote_post.shallow_quote?
+    }
+  end
+
+  def serialize_poll(status)
+    return nil unless status.poll
+
+    poll = status.poll
+    result = poll.to_mastodon_api
+
+    # Add current user specific data if authenticated
+    if current_user
+      result[:voted] = poll.voted_by?(current_user)
+      result[:own_votes] = poll.actor_choices(current_user)
+    end
+
+    result
   end
 end

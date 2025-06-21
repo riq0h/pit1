@@ -108,7 +108,7 @@ class ObjectsController < ApplicationController
       build_public_audience(type)
     when 'unlisted'
       build_unlisted_audience(object, type)
-    when 'followers_only'
+    when 'private'
       build_followers_audience(object, type)
     when 'direct'
       build_direct_audience(type)

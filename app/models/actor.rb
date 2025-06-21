@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 class Actor < ApplicationRecord
-  # パスワード認証機能
   has_secure_password validations: false
+
+  attribute :settings, :json, default: -> { {} }
 
   # アソシエーション
   has_many :objects, dependent: :destroy, class_name: 'ActivityPubObject'
@@ -13,6 +14,11 @@ class Actor < ApplicationRecord
   has_many :mentions, dependent: :destroy
   has_many :bookmarks, dependent: :destroy
   has_many :featured_tags, dependent: :destroy
+  has_many :followed_tags, dependent: :destroy
+  has_many :quote_posts, dependent: :destroy
+  has_many :markers, dependent: :destroy
+  has_many :scheduled_statuses, dependent: :destroy
+  has_many :poll_votes, dependent: :destroy
   has_many :pinned_statuses, dependent: :destroy
   has_many :lists, dependent: :destroy
   has_many :list_memberships, dependent: :destroy
@@ -91,6 +97,41 @@ class Actor < ApplicationRecord
   before_validation :set_ap_urls, if: :local?, on: :create
   before_validation :generate_key_pair, if: :local?, on: :create
   before_create :set_admin_for_local_users, if: :local?
+
+  def setting(key)
+    settings[key.to_s]
+  end
+
+  def update_setting(key, value)
+    update!(settings: settings.merge(key.to_s => value))
+  end
+
+  def default_settings
+    {
+      'posting:default:visibility' => 'public',
+      'posting:default:sensitive' => false,
+      'posting:default:language' => 'ja',
+      'reading:expand:media' => 'default',
+      'reading:expand:spoilers' => false,
+      'reading:autoplay:gifs' => true,
+      'web:advanced_layout' => false,
+      'web:use_blurhash' => true,
+      'web:use_pending_items' => false,
+      'web:trends' => true,
+      'notification_emails' => {
+        'follow' => true,
+        'reblog' => true,
+        'favourite' => true,
+        'mention' => true,
+        'follow_request' => true,
+        'digest' => true
+      }
+    }
+  end
+
+  def preferences
+    default_settings.merge(settings || {})
+  end
 
   # ActivityPub URLs
   def followers_url

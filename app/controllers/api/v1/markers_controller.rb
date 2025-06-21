@@ -49,29 +49,21 @@ module Api
         return {} unless marker
 
         {
-          last_read_id: marker[:last_read_id].to_s,
-          version: marker[:version] || 1,
-          updated_at: marker[:updated_at]&.iso8601 || Time.current.iso8601
+          last_read_id: marker.last_read_id.to_s,
+          version: marker.version || 1,
+          updated_at: marker.updated_at&.iso8601 || Time.current.iso8601
         }
       end
 
       def save_marker(timeline, last_read_id)
-        key = marker_cache_key(timeline)
-        marker_data = {
-          last_read_id: last_read_id,
-          version: (get_marker(timeline)&.dig(:version) || 0) + 1,
-          updated_at: Time.current
-        }
-
-        Rails.cache.write(key, marker_data, expires_in: 1.year)
+        marker = Marker.find_or_initialize_for_actor_and_timeline(current_user, timeline)
+        marker.last_read_id = last_read_id
+        marker.increment_version!
+        marker.save!
       end
 
       def get_marker(timeline)
-        Rails.cache.read(marker_cache_key(timeline))
-      end
-
-      def marker_cache_key(timeline)
-        "markers:#{current_user.id}:#{timeline}"
+        current_user.markers.for_timeline(timeline).first
       end
     end
   end

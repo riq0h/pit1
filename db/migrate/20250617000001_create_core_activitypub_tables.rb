@@ -46,6 +46,9 @@ class CreateCoreActivitypubTables < ActiveRecord::Migration[8.0]
       # Authentication (for local users)
       t.string :password_digest
       
+      # User preferences and settings
+      t.json :settings, default: '{}'
+      
       t.timestamps
     end
 

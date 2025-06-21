@@ -115,6 +115,8 @@ Rails.application.routes.draw do
       post '/statuses/:id/unfavourite', to: 'statuses#unfavourite'
       post '/statuses/:id/reblog', to: 'statuses#reblog'
       post '/statuses/:id/unreblog', to: 'statuses#unreblog'
+      post '/statuses/:id/quote', to: 'statuses#quote'
+      get '/statuses/:id/quoted_by', to: 'statuses#quoted_by'
       get '/statuses/:id/reblogged_by', to: 'statuses#reblogged_by'
       get '/statuses/:id/favourited_by', to: 'statuses#favourited_by'
       post '/statuses/:id/pin', to: 'statuses#pin'
@@ -193,6 +195,24 @@ Rails.application.routes.draw do
 
       # Followed tags
       get '/followed_tags', to: 'followed_tags#index'
+      
+      # Polls
+      get '/polls/:id', to: 'polls#show'
+      post '/polls/:id/votes', to: 'polls#vote'
+      
+      # Scheduled statuses
+      get '/scheduled_statuses', to: 'scheduled_statuses#index'
+      get '/scheduled_statuses/:id', to: 'scheduled_statuses#show'
+      put '/scheduled_statuses/:id', to: 'scheduled_statuses#update'
+      delete '/scheduled_statuses/:id', to: 'scheduled_statuses#destroy'
+      
+      # Endorsements (stub)
+      get '/endorsements', to: 'endorsements#index'
+      post '/accounts/:id/pin', to: 'endorsements#create'
+      delete '/accounts/:id/unpin', to: 'endorsements#destroy'
+      
+      # Reports (stub)
+      post '/reports', to: 'reports#create'
       
       # Suggestions
       get '/suggestions', to: 'suggestions#index'

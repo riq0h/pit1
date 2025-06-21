@@ -5,7 +5,7 @@ class ActivityPubObject < ApplicationRecord
 
   # === 定数 ===
   OBJECT_TYPES = %w[Note Article Image Video Audio Document Page].freeze
-  VISIBILITY_LEVELS = %w[public unlisted followers_only direct].freeze
+  VISIBILITY_LEVELS = %w[public unlisted private direct].freeze
 
   # === バリデーション ===
   validates :ap_id, presence: true, uniqueness: true
@@ -27,6 +27,9 @@ class ActivityPubObject < ApplicationRecord
   has_many :mentioned_actors, through: :mentions, source: :actor
   has_many :bookmarks, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
   has_many :status_edits, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
+  has_many :quote_posts, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
+  has_many :quotes_of_this, class_name: 'QuotePost', dependent: :destroy, foreign_key: :quoted_object_id, inverse_of: :quoted_object
+  has_one :poll, dependent: :destroy, foreign_key: :object_id, primary_key: :id
 
   # Conversations (for direct messages)
   belongs_to :conversation, optional: true
@@ -94,8 +97,8 @@ class ActivityPubObject < ApplicationRecord
     visibility == 'unlisted'
   end
 
-  def followers_only?
-    visibility == 'followers_only'
+  def private?
+    visibility == 'private'
   end
 
   def direct?
@@ -130,6 +133,14 @@ class ActivityPubObject < ApplicationRecord
 
   def edits_count
     status_edits.count
+  end
+
+  def quotes_count
+    quotes_of_this.count
+  end
+
+  def quoted?
+    quote_posts.any?
   end
 
   def root_conversation
@@ -182,7 +193,15 @@ class ActivityPubObject < ApplicationRecord
       'sensitive' => sensitive?,
       'source' => source_data,
       'replies' => replies_collection_data
-    }
+    }.tap do |data|
+      # Quote情報を追加（FEP-e232およびMisskey互換）
+      if quoted?
+        quote_post = quote_posts.first
+        data['quoteUrl'] = quote_post.quoted_object.ap_id
+        data['_misskey_quote'] = quote_post.quoted_object.ap_id
+        data['quoteUri'] = quote_post.quoted_object.ap_id  # Fedibird互換
+      end
+    end
   end
 
   def source_data
@@ -280,7 +299,7 @@ class ActivityPubObject < ApplicationRecord
       build_public_audience_list(type)
     when 'unlisted'
       build_unlisted_audience_list(type)
-    when 'followers_only'
+    when 'private'
       build_followers_audience_list(type)
     when 'direct'
       build_direct_audience_list(type)
@@ -506,6 +525,24 @@ class ActivityPubObject < ApplicationRecord
     queue_activity_delivery(activity)
   end
 
+  # Quote活動を作成してActivityPub配信
+  def create_quote_activity(quoted_object)
+    return unless local?
+
+    activity = Activity.create!(
+      ap_id: "#{ap_id}#quote-#{Time.current.to_i}",
+      activity_type: 'Quote',
+      actor: actor,
+      object_ap_id: ap_id,
+      target_ap_id: quoted_object.ap_id,
+      published_at: Time.current,
+      local: true
+    )
+
+    # ActivityPub配信をキューに追加
+    queue_activity_delivery(activity)
+  end
+
   # ActivityPub配信をキューする
   def queue_activity_delivery(activity)
     # メンションされたアクター（外部）のinboxは常に配信対象
@@ -521,7 +558,7 @@ class ActivityPubObject < ApplicationRecord
       # Unlisted投稿：フォロワー + メンションされたアクター
       follower_inboxes = actor.followers.where(local: false).pluck(:inbox_url)
       all_inboxes.concat(follower_inboxes)
-    when 'private', 'followers_only'
+    when 'private'
       # フォロワー限定：フォロワー + メンションされたアクター
       follower_inboxes = actor.followers.where(local: false).pluck(:inbox_url)
       all_inboxes.concat(follower_inboxes)

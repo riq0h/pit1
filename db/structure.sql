@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS "schema_migrations" ("version" varchar NOT NULL PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS "ar_internal_metadata" ("key" varchar NOT NULL PRIMARY KEY, "value" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
-CREATE TABLE IF NOT EXISTS "actors" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "username" varchar NOT NULL, "domain" varchar, "display_name" varchar, "note" text, "ap_id" varchar NOT NULL, "inbox_url" varchar NOT NULL, "outbox_url" varchar NOT NULL, "followers_url" varchar, "following_url" varchar, "featured_url" varchar, "public_key" text, "private_key" text, "local" boolean DEFAULT 0 NOT NULL, "locked" boolean DEFAULT 0, "bot" boolean DEFAULT 0, "suspended" boolean DEFAULT 0, "admin" boolean DEFAULT 0, "fields" text, "followers_count" integer DEFAULT 0, "following_count" integer DEFAULT 0, "posts_count" integer DEFAULT 0, "raw_data" text, "actor_type" varchar DEFAULT 'Person', "discoverable" boolean DEFAULT 1, "manually_approves_followers" boolean DEFAULT 0, "password_digest" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
+CREATE TABLE IF NOT EXISTS "actors" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "username" varchar NOT NULL, "domain" varchar, "display_name" varchar, "note" text, "ap_id" varchar NOT NULL, "inbox_url" varchar NOT NULL, "outbox_url" varchar NOT NULL, "followers_url" varchar, "following_url" varchar, "featured_url" varchar, "public_key" text, "private_key" text, "local" boolean DEFAULT 0 NOT NULL, "locked" boolean DEFAULT 0, "bot" boolean DEFAULT 0, "suspended" boolean DEFAULT 0, "admin" boolean DEFAULT 0, "fields" text, "followers_count" integer DEFAULT 0, "following_count" integer DEFAULT 0, "posts_count" integer DEFAULT 0, "raw_data" text, "actor_type" varchar DEFAULT 'Person', "discoverable" boolean DEFAULT 1, "manually_approves_followers" boolean DEFAULT 0, "password_digest" varchar, "settings" json DEFAULT '"{}"', "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
 CREATE INDEX "index_actors_on_domain" ON "actors" ("domain") /*application='Letter'*/;
 CREATE UNIQUE INDEX "index_actors_on_ap_id" ON "actors" ("ap_id") /*application='Letter'*/;
 CREATE INDEX "index_actors_on_local" ON "actors" ("local") /*application='Letter'*/;
@@ -120,6 +120,31 @@ FOREIGN KEY ("tag_id")
 CREATE INDEX "index_featured_tags_on_actor_id" ON "featured_tags" ("actor_id") /*application='Letter'*/;
 CREATE INDEX "index_featured_tags_on_tag_id" ON "featured_tags" ("tag_id") /*application='Letter'*/;
 CREATE UNIQUE INDEX "index_featured_tags_on_actor_id_and_tag_id" ON "featured_tags" ("actor_id", "tag_id") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "followed_tags" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "actor_id" integer NOT NULL, "tag_id" integer NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_117eec4622"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+, CONSTRAINT "fk_rails_255df44449"
+FOREIGN KEY ("tag_id")
+  REFERENCES "tags" ("id")
+);
+CREATE INDEX "index_followed_tags_on_actor_id" ON "followed_tags" ("actor_id") /*application='Letter'*/;
+CREATE INDEX "index_followed_tags_on_tag_id" ON "followed_tags" ("tag_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_followed_tags_on_actor_id_and_tag_id" ON "followed_tags" ("actor_id", "tag_id") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "quote_posts" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "object_id" varchar NOT NULL, "quoted_object_id" varchar NOT NULL, "actor_id" integer NOT NULL, "shallow_quote" boolean DEFAULT 0 NOT NULL, "quote_text" text, "ap_id" varchar, "visibility" varchar DEFAULT 'public', "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_adedfdd0ad"
+FOREIGN KEY ("object_id")
+  REFERENCES "objects" ("id")
+, CONSTRAINT "fk_rails_ff36914c5b"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+, CONSTRAINT "fk_rails_aa3e8ec98a"
+FOREIGN KEY ("quoted_object_id")
+  REFERENCES "objects" ("id")
+);
+CREATE INDEX "index_quote_posts_on_actor_id" ON "quote_posts" ("actor_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_quote_posts_on_ap_id" ON "quote_posts" ("ap_id") /*application='Letter'*/;
+CREATE INDEX "index_quote_posts_on_object_id" ON "quote_posts" ("object_id") /*application='Letter'*/;
+CREATE INDEX "index_quote_posts_on_quoted_object_id" ON "quote_posts" ("quoted_object_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_quote_posts_on_object_id_and_quoted_object_id" ON "quote_posts" ("object_id", "quoted_object_id") /*application='Letter'*/;
 CREATE TABLE IF NOT EXISTS "mentions" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "object_id" varchar NOT NULL, "actor_id" integer NOT NULL, "ap_id" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_227016d488"
 FOREIGN KEY ("actor_id")
   REFERENCES "actors" ("id")
@@ -242,6 +267,63 @@ FOREIGN KEY ("actor_id")
 );
 CREATE INDEX "index_web_push_subscriptions_on_actor_id" ON "web_push_subscriptions" ("actor_id") /*application='Letter'*/;
 CREATE UNIQUE INDEX "index_web_push_subscriptions_on_actor_id_and_endpoint" ON "web_push_subscriptions" ("actor_id", "endpoint") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "markers" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "actor_id" integer NOT NULL, "timeline" varchar NOT NULL, "last_read_id" varchar NOT NULL, "version" integer DEFAULT 1 NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_474765557e"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+);
+CREATE INDEX "index_markers_on_actor_id" ON "markers" ("actor_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_markers_on_actor_id_and_timeline" ON "markers" ("actor_id", "timeline") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "announcements" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "content" text NOT NULL, "starts_at" datetime(6), "ends_at" datetime(6), "published" boolean DEFAULT 0 NOT NULL, "all_day" boolean DEFAULT 0 NOT NULL, "published_at" datetime(6), "mentions" json, "statuses" json, "tags" json, "emojis" json, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
+CREATE TABLE IF NOT EXISTS "announcement_reactions" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "announcement_id" integer NOT NULL, "actor_id" integer NOT NULL, "name" varchar NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_a1226eaa5c"
+FOREIGN KEY ("announcement_id")
+  REFERENCES "announcements" ("id")
+, CONSTRAINT "fk_rails_1850eb8106"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+);
+CREATE INDEX "index_announcement_reactions_on_announcement_id" ON "announcement_reactions" ("announcement_id") /*application='Letter'*/;
+CREATE INDEX "index_announcement_reactions_on_actor_id" ON "announcement_reactions" ("actor_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "idx_on_announcement_id_actor_id_name_02cf634df5" ON "announcement_reactions" ("announcement_id", "actor_id", "name") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "announcement_dismissals" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "announcement_id" integer NOT NULL, "actor_id" integer NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_c290f2d124"
+FOREIGN KEY ("announcement_id")
+  REFERENCES "announcements" ("id")
+, CONSTRAINT "fk_rails_25ed0c754e"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+);
+CREATE INDEX "index_announcement_dismissals_on_announcement_id" ON "announcement_dismissals" ("announcement_id") /*application='Letter'*/;
+CREATE INDEX "index_announcement_dismissals_on_actor_id" ON "announcement_dismissals" ("actor_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_announcement_dismissals_on_announcement_id_and_actor_id" ON "announcement_dismissals" ("announcement_id", "actor_id") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "reports" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "reporter_id" integer NOT NULL, "target_account_id" integer NOT NULL, "status_ids" json, "comment" text, "category" varchar DEFAULT 'other', "forwarded" boolean DEFAULT 0, "action_taken" boolean DEFAULT 0, "action_taken_at" datetime(6), "rule_ids" json, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_c4cb6e6463"
+FOREIGN KEY ("reporter_id")
+  REFERENCES "actors" ("id")
+, CONSTRAINT "fk_rails_66528197fd"
+FOREIGN KEY ("target_account_id")
+  REFERENCES "actors" ("id")
+);
+CREATE INDEX "index_reports_on_reporter_id" ON "reports" ("reporter_id") /*application='Letter'*/;
+CREATE INDEX "index_reports_on_target_account_id" ON "reports" ("target_account_id") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "polls" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "object_id" varchar NOT NULL, "expires_at" datetime(6) NOT NULL, "multiple" boolean DEFAULT 0 NOT NULL, "votes_count" integer DEFAULT 0 NOT NULL, "voters_count" integer DEFAULT 0, "options" json NOT NULL, "hide_totals" boolean DEFAULT 0 NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_bb7c29f20c"
+FOREIGN KEY ("object_id")
+  REFERENCES "objects" ("id")
+);
+CREATE INDEX "index_polls_on_object_id" ON "polls" ("object_id") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "poll_votes" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "poll_id" integer NOT NULL, "actor_id" integer NOT NULL, "choice" integer NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_a6e6974b7e"
+FOREIGN KEY ("poll_id")
+  REFERENCES "polls" ("id")
+, CONSTRAINT "fk_rails_a029c85985"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+);
+CREATE INDEX "index_poll_votes_on_poll_id" ON "poll_votes" ("poll_id") /*application='Letter'*/;
+CREATE INDEX "index_poll_votes_on_actor_id" ON "poll_votes" ("actor_id") /*application='Letter'*/;
+CREATE UNIQUE INDEX "index_poll_votes_on_poll_id_and_actor_id_and_choice" ON "poll_votes" ("poll_id", "actor_id", "choice") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "scheduled_statuses" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "actor_id" integer NOT NULL, "scheduled_at" datetime(6) NOT NULL, "params" json NOT NULL, "media_attachment_ids" json, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_557f5f655f"
+FOREIGN KEY ("actor_id")
+  REFERENCES "actors" ("id")
+);
+CREATE INDEX "index_scheduled_statuses_on_actor_id" ON "scheduled_statuses" ("actor_id") /*application='Letter'*/;
+CREATE INDEX "index_scheduled_statuses_on_scheduled_at" ON "scheduled_statuses" ("scheduled_at") /*application='Letter'*/;
 CREATE VIRTUAL TABLE letter_post_search_fts5 USING fts5(
   object_id UNINDEXED,
   content,

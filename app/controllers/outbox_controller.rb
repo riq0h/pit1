@@ -159,7 +159,7 @@ class OutboxController < ApplicationController
       build_public_audience(object, type)
     when 'unlisted'
       build_unlisted_audience(object, type)
-    when 'followers_only'
+    when 'private'
       build_followers_audience(object, type)
     when 'direct'
       build_direct_audience(type)

@@ -140,7 +140,7 @@ class SendActivityJob < ApplicationJob
       build_public_audience(type, object)
     when 'unlisted'
       build_unlisted_audience(type, object)
-    when 'followers_only'
+    when 'private'
       build_followers_audience(type, object)
     when 'direct'
       build_direct_audience(type)

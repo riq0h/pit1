@@ -63,6 +63,36 @@ class CreateContentInteractions < ActiveRecord::Migration[8.0]
 
     add_index :featured_tags, [:actor_id, :tag_id], unique: true
 
+    # Followed Tags (hashtags followed by user)
+    create_table :followed_tags, id: :integer do |t|
+      t.references :actor, foreign_key: true, type: :integer, null: false, index: true
+      t.references :tag, foreign_key: true, type: :integer, null: false, index: true
+      
+      t.timestamps
+    end
+
+    add_index :followed_tags, [:actor_id, :tag_id], unique: true
+
+    # Quote Posts (quotes of other posts)
+    create_table :quote_posts, id: :integer do |t|
+      t.string :object_id, null: false
+      t.string :quoted_object_id, null: false
+      t.references :actor, foreign_key: true, type: :integer, null: false, index: true
+      t.boolean :shallow_quote, default: false, null: false
+      t.text :quote_text
+      
+      t.string :ap_id, index: { unique: true }
+      t.string :visibility, default: 'public'
+      
+      t.timestamps
+    end
+
+    add_index :quote_posts, :object_id
+    add_index :quote_posts, :quoted_object_id
+    add_index :quote_posts, [:object_id, :quoted_object_id], unique: true
+    add_foreign_key :quote_posts, :objects, column: :object_id, primary_key: :id
+    add_foreign_key :quote_posts, :objects, column: :quoted_object_id, primary_key: :id
+
     # Mentions
     create_table :mentions, id: :integer do |t|
       t.string :object_id, null: false, index: true

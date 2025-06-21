@@ -34,11 +34,17 @@ module Api
       def create
         return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
 
+        # Handle scheduled status
+        if params[:scheduled_at].present?
+          return create_scheduled_status
+        end
+
         @status = build_status_object
         attach_media_to_status if @media_ids&.any?
 
         if @status.save
           process_mentions_and_tags
+          create_poll_for_status if poll_params.present?
           handle_direct_message_conversation if @status.visibility == 'direct'
           render json: serialized_status(@status), status: :created
         else
@@ -103,6 +109,36 @@ module Api
         limit = [params.fetch(:limit, 40).to_i, 80].min
         favourites = @status.favourites.includes(:actor).limit(limit)
         accounts = favourites.map(&:actor)
+        render json: accounts.map { |account| serialized_account(account) }
+      end
+
+      # POST /api/v1/statuses/:id/quote
+      def quote
+        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+
+        quote_params = build_quote_params
+        quoted_status = @status
+
+        # 新しいポストオブジェクトを作成
+        @status = build_quote_status_object(quoted_status, quote_params)
+
+        if @status.save
+          create_quote_post_record(quoted_status, quote_params)
+          process_mentions_and_tags if @status.content.present?
+          @status.create_quote_activity(quoted_status) if @status.local?
+          render json: serialized_status(@status), status: :created
+        else
+          render_validation_error(@status)
+        end
+      end
+
+      # GET /api/v1/statuses/:id/quoted_by
+      def quoted_by
+        limit = [params.fetch(:limit, 40).to_i, 80].min
+        quotes = @status.quotes_of_this.includes(:actor, :object).limit(limit)
+        
+        # 引用したアクターを返す
+        accounts = quotes.map(&:actor).uniq
         render json: accounts.map { |account| serialized_account(account) }
       end
 
@@ -491,6 +527,7 @@ module Api
           content: @status.content || '',
           spoiler_text: @status.summary || '',
           sensitive: @status.sensitive || false,
+          visibility: @status.visibility || 'public',
           created_at: current_time.iso8601,
           account: serialized_account(@status.actor),
           media_attachments: serialized_media_attachments(@status),
@@ -504,12 +541,116 @@ module Api
           content: edit.content || '',
           spoiler_text: edit.summary || '',
           sensitive: edit.sensitive || false,
+          visibility: @status.visibility || 'public',
           created_at: edit.created_at.iso8601,
           account: serialized_account(@status.actor),
           media_attachments: edit.media_attachments_data,
           emojis: [],
           tags: []
         }
+      end
+
+      def build_quote_params
+        {
+          content: params[:status],
+          visibility: params[:visibility] || 'public',
+          sensitive: params[:sensitive] || false,
+          spoiler_text: params[:spoiler_text],
+          shallow_quote: params[:shallow_quote] || false
+        }
+      end
+
+      def build_quote_status_object(quoted_status, quote_params)
+        current_user.objects.build(
+          content: quote_params[:content],
+          visibility: quote_params[:visibility],
+          sensitive: quote_params[:sensitive],
+          summary: quote_params[:spoiler_text],
+          object_type: 'Note',
+          published_at: Time.current,
+          local: true,
+          ap_id: generate_status_ap_id
+        )
+      end
+
+      def create_quote_post_record(quoted_status, quote_params)
+        current_user.quote_posts.create!(
+          object: @status,
+          quoted_object: quoted_status,
+          shallow_quote: quote_params[:shallow_quote],
+          quote_text: quote_params[:content],
+          visibility: quote_params[:visibility],
+          ap_id: "#{@status.ap_id}#quote"
+        )
+      end
+
+      def create_scheduled_status
+        scheduled_at = parse_scheduled_at
+        return render json: { error: 'Invalid scheduled_at format' }, status: :unprocessable_entity unless scheduled_at
+
+        scheduled_params = prepare_scheduled_params
+        media_attachment_ids = params[:media_ids] || []
+
+        scheduled_status = current_user.scheduled_statuses.build(
+          scheduled_at: scheduled_at,
+          params: scheduled_params,
+          media_attachment_ids: media_attachment_ids
+        )
+
+        if scheduled_status.save
+          render json: scheduled_status.to_mastodon_api, status: :created
+        else
+          render json: { 
+            error: scheduled_status.errors.full_messages.join(', ') 
+          }, status: :unprocessable_entity
+        end
+      end
+
+      def parse_scheduled_at
+        Time.parse(params[:scheduled_at])
+      rescue ArgumentError
+        nil
+      end
+
+      def prepare_scheduled_params
+        base_params = params.permit(:status, :in_reply_to_id, :sensitive, :spoiler_text, :visibility, :language)
+                           .to_h
+                           .compact
+        
+        # Add poll parameters if present
+        if poll_params.present?
+          base_params['poll'] = poll_params
+        end
+
+        base_params
+      end
+
+      def poll_params
+        return nil unless params[:poll].present?
+
+        params.require(:poll).permit(:expires_in, :multiple, :hide_totals, options: [])
+      end
+
+      def create_poll_for_status
+        poll_data = poll_params
+        return unless poll_data
+
+        options = poll_data[:options]
+        return unless options.is_a?(Array) && options.length.between?(2, 4)
+
+        expires_in = poll_data[:expires_in].to_i
+        expires_in = 86400 if expires_in <= 0 # Default to 24 hours
+        expires_at = Time.current + expires_in.seconds
+
+        formatted_options = options.map { |title| { 'title' => title.to_s } }
+
+        Poll.create!(
+          object: @status,
+          expires_at: expires_at,
+          multiple: poll_data[:multiple] || false,
+          hide_totals: poll_data[:hide_totals] || false,
+          options: formatted_options
+        )
       end
     end
   end

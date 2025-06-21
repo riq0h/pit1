@@ -53,7 +53,7 @@ en:
   visibility:
     public: "Public"
     unlisted: "Unlisted"
-    followers_only: "Followers only"
+    private: "Followers only"
     direct: "Direct"
   time:
     ago: " ago"

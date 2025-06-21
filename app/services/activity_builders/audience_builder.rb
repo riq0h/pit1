@@ -12,7 +12,7 @@ module ActivityBuilders
         build_public_audience(type)
       when 'unlisted'
         build_unlisted_audience(type)
-      when 'followers_only'
+      when 'private'
         build_followers_audience(type)
       when 'direct'
         build_direct_audience(type)

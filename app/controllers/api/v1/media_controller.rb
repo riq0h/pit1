@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require 'mini_magick'
+require 'blurhash'
+
 module Api
   module V1
     class MediaController < Api::BaseController
@@ -121,17 +124,51 @@ module Api
         end
       end
 
-      def extract_file_metadata(_file, media_type)
+      def extract_file_metadata(file, media_type)
         metadata = {}
 
         if media_type == 'image'
-          # 画像のメタデータを抽出（実際の実装ではImageMagickなどを使用）
-          metadata[:width] = 1920  # ダミーデータ
-          metadata[:height] = 1080 # ダミーデータ
-          metadata[:blurhash] = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' # ダミーデータ
+          begin
+            # MiniMagickを使用して画像のメタデータを抽出
+            image = MiniMagick::Image.read(file.read)
+            metadata[:width] = image.width
+            metadata[:height] = image.height
+            
+            # Blurhashを生成
+            metadata[:blurhash] = generate_blurhash(image)
+            
+            # ファイルポインタをリセット
+            file.rewind
+          rescue StandardError => e
+            Rails.logger.warn "Failed to extract image metadata: #{e.message}"
+            # フォールバック値
+            metadata[:width] = nil
+            metadata[:height] = nil
+            metadata[:blurhash] = nil
+          end
         end
 
         metadata
+      end
+
+      def generate_blurhash(image)
+        # 画像を小さくリサイズしてBlurhash生成の高速化
+        image.resize '200x200>'
+        
+        # RGBピクセルデータを取得
+        pixels = image.get_pixels
+        width = image.width
+        height = image.height
+        
+        # ピクセルデータをBlurhash用にフラット化
+        pixel_data = pixels.flatten.map(&:to_i)
+        
+        # Blurhashを生成（4x4コンポーネント）
+        Blurhash.encode(width, height, pixel_data, x_components: 4, y_components: 4)
+      rescue StandardError => e
+        Rails.logger.warn "Failed to generate blurhash: #{e.message}"
+        # デフォルトのBlurhash（灰色の平坦な画像）
+        'LEHV6nWB2yk8pyo0adR*.7kCMdnj'
       end
 
       def media_update_params

@@ -140,14 +140,16 @@ module Api
       end
 
       def load_instance_setting(key)
-        config_file = Rails.root.join('config', 'instance_config.yml')
-        return nil unless File.exist?(config_file)
-
-        settings = YAML.load_file(config_file) || {}
-        settings[key]
-      rescue StandardError => e
-        Rails.logger.error "Failed to load instance setting #{key}: #{e.message}"
-        nil
+        case key
+        when 'instance_name'
+          ENV['INSTANCE_NAME']
+        when 'instance_description'
+          ENV['INSTANCE_DESCRIPTION']
+        when 'instance_contact_email', 'contact_email'
+          ENV['INSTANCE_CONTACT_EMAIL']
+        else
+          nil
+        end
       end
     end
   end

@@ -55,7 +55,7 @@ ja:
   visibility:
     public: "公開"
     unlisted: "未収載"
-    followers_only: "フォロワー限定"
+    private: "フォロワー限定"
     direct: "ダイレクト"
   time:
     ago: "前"
