@@ -73,9 +73,9 @@
           <div class="flex items-center space-x-3">
             <!-- 編集アイコン -->
             <%= link_to edit_config_custom_emoji_path(emoji), 
+                data: { turbo_frame: "_top" },
                 class: "text-gray-600 hover:text-gray-900 transition-colors",
-                title: "編集",
-                data: { turbo: false } do %>
+                title: "編集" do %>
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
               </svg>
@@ -84,20 +84,18 @@
             <!-- 有効化/無効化アイコン -->
             <% if emoji.disabled %>
               <%= link_to enable_config_custom_emoji_path(emoji), 
-                  method: :patch,
+                  data: { turbo_method: :patch },
                   class: "text-gray-600 hover:text-gray-900 transition-colors",
-                  title: "有効化",
-                  data: { turbo: false } do %>
+                  title: "有効化" do %>
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
               <% end %>
             <% else %>
               <%= link_to disable_config_custom_emoji_path(emoji), 
-                  method: :patch,
+                  data: { turbo_method: :patch },
                   class: "text-gray-600 hover:text-gray-900 transition-colors",
-                  title: "無効化",
-                  data: { turbo: false } do %>
+                  title: "無効化" do %>
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
@@ -106,8 +104,10 @@
             
             <!-- 削除アイコン -->
             <%= link_to config_custom_emoji_path(emoji), 
-                method: :delete,
-                data: { confirm: "絵文字「:#{emoji.shortcode}:」を削除しますか？この操作は取り消せません。", turbo: false },
+                data: { 
+                  turbo_method: :delete,
+                  turbo_confirm: "絵文字「:#{emoji.shortcode}:」を削除しますか？この操作は取り消せません。"
+                },
                 class: "text-gray-600 hover:text-gray-900 transition-colors",
                 title: "削除" do %>
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

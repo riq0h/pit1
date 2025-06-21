@@ -216,7 +216,7 @@ class Actor < ApplicationRecord
 
   # ActivityPub JSON-LD representation
   def to_activitypub(request = nil)
-    base_activitypub_data(request).merge(activitypub_links(request)).merge(activitypub_images(request)).merge(activitypub_attachments).compact
+    base_activitypub_data(request).merge(activitypub_links(request)).merge(activitypub_images(request)).merge(activitypub_attachments).merge(activitypub_tags).compact
   end
 
   # フォロー・フォロワー数の更新
@@ -400,8 +400,8 @@ class Actor < ApplicationRecord
       'type' => actor_type || 'Person',
       'id' => actor_url,
       'preferredUsername' => username,
-      'name' => display_name,
-      'summary' => note,
+      'name' => convert_emoji_html_to_shortcode(display_name),
+      'summary' => convert_emoji_html_to_shortcode(note),
       'url' => actor_url,
       'discoverable' => discoverable,
       'manuallyApprovesFollowers' => manually_approves_followers
@@ -446,8 +446,8 @@ class Actor < ApplicationRecord
 
         {
           'type' => 'PropertyValue',
-          'name' => link['name'],
-          'value' => format_profile_link_value(link['value'])
+          'name' => convert_emoji_html_to_shortcode(link['name']),
+          'value' => format_profile_link_value_for_activitypub(link['value'])
         }
       end
 
@@ -471,6 +471,66 @@ class Actor < ApplicationRecord
     rescue URI::InvalidURIError
       CGI.escapeHTML(value)
     end
+  end
+
+  # ActivityPub用のプロフィールリンクvalue形式化（HTML内のemojiもショートコード化）
+  def format_profile_link_value_for_activitypub(value)
+    converted_value = convert_emoji_html_to_shortcode(value)
+    return converted_value unless converted_value.match?(/\Ahttps?:\/\//)
+
+    begin
+      domain = begin
+        URI.parse(converted_value).host
+      rescue StandardError
+        converted_value
+      end
+      %(<a href="#{CGI.escapeHTML(converted_value)}" target="_blank" rel="nofollow noopener noreferrer me">#{CGI.escapeHTML(domain)}</a>)
+    rescue URI::InvalidURIError
+      CGI.escapeHTML(converted_value)
+    end
+  end
+
+  # HTMLの<img>タグをショートコード形式に変換
+  def convert_emoji_html_to_shortcode(text)
+    return text if text.blank?
+
+    # <img ... alt=":shortcode:" ...> を :shortcode: に変換
+    text.gsub(/<img[^>]*alt=":([^"]+):"[^>]*\/?>/, ':\1:')
+  end
+
+  # ActivityPub tags (emoji情報)
+  def activitypub_tags
+    emoji_tags = extract_actor_emojis
+    emoji_tags.empty? ? {} : { 'tag' => emoji_tags }
+  end
+
+  # アクターのプロフィールからemoji情報を抽出
+  def extract_actor_emojis
+    # display_name、note、fieldsからemoji shortcodeを抽出
+    text_content = [display_name, note].compact.join(' ')
+    
+    # fieldsからもemoji shortcodeを抽出
+    if fields.present?
+      begin
+        fields_data = JSON.parse(fields)
+        field_content = fields_data.map { |f| [f['name'], f['value']].compact.join(' ') }.join(' ')
+        text_content += " #{field_content}"
+      rescue JSON::ParserError
+        # JSON解析エラーの場合は無視
+      end
+    end
+
+    # emojis抽出
+    emoji_regex = /:([a-zA-Z0-9_]+):/
+    shortcodes = text_content.scan(emoji_regex).flatten.uniq
+    return [] if shortcodes.empty?
+
+    # ローカル絵文字のみを対象
+    emojis = CustomEmoji.enabled.local.where(shortcode: shortcodes)
+    emojis.map(&:to_ap)
+  rescue StandardError => e
+    Rails.logger.warn "Failed to extract actor emojis for actor #{id}: #{e.message}"
+    []
   end
 
   # Get base URL from request or fallback to config

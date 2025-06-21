@@ -152,13 +152,14 @@ module Api
       end
 
       def generate_blurhash(image)
-        # 画像を小さくリサイズしてBlurhash生成の高速化
-        image.resize '200x200>'
+        # 元画像を変更しないよう複製を作成してからリサイズ
+        temp_image = image.dup
+        temp_image.resize '200x200>'
         
         # RGBピクセルデータを取得
-        pixels = image.get_pixels
-        width = image.width
-        height = image.height
+        pixels = temp_image.get_pixels
+        width = temp_image.width
+        height = temp_image.height
         
         # ピクセルデータをBlurhash用にフラット化
         pixel_data = pixels.flatten.map(&:to_i)

@@ -2,6 +2,8 @@
 
 module AccountSerializer
   extend ActiveSupport::Concern
+  include StatusSerializer
+  include TextLinkingHelper
 
   private
 
@@ -12,6 +14,7 @@ module AccountSerializer
              .merge(metadata_attributes)
 
     result[:fields] = account_fields(account)
+    result[:emojis] = account_emojis(account)
     result.merge!(self_account_attributes(account)) if is_self
     result
   end
@@ -27,7 +30,8 @@ module AccountSerializer
       discoverable: account.discoverable || false,
       group: false,
       created_at: account.created_at.iso8601,
-      note: account.note || '',
+      note: format_text_for_api(account.note || ''),
+      note_html: format_text_for_client(account.note || ''),
       url: account.public_url || account.ap_id || '',
       uri: account.ap_id || ''
     }
@@ -59,6 +63,31 @@ module AccountSerializer
     }
   end
 
+  def account_emojis(account)
+    return [] if account.display_name.blank? && account.note.blank? && account.fields.blank?
+
+    # display_nameとnoteからemoji shortcodeを抽出
+    text_content = [account.display_name, account.note].compact.join(' ')
+    
+    # fieldsからもemoji shortcodeを抽出
+    if account.fields.present?
+      begin
+        fields = JSON.parse(account.fields)
+        field_content = fields.map { |f| [f['name'], f['value']].compact.join(' ') }.join(' ')
+        text_content += " #{field_content}"
+      rescue JSON::ParserError
+        # JSON解析エラーの場合は無視
+      end
+    end
+
+    # emojis抽出
+    emojis = EmojiParser.new(text_content).emojis_used
+    emojis.map(&:to_activitypub)
+  rescue StandardError => e
+    Rails.logger.warn "Failed to serialize account emojis for actor #{account.id}: #{e.message}"
+    []
+  end
+
   def account_fields(account)
     return [] if account.fields.blank?
 
@@ -67,7 +96,8 @@ module AccountSerializer
       fields.map do |field|
         {
           name: field['name'] || '',
-          value: format_field_value(field['value'] || ''),
+          value: format_field_value_for_api(field['value'] || ''),
+          value_html: format_field_value_for_client(field['value'] || ''),
           verified_at: nil
         }
       end
@@ -108,26 +138,63 @@ module AccountSerializer
     '/icon.png'
   end
 
-  def format_field_value(value)
+  # クライアント用のテキスト処理（emoji + URLリンク化）
+  def format_text_for_client(text)
+    return '' if text.blank?
+
+    # 1. emoji解析
+    text_with_emoji = parse_content_for_frontend(text)
+    # 2. URLリンク化
+    auto_link_urls(text_with_emoji)
+  end
+
+  # クライアント用のフィールドvalue処理（emoji + URLリンク化）
+  def format_field_value_for_client(value)
+    return '' if value.blank?
+
+    # emoji解析
+    value_with_emoji = parse_content_for_frontend(value)
+    # URLリンク化
+    auto_link_urls(value_with_emoji)
+  end
+
+  # API用のテキスト処理（ショートコード + URLリンク化）
+  def format_text_for_api(text)
+    return '' if text.blank?
+
+    # HTMLエスケープ後URLリンク化のみ（絵文字はショートコードのまま）
+    escaped_text = CGI.escapeHTML(text).gsub("\n", '<br>')
+    apply_url_links(escaped_text)
+  end
+
+  # API用のフィールドvalue処理（ショートコード + URLリンク化）
+  def format_field_value_for_api(value)
     return '' if value.blank?
 
     # 既にHTMLリンクが含まれている場合はそのまま返す（外部から受信した場合）
-    if value.include?('<a href=')
-      value
-    elsif value.match?(/\Ahttps?:\/\//)
-      # プレーンなURLの場合はHTMLリンクとして返す（ローカルで設定した場合）
-      domain = begin
-        URI.parse(value).host
-      rescue StandardError
-        value
-      end
+    return value if value.include?('<a href=')
+
+    # プレーンなURLの場合はHTMLリンクとして返す（ローカルで設定した場合）
+    if value.match?(/\Ahttps?:\/\//)
+      domain = URI.parse(value).host rescue value
       %(<a href="#{CGI.escapeHTML(value)}" target="_blank" rel="nofollow noopener noreferrer me">#{CGI.escapeHTML(domain)}</a>)
     else
-      # プレーンテキストの場合はHTMLエスケープして返す
-      CGI.escapeHTML(value)
+      # プレーンテキストの場合はHTMLエスケープしてURLリンク化のみ
+      escaped_value = CGI.escapeHTML(value)
+      apply_url_links(escaped_value)
     end
   rescue URI::InvalidURIError
-    # URLの解析に失敗した場合はプレーンテキストとして扱う
     CGI.escapeHTML(value)
   end
+
+  private
+
+  def apply_url_links(text)
+    link_pattern = /(https?:\/\/[^\s]+)/
+    link_template = '<a href="\1" target="_blank" rel="noopener noreferrer" ' \
+                    'class="text-blue-600 hover:text-blue-800 underline">' \
+                    '\1</a>'
+    text.gsub(link_pattern, link_template)
+  end
+
 end

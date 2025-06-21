@@ -48,10 +48,9 @@ module Search
       existing_actor = Actor.find_by(ap_id: data['id'])
       return existing_actor if existing_actor
 
-      username = data['preferredUsername']
-      domain = URI.parse(data['id']).host
-
-      create_actor_record(data, username, domain)
+      # ActorFetcherを使用してemoji処理も含めて作成
+      actor_fetcher = ActorFetcher.new
+      actor_fetcher.create_actor_from_data(data['id'], data)
     rescue StandardError => e
       Rails.logger.error "アクター作成エラー: #{e.message}"
       nil

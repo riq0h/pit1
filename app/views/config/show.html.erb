@@ -100,20 +100,20 @@
             <%= form.file_field "actor[avatar]", 
                 accept: "image/*",
                 class: "hidden",
-                id: "icon_upload",
-                onchange: "previewProfileImage(this)" %>
-            <label for="icon_upload" class="cursor-pointer">
-              <div id="profile_image_preview_container" class="<%= 'hidden' unless current_user&.avatar&.attached? %>">
+                id: "avatar_image_input",
+                onchange: "previewAvatarImage(this)" %>
+            <label for="avatar_image_input" class="cursor-pointer">
+              <div id="avatar_image_preview_container" class="<%= 'hidden' unless current_user&.avatar&.attached? %>">
                 <% if current_user&.avatar&.attached? %>
-                  <img id="profile_image_preview" src="<%= url_for(current_user.avatar) %>" class="mx-auto max-w-16 max-h-16 object-contain mb-2 rounded">
+                  <img id="avatar_image_preview" src="<%= current_user.avatar_url %>" class="mx-auto max-w-16 max-h-16 object-contain mb-2 rounded">
                 <% else %>
-                  <img id="profile_image_preview" class="mx-auto max-w-16 max-h-16 object-contain mb-2 rounded">
+                  <img id="avatar_image_preview" class="mx-auto max-w-16 max-h-16 object-contain mb-2 rounded">
                 <% end %>
                 <p class="text-sm text-gray-600" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
                   クリックして変更
                 </p>
               </div>
-              <div id="profile_upload_placeholder" class="<%= 'hidden' if current_user&.avatar&.attached? %>">
+              <div id="avatar_upload_placeholder" class="<%= 'hidden' if current_user&.avatar&.attached? %>">
                 <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                   <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
@@ -121,7 +121,7 @@
                   <span class="font-medium">クリックしてファイルを選択</span> またはドラッグ&ドロップ
                 </p>
                 <p class="text-xs text-gray-500" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
-                  PNG, JPG, GIF, WebP対応（推奨サイズ: 400x400px）
+                  PNG, JPG, GIF, WebP対応
                 </p>
               </div>
             </label>
@@ -139,7 +139,7 @@
               class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors resize-none",
               style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
           <p class="text-xs text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
-            https://から始まるURLは自動的にリンクになります
+            https://から始まるURLは自動的にリンクになります。:絵文字名:でカスタム絵文字が使用できます。
           </p>
         </div>
 
@@ -241,7 +241,7 @@
           </div>
           
           <p class="text-xs text-gray-500 mt-3" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
-            プロフィールページに表示されるリンクを設定できます（最大5個まで）
+            プロフィールページに表示されるリンクを設定できます（最大5個まで）。ラベルと値で:絵文字名:が使用できます。
           </p>
         </div>
       </div>
@@ -274,97 +274,64 @@
       
       <div class="space-y-4">
         <div>
-          <label class="flex items-center">
-            <%= form.check_box "config[s3_enabled]", 
-                { checked: @config[:s3_enabled], class: "mr-2", 
-                  style: "appearance: none; width: 1rem; height: 1rem; border: 1px solid #d1d5db; background-color: white; position: relative; cursor: pointer;" }, 
-                "1", "0" %>
-            <span class="text-sm text-gray-700" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
-              オブジェクトストレージを有効にする
-            </span>
+          <label class="block text-sm text-gray-700 mb-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+            ステータス
           </label>
-          <style>
-            input[name="config[s3_enabled]"]:checked {
-              border-color: #6b7280 !important;
-              background-color: white !important;
-            }
-            input[name="config[s3_enabled]"]:checked::after {
-              content: '';
-              position: absolute;
-              left: 3px;
-              top: 1px;
-              width: 6px;
-              height: 10px;
-              border: solid #6b7280;
-              border-width: 0 2px 2px 0;
-              transform: rotate(45deg);
-            }
-            input[name="config[s3_enabled]"]:hover {
-              border-color: #9ca3af !important;
-            }
-          </style>
-          <p class="text-xs text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
-            有効後、画像がオブジェクトストレージに保存されます。
-          </p>
+          <div class="flex items-center">
+            <span class="<%= @config[:s3_enabled] ? 'text-green-600' : 'text-gray-500' %> text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+              <%= @config[:s3_enabled] ? '✓ 有効' : '無効' %>
+            </span>
+          </div>
         </div>
         
-        <div>
-          <%= form.label "config[s3_endpoint]", "R2 エンドポイント", 
-              class: "block text-sm text-gray-700 mb-2", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-          <%= form.text_field "config[s3_endpoint]", 
-              value: @config[:s3_endpoint],
-              placeholder: "https://account-id.r2.cloudflarestorage.com",
-              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-        </div>
-        
-        <div>
-          <%= form.label "config[s3_bucket]", "バケット名", 
-              class: "block text-sm text-gray-700 mb-2", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-          <%= form.text_field "config[s3_bucket]", 
-              value: @config[:s3_bucket],
-              placeholder: "my-bucket",
-              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-        </div>
-        
-        <div>
-          <%= form.label "config[r2_access_key_id]", "アクセスキーID", 
-              class: "block text-sm text-gray-700 mb-2", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-          <%= form.text_field "config[r2_access_key_id]", 
-              value: @config[:r2_access_key_id],
-              placeholder: "アクセスキーID",
-              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-        </div>
-        
-        <div>
-          <%= form.label "config[r2_secret_access_key]", "シークレットアクセスキー", 
-              class: "block text-sm text-gray-700 mb-2", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-          <%= form.password_field "config[r2_secret_access_key]", 
-              value: @config[:r2_secret_access_key],
-              placeholder: "シークレットアクセスキー",
-              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-        </div>
-        
-        <div>
-          <%= form.label "config[s3_alias_host]", "カスタムドメイン (オプション)", 
-              class: "block text-sm text-gray-700 mb-2", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-          <%= form.text_field "config[s3_alias_host]", 
-              value: @config[:s3_alias_host],
-              placeholder: "files.example.com",
-              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-          <p class="text-xs text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
-            カスタムドメインでファイルを配信する場合のドメイン名
-          </p>
-        </div>
+        <% if @config[:s3_enabled] %>
+          <div>
+            <label class="block text-sm text-gray-700 mb-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+              エンドポイント
+            </label>
+            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+              <%= @config[:s3_endpoint] || '未設定' %>
+            </div>
+          </div>
+          
+          <div>
+            <label class="block text-sm text-gray-700 mb-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+              バケット名
+            </label>
+            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+              <%= @config[:s3_bucket] || '未設定' %>
+            </div>
+          </div>
+          
+          <div>
+            <label class="block text-sm text-gray-700 mb-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+              アクセスキーID
+            </label>
+            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+              <%= @config[:r2_access_key_id] ? @config[:r2_access_key_id][0..7] + '...' : '未設定' %>
+            </div>
+          </div>
+          
+          <div>
+            <label class="block text-sm text-gray-700 mb-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+              シークレットアクセスキー
+            </label>
+            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+              <%= @config[:r2_secret_access_key] ? '••••••••••••••••' : '未設定' %>
+            </div>
+          </div>
+          
+          <% if @config[:s3_alias_host].present? %>
+            <div>
+              <label class="block text-sm text-gray-700 mb-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                カスタムドメイン
+              </label>
+              <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                <%= @config[:s3_alias_host] %>
+              </div>
+            </div>
+          <% end %>
+        <% end %>
       </div>
     </section>
 
@@ -458,9 +425,24 @@ function previewImageGeneric(input, previewId, previewContainerId, placeholderId
   }
 }
 
-// プロフィール画像専用のラッパー関数
-function previewProfileImage(input) {
-  previewImageGeneric(input, 'profile_image_preview', 'profile_image_preview_container', 'profile_upload_placeholder');
+// プロフィール画像専用のプレビュー関数
+function previewAvatarImage(input) {
+  const file = input.files[0];
+  const preview = document.getElementById('avatar_image_preview');
+  const previewContainer = document.getElementById('avatar_image_preview_container');
+  const placeholder = document.getElementById('avatar_upload_placeholder');
+  
+  if (file) {
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+      preview.src = e.target.result;
+      previewContainer.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+    };
+    
+    reader.readAsDataURL(file);
+  }
 }
 
 // ドラッグ&ドロップ対応（汎用化）
@@ -510,7 +492,7 @@ function setupDragAndDrop(dropZoneSelector, fileInputId, previewFunction) {
 
 // プロフィール画像のドラッグ&ドロップ設定
 document.addEventListener('DOMContentLoaded', function() {
-  setupDragAndDrop('.border-dashed', 'icon_upload', previewProfileImage);
+  setupDragAndDrop('.border-dashed', 'avatar_image_input', previewAvatarImage);
 });
 
 // プロフィールリンクの追加

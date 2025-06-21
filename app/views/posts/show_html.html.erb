@@ -26,7 +26,7 @@
       <div>
         <div class="text-base text-gray-900" style="font-weight: 300;">
           <%= link_to profile_path(@actor.username), class: "hover:text-gray-600 transition-colors" do %>
-            <%= @actor.display_name.presence || @actor.username %>
+            <%= parse_content_for_frontend(@actor.display_name.presence || @actor.username).html_safe %>
           <% end %>
           <span class="text-gray-500 text-sm ml-2" style="font-weight: 300;">
             @<%= @actor.username %><%= @actor.domain.present? ? "@#{@actor.domain}" : "" %>
@@ -117,7 +117,7 @@
                   <%= link_to reply.actor.ap_id, 
                               class: "hover:text-gray-600 transition-colors",
                               data: { turbo_frame: "_top" } do %>
-                    <%= reply.actor.display_name.presence || reply.actor.username %>
+                    <%= parse_content_for_frontend(reply.actor.display_name.presence || reply.actor.username).html_safe %>
                   <% end %>
                   <span class="text-gray-500 text-sm ml-2" style="font-weight: 300;">
                     @<%= reply.actor.username %><%= reply.actor.domain.present? ? "@#{reply.actor.domain}" : "" %>

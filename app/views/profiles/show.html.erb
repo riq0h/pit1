@@ -23,7 +23,7 @@
       <!-- ユーザ名 -->
       <div>
         <h1 class="text-2xl text-gray-900" style="font-weight: 300;">
-          <%= @actor.display_name.presence || @actor.username %>
+          <%= parse_content_for_frontend(@actor.display_name.presence || @actor.username).html_safe %>
         </h1>
         <p class="text-gray-600" style="font-weight: 300;">
           @<%= @actor.username %><%= @actor.domain.present? ? "@#{@actor.domain}" : "" %>
@@ -41,7 +41,8 @@
     <!-- 自己紹介 -->
     <% if @actor.note.present? %>
       <div class="text-gray-700 leading-relaxed mb-4">
-        <%= auto_link_urls(@actor.note).html_safe %>
+        <% note_with_emoji = parse_content_for_frontend(@actor.note) %>
+        <%= auto_link_urls(note_with_emoji).html_safe %>
       </div>
     <% end %>
 
@@ -55,20 +56,21 @@
               <% if link['name'].present? && link['value'].present? %>
                 <div class="flex items-center space-x-2 text-sm">
                   <span class="text-gray-600 font-medium min-w-0 flex-shrink-0">
-                    <%= link['name'] %>:
+                    <%= parse_content_for_frontend(link['name']).html_safe %>:
                   </span>
+                  <% value_with_emoji = parse_content_for_frontend(link['value']) %>
                   <% if link['value'].match?(/\Ahttps?:\/\//) %>
                     <a href="<%= link['value'] %>" 
                        target="_blank" 
                        rel="nofollow noopener noreferrer me" 
                        class="text-blue-600 hover:text-blue-800 transition-colors truncate"
                        style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
-                      <%= link['value'].gsub(/^https?:\/\//, '') %>
+                      <%= auto_link_urls(value_with_emoji).html_safe %>
                     </a>
                   <% else %>
                     <span class="text-gray-700 truncate"
                           style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
-                      <%= link['value'] %>
+                      <%= auto_link_urls(value_with_emoji).html_safe %>
                     </span>
                   <% end %>
                 </div>

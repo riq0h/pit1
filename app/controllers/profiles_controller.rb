@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class ProfilesController < ApplicationController
+  include StatusSerializer
   before_action :find_actor
 
   def show

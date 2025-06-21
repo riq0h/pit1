@@ -43,6 +43,9 @@ class ActorFetcher
 
     actor = Actor.create!(build_actor_attributes(actor_uri, actor_data, username, domain, public_key_pem))
 
+    # emoji情報を処理
+    process_actor_emojis(actor, actor_data)
+
     Rails.logger.info "👤 Remote actor created: #{username}@#{domain}"
     actor
   rescue ActiveRecord::RecordInvalid => e
@@ -146,5 +149,33 @@ class ActorFetcher
     when Array
       image_data.first&.dig('url') || image_data.first&.dig('href')
     end
+  end
+
+  # アクターのemoji情報を処理
+  def process_actor_emojis(actor, actor_data)
+    tags = Array(actor_data['tag'])
+    emoji_tags = tags.select { |tag| tag['type'] == 'Emoji' }
+
+    emoji_tags.each do |emoji_tag|
+      shortcode = emoji_tag['name']&.gsub(/^:|:$/, '')
+      icon_url = emoji_tag.dig('icon', 'url')
+
+      next unless shortcode.present? && icon_url.present?
+
+      existing_emoji = CustomEmoji.find_by(shortcode: shortcode, domain: actor.domain)
+      next if existing_emoji
+
+      CustomEmoji.create!(
+        shortcode: shortcode,
+        domain: actor.domain,
+        image_url: icon_url,
+        visible_in_picker: false,
+        disabled: false
+      )
+
+      Rails.logger.info "🎭 Actor emoji created: :#{shortcode}: from #{actor.domain}"
+    end
+  rescue StandardError => e
+    Rails.logger.error "❌ Failed to process actor emojis: #{e.message}"
   end
 end

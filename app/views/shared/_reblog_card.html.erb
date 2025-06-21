@@ -25,13 +25,13 @@
             <%= link_to profile_path(reblog.object.actor.username), 
                         class: "hover:text-gray-600 transition-colors",
                         data: { turbo_frame: "_top" } do %>
-              <%= reblog.object.actor.display_name.presence || reblog.object.actor.username %>
+              <%= parse_content_for_frontend(reblog.object.actor.display_name.presence || reblog.object.actor.username).html_safe %>
             <% end %>
           <% else %>
             <%= link_to reblog.object.actor.ap_id, 
                         class: "hover:text-gray-600 transition-colors",
                         data: { turbo_frame: "_top" } do %>
-              <%= reblog.object.actor.display_name.presence || reblog.object.actor.username %>
+              <%= parse_content_for_frontend(reblog.object.actor.display_name.presence || reblog.object.actor.username).html_safe %>
             <% end %>
           <% end %>
           <span class="text-gray-500 text-sm ml-2" style="font-weight: 300;">

@@ -10,7 +10,7 @@ class ConfigController < ApplicationController
 
   # PATCH /config
   def update
-    if update_user_profile
+    if update_instance_config && update_user_profile
       redirect_to config_path, notice: I18n.t('config.updated')
     else
       @config = current_instance_config
@@ -60,7 +60,6 @@ class ConfigController < ApplicationController
   # DELETE /config/custom_emojis/:id
   def destroy_custom_emoji
     @custom_emoji = CustomEmoji.find(params[:id])
-    @custom_emoji.image.purge if @custom_emoji.image.attached?
     @custom_emoji.destroy
     redirect_to config_custom_emojis_path, notice: t('custom_emojis.deleted')
   end
@@ -68,14 +67,14 @@ class ConfigController < ApplicationController
   # PATCH /config/custom_emojis/:id/enable
   def enable_custom_emoji
     @custom_emoji = CustomEmoji.find(params[:id])
-    @custom_emoji.update!(disabled: false)
+    @custom_emoji.update(disabled: false)
     redirect_to config_custom_emojis_path, notice: t('custom_emojis.enabled')
   end
 
   # PATCH /config/custom_emojis/:id/disable
   def disable_custom_emoji
     @custom_emoji = CustomEmoji.find(params[:id])
-    @custom_emoji.update!(disabled: true)
+    @custom_emoji.update(disabled: true)
     redirect_to config_custom_emojis_path, notice: t('custom_emojis.disabled')
   end
 
@@ -95,16 +94,75 @@ class ConfigController < ApplicationController
 
   private
 
+  def update_instance_config
+    params = config_params
+    return false if params.nil?
+
+    save_config(params)
+    true
+  rescue StandardError => e
+    Rails.logger.error "Config update failed: #{e.message}"
+    false
+  end
+
   def update_user_profile
-    return true unless params[:config]
+    return true if params[:actor].blank?
 
-    user_bio = params[:config][:user_bio]
-    return true unless user_bio
+    actor_params = params.require(:actor).permit(:note, :avatar, fields: [:name, :value])
 
-    current_user.update(note: user_bio)
+    # fieldsをJSON形式で保存
+    if actor_params[:fields].present?
+      clean_fields = actor_params[:fields].reject { |field| field[:name].blank? && field[:value].blank? }
+      actor_params[:fields] = clean_fields.to_json
+    end
+
+    current_user.update(actor_params)
   rescue StandardError => e
     Rails.logger.error "User profile update failed: #{e.message}"
     false
+  end
+
+  def load_stored_config
+    config_file = Rails.root.join('config', 'instance_config.yml')
+    if File.exist?(config_file)
+      YAML.load_file(config_file) || {}
+    else
+      {}
+    end
+  rescue StandardError => e
+    Rails.logger.error "Failed to load config: #{e.message}"
+    {}
+  end
+
+  def save_config(new_config)
+    config_file = Rails.root.join('config', 'instance_config.yml')
+    current_config = load_stored_config
+
+    updated_config = merge_configs(current_config, new_config)
+    write_config_file(config_file, updated_config)
+  end
+
+  def merge_configs(current_config, new_config)
+    current_config.merge(new_config.compact)
+  end
+
+  def write_config_file(config_file, updated_config)
+    File.open(config_file, 'w') do |file|
+      file.write(updated_config.to_yaml)
+    end
+  end
+
+  def config_params
+    return nil unless params[:config]
+
+    params.require(:config).permit(
+      :instance_name,
+      :instance_description,
+      :instance_contact_email,
+      :instance_maintainer,
+      :blog_footer,
+      :background_color
+    )
   end
 
   def process_bulk_emoji_action(action_type, emoji_ids)
@@ -132,27 +190,59 @@ class ConfigController < ApplicationController
   end
 
   def build_base_config
+    stored_config = load_stored_config
+    build_instance_config_hash(stored_config)
+  end
+
+  def build_instance_config_hash(stored_config)
     {
-      instance_name: ENV['INSTANCE_NAME'] || 'letter',
-      instance_description: ENV['INSTANCE_DESCRIPTION'] || 'General Letter Publication System based on ActivityPub',
-      instance_contact_email: ENV['INSTANCE_CONTACT_EMAIL'] || 'admin@localhost',
-      instance_maintainer: ENV['INSTANCE_MAINTAINER'] || 'letter Administrator',
-      blog_footer: ENV['BLOG_FOOTER'] || 'General Letter Publication System based on ActivityPub',
-      background_color: ENV['BACKGROUND_COLOR'] || '#fdfbfb',
-      user_bio: current_user&.note || ENV['USER_BIO'] || '',
-      s3_enabled: ENV['S3_ENABLED'] == 'true',
-      s3_endpoint: ENV['S3_ENDPOINT'],
-      s3_bucket: ENV['S3_BUCKET'],
-      r2_access_key_id: ENV['R2_ACCESS_KEY_ID'],
-      r2_secret_access_key: ENV['R2_SECRET_ACCESS_KEY'],
-      s3_alias_host: ENV['S3_ALIAS_HOST']
+      instance_name: config_value(stored_config, 'instance_name'),
+      instance_description: config_value(stored_config, 'instance_description'),
+      instance_contact_email: config_value(stored_config, 'instance_contact_email'),
+      instance_maintainer: config_value(stored_config, 'instance_maintainer'),
+      blog_footer: config_value(stored_config, 'blog_footer'),
+      background_color: config_value(stored_config, 'background_color'),
+      user_bio: current_user&.note || ''
     }
   end
 
+  def config_value(stored_config, key)
+    if key == 'background_color'
+      stored_config[key] || '#fdfbfb'
+    elsif key == 'instance_name'
+      stored_config[key] || 'letter'
+    elsif key == 'instance_description'
+      stored_config[key] || 'General Letter Publication System based on ActivityPub'
+    elsif key == 'instance_contact_email'
+      stored_config[key] || 'admin@localhost'
+    elsif key == 'instance_maintainer'
+      stored_config[key] || 'letter Administrator'
+    elsif key == 'blog_footer'
+      stored_config[key] || 'General Letter Publication System based on ActivityPub'
+    else
+      stored_config[key]
+    end
+  end
+
   def build_activitypub_config
+    build_activitypub_settings.merge(build_r2_settings)
+  end
+
+  def build_activitypub_settings
     {
       activitypub_domain: Rails.application.config.activitypub.domain,
       activitypub_base_url: Rails.application.config.activitypub.base_url
+    }
+  end
+
+  def build_r2_settings
+    {
+      s3_enabled: ENV['S3_ENABLED'] == 'true',
+      s3_endpoint: ENV.fetch('S3_ENDPOINT', nil),
+      s3_bucket: ENV.fetch('S3_BUCKET', nil),
+      r2_access_key_id: ENV.fetch('R2_ACCESS_KEY_ID', nil),
+      r2_secret_access_key: ENV.fetch('R2_SECRET_ACCESS_KEY', nil),
+      s3_alias_host: ENV.fetch('S3_ALIAS_HOST', nil)
     }
   end
 
@@ -167,12 +257,12 @@ class ConfigController < ApplicationController
   end
 
   def filter_by_category(scope)
-    return scope unless params[:category].present?
+    return scope unless params[:enabled].present?
 
-    case params[:category]
-    when 'enabled'
+    case params[:enabled]
+    when 'true'
       scope.where(disabled: false)
-    when 'disabled'
+    when 'false'
       scope.where(disabled: true)
     else
       scope
@@ -180,14 +270,14 @@ class ConfigController < ApplicationController
   end
 
   def filter_by_search(scope)
-    return scope unless params[:search].present?
+    return scope unless params[:q].present?
 
-    search_term = "%#{params[:search]}%"
-    scope.where('shortcode ILIKE ? OR domain ILIKE ?', search_term, search_term)
+    search_term = "%#{params[:q].upcase}%"
+    scope.where('UPPER(shortcode) LIKE ? OR UPPER(domain) LIKE ?', search_term, search_term)
   end
 
   def paginate_emojis(scope)
-    scope.page(params[:page]).per(20)
+    scope.limit(20)
   end
 
   def custom_emoji_params

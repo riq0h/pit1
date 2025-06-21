@@ -36,11 +36,25 @@ class ApplicationController < ActionController::Base
   end
 
   def blog_title
-    ENV['INSTANCE_NAME'] || Rails.application.config.instance_name
+    stored_config = load_instance_config
+    stored_config['instance_name'] || Rails.application.config.instance_name || 'letter'
   end
 
   def blog_footer
-    ENV['BLOG_FOOTER'] || Rails.application.config.blog_footer
+    stored_config = load_instance_config
+    stored_config['blog_footer'] || Rails.application.config.blog_footer || 'General Letter Publication System based on ActivityPub'
+  end
+
+  def load_instance_config
+    config_file = Rails.root.join('config', 'instance_config.yml')
+    if File.exist?(config_file)
+      YAML.load_file(config_file) || {}
+    else
+      {}
+    end
+  rescue StandardError => e
+    Rails.logger.error "Failed to load config: #{e.message}"
+    {}
   end
 
   # 認証必須ページの保護

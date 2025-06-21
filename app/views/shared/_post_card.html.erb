@@ -25,7 +25,7 @@
           <%= link_to profile_path(post.actor.username), 
                       class: "hover:text-gray-600 transition-colors",
                       data: { turbo_frame: "_top" } do %>
-            <%= post.actor.display_name.presence || post.actor.username %>
+            <%= parse_content_for_frontend(post.actor.display_name.presence || post.actor.username).html_safe %>
           <% end %>
           <span class="text-gray-500 text-sm ml-2" style="font-weight: 300;">
             @<%= post.actor.username %><%= post.actor.domain.present? ? "@#{post.actor.domain}" : "" %>
