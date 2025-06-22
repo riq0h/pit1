@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require 'mini_magick'
+require 'blurhash'
+
 module Api
   module V2
     class MediaController < Api::BaseController
@@ -17,8 +20,9 @@ module Api
           if media_attachment.image?
             render json: serialized_media_attachment(media_attachment), status: :ok
           else
-            # TODO: 大きなメディアファイルの非同期処理実装
-            # 現在は同期処理として扱う
+            # 大きなメディアファイル（動画・音声）は非同期処理
+            media_attachment.update!(processing_status: 'pending', processed: false)
+            MediaProcessingJob.perform_later(media_attachment.id)
             render json: serialized_media_attachment(media_attachment), status: :accepted
           end
         rescue StandardError => e
@@ -99,18 +103,52 @@ module Api
         end
       end
 
-      def extract_file_metadata(_file, media_type)
+      def extract_file_metadata(file, media_type)
         metadata = {}
 
         if media_type == 'image'
-          # TODO: 実際の画像メタデータ抽出の実装 (ImageMagickなど)
-          # 現在はダミーデータを使用
-          metadata[:width] = 1920
-          metadata[:height] = 1080
-          metadata[:blurhash] = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj'
+          begin
+            # MiniMagickを使用して画像のメタデータを抽出
+            image = MiniMagick::Image.read(file.read)
+            metadata[:width] = image.width
+            metadata[:height] = image.height
+
+            # Blurhashを生成
+            metadata[:blurhash] = generate_blurhash(image)
+
+            # ファイルポインタをリセット
+            file.rewind
+          rescue StandardError => e
+            Rails.logger.warn "Failed to extract image metadata: #{e.message}"
+            # フォールバック値
+            metadata[:width] = nil
+            metadata[:height] = nil
+            metadata[:blurhash] = nil
+          end
         end
 
         metadata
+      end
+
+      def generate_blurhash(image)
+        # 元画像を変更しないよう複製を作成してからリサイズ
+        temp_image = image.dup
+        temp_image.resize '200x200>'
+
+        # RGBピクセルデータを取得
+        pixels = temp_image.get_pixels
+        width = temp_image.width
+        height = temp_image.height
+
+        # ピクセルデータをBlurhash用にフラット化
+        pixel_data = pixels.flatten.map(&:to_i)
+
+        # Blurhashを生成（4x4コンポーネント）
+        Blurhash.encode(width, height, pixel_data, x_components: 4, y_components: 4)
+      rescue StandardError => e
+        Rails.logger.warn "Failed to generate blurhash: #{e.message}"
+        # デフォルトのBlurhash（灰色の平坦な画像）
+        'LEHV6nWB2yk8pyo0adR*.7kCMdnj'
       end
 
       def serialized_media_attachment(media)

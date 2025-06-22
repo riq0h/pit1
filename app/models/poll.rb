@@ -1,19 +1,18 @@
 # frozen_string_literal: true
 
 class Poll < ApplicationRecord
-  belongs_to :object, class_name: 'ActivityPubObject', foreign_key: :object_id, primary_key: :id
+  belongs_to :object, class_name: 'ActivityPubObject', primary_key: :id
   has_many :poll_votes, dependent: :destroy
   has_many :voters, through: :poll_votes, source: :actor
 
-  validates :object_id, presence: true
   validates :expires_at, presence: true
   validates :options, presence: true
   validate :validate_options_format
   validate :validate_expiry_time
   validate :validate_not_expired_on_create, on: :create
 
-  scope :expired, -> { where('expires_at < ?', Time.current) }
-  scope :active, -> { where('expires_at >= ?', Time.current) }
+  scope :expired, -> { where(expires_at: ...Time.current) }
+  scope :active, -> { where(expires_at: Time.current..) }
 
   before_save :calculate_vote_counts
 
@@ -28,7 +27,7 @@ class Poll < ApplicationRecord
   def option_titles
     return [] unless options.is_a?(Array)
 
-    options.map { |option| option['title'] || option[:title] }.compact
+    options.filter_map { |option| option['title'] || option[:title] }
   end
 
   def option_votes_count(index)
@@ -43,7 +42,7 @@ class Poll < ApplicationRecord
     choices = Array(choices)
     return false if choices.empty?
     return false if !multiple && choices.length > 1
-    return false if choices.any? { |choice| choice < 0 || choice >= options.length }
+    return false if choices.any? { |choice| choice.negative? || choice >= options.length }
 
     ActiveRecord::Base.transaction do
       # 既存の投票を削除（単一選択の場合、または複数選択で全て再投票する場合）
@@ -97,13 +96,9 @@ class Poll < ApplicationRecord
     end
 
     options.each_with_index do |option, index|
-      unless option.is_a?(Hash) && option['title'].present?
-        errors.add(:options, "option #{index + 1} must have a title")
-      end
+      errors.add(:options, "option #{index + 1} must have a title") unless option.is_a?(Hash) && option['title'].present?
 
-      if option['title'].to_s.length > 50
-        errors.add(:options, "option #{index + 1} title too long (maximum 50 characters)")
-      end
+      errors.add(:options, "option #{index + 1} title too long (maximum 50 characters)") if option['title'].to_s.length > 50
     end
   end
 
@@ -123,9 +118,9 @@ class Poll < ApplicationRecord
   def validate_not_expired_on_create
     return unless expires_at && new_record?
 
-    if expires_at <= Time.current
-      errors.add(:expires_at, 'cannot be in the past')
-    end
+    return unless expires_at <= Time.current
+
+    errors.add(:expires_at, 'cannot be in the past')
   end
 
   def calculate_vote_counts

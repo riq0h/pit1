@@ -1,0 +1,109 @@
+<% content_for :title, "リレー管理 | #{blog_title}" %>
+<% content_for :description, "General Letter Publication System based on ActivityPub" %>
+
+<div class="max-w-2xl mx-auto">
+  <header class="mb-12 text-center">
+    <h1 class="text-xl sm:text-2xl text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+      リレー管理
+    </h1>
+  </header>
+
+  <section class="border border-gray-300 p-6 space-y-8">
+    <div class="space-y-4">
+      <!-- リレー追加フォーム -->
+      <div class="mb-3">
+        <%= form_with url: config_relays_path, method: :post, local: true do |f| %>
+          <div class="flex items-center space-x-2">
+            <%= f.text_field :inbox_url, 
+                placeholder: "https://relay.example.com/inbox",
+                class: "flex-1 px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm",
+                style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+            <%= f.submit "追加", 
+                class: "px-3 py-2 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors text-sm",
+                style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+          </div>
+        <% end %>
+      </div>
+      
+      <!-- 既存リレー一覧 -->
+      <% if @relays.any? %>
+        <div class="space-y-3 mb-3">
+          <% @relays.each do |relay| %>
+            <div>
+              <div class="flex items-center space-x-2">
+                <!-- リレー情報の枠 -->
+                <div class="flex-1 border border-gray-200 px-3 py-2">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                      <%= relay.domain %>
+                    </span>
+                    <span class="text-xs text-gray-600" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                      <%= case relay.state
+                          when 'accepted' then '接続済み'
+                          when 'pending' then '接続中'
+                          when 'rejected' then '拒否'
+                          else '未接続'
+                          end %>
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- ボタン群 -->
+                <div class="flex items-center space-x-2">
+                  <% if relay.idle? %>
+                    <%= form_with url: config_relay_path(relay), method: :patch, local: true, class: "inline" do |f| %>
+                      <%= f.hidden_field :action_type, value: 'enable' %>
+                      <%= f.submit "接続", 
+                          class: "px-3 py-2 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors text-sm",
+                          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+                    <% end %>
+                  <% elsif relay.accepted? %>
+                    <%= form_with url: config_relay_path(relay), method: :patch, local: true, class: "inline" do |f| %>
+                      <%= f.hidden_field :action_type, value: 'disable' %>
+                      <%= f.submit "切断", 
+                          class: "px-3 py-2 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors text-sm",
+                          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+                    <% end %>
+                  <% end %>
+                  <%= form_with url: config_relay_path(relay), method: :delete, local: true, class: "inline", data: { confirm: "本当に削除しますか？" } do |f| %>
+                    <%= f.submit "削除", 
+                        class: "px-3 py-2 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors text-sm",
+                        style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="text-center py-4 text-gray-500 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+          設定されているリレーはありません
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <!-- 成功メッセージ -->
+  <% if flash[:notice] %>
+    <div class="mt-6 p-4 bg-green-50 border border-green-200">
+      <p class="text-sm text-green-700" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+        <%= flash[:notice] %>
+      </p>
+    </div>
+  <% end %>
+
+  <!-- エラーメッセージ -->
+  <% if flash[:alert] %>
+    <div class="mt-6 p-4 bg-red-50 border border-red-200">
+      <p class="text-sm text-red-700" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+        <%= flash[:alert] %>
+      </p>
+    </div>
+  <% end %>
+
+  <div class="mt-6">
+    <%= link_to "設定に戻る", config_path, 
+        class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
+        style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+  </div>
+</div>

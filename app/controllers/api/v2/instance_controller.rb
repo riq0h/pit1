@@ -142,11 +142,11 @@ module Api
       def load_instance_setting(key)
         case key
         when 'instance_name'
-          ENV['INSTANCE_NAME']
+          ENV.fetch('INSTANCE_NAME', nil)
         when 'instance_description'
-          ENV['INSTANCE_DESCRIPTION']
+          ENV.fetch('INSTANCE_DESCRIPTION', nil)
         when 'instance_contact_email', 'contact_email'
-          ENV['INSTANCE_CONTACT_EMAIL']
+          ENV.fetch('INSTANCE_CONTACT_EMAIL', nil)
         else
           nil
         end

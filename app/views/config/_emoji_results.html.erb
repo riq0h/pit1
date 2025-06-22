@@ -11,26 +11,45 @@
             </label>
             
             <div class="flex items-center space-x-2">
-              <%= form.select :action_type, 
-                  options_for_select([
-                    ['一括操作を選択', ''],
-                    ['有効化', 'enable'],
-                    ['無効化', 'disable'],
-                    ['削除', 'delete']
-                  ]),
-                  {},
-                  class: "px-3 py-1 border border-gray-300 text-sm",
-                  style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              <% if params[:tab] == 'remote' %>
+                <%= form.select :action_type, 
+                    options_for_select([
+                      ['一括操作を選択', ''],
+                      ['ローカルにコピー', 'copy'],
+                      ['有効化', 'enable'],
+                      ['無効化', 'disable'],
+                      ['削除', 'delete']
+                    ]),
+                    {},
+                    class: "px-3 py-1 border border-gray-300 text-sm",
+                    style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              <% else %>
+                <%= form.select :action_type, 
+                    options_for_select([
+                      ['一括操作を選択', ''],
+                      ['有効化', 'enable'],
+                      ['無効化', 'disable'],
+                      ['削除', 'delete']
+                    ]),
+                    {},
+                    class: "px-3 py-1 border border-gray-300 text-sm",
+                    style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              <% end %>
               
               <%= form.submit "実行", 
                   class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
                   style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;",
                   onclick: "return confirmBulkAction()" %>
+              
+              <%= form.hidden_field :tab, value: params[:tab] %>
             </div>
           </div>
           
           <div class="text-sm text-gray-500" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
-            <%= custom_emojis.count %>件の絵文字
+            <%= defined?(@total_count) ? @total_count : custom_emojis.count %>件の絵文字
+            <% if defined?(@current_page) && @total_pages > 1 %>
+              （<%= @current_page %>/<%= @total_pages %>ページ）
+            <% end %>
           </div>
         </div>
       <% end %>
@@ -47,10 +66,11 @@
                    form="bulk_form">
             
             <div class="flex items-center space-x-3">
-              <% if emoji.image.attached? %>
+              <% if emoji.image.attached? || emoji.image_url.present? %>
                 <%= image_tag emoji.url, 
                     alt: ":#{emoji.shortcode}:",
-                    class: "w-8 h-8 object-contain" %>
+                    class: "w-8 h-8 object-contain",
+                    loading: "lazy" %>
               <% else %>
                 <div class="w-8 h-8 bg-gray-200 flex items-center justify-center">
                   <span class="text-xs text-gray-500">?</span>
@@ -60,6 +80,11 @@
               <div>
                 <div class="flex items-center space-x-2">
                   <span class="font-mono text-sm">:<%= emoji.shortcode %>:</span>
+                  <% if emoji.remote? %>
+                    <span class="text-xs text-gray-600"><%= emoji.domain %></span>
+                  <% else %>
+                    <span class="text-xs text-gray-600">ローカル</span>
+                  <% end %>
                   <% unless emoji.disabled %>
                     <span class="text-gray-600 text-xs">有効</span>
                   <% else %>
@@ -71,14 +96,29 @@
           </div>
           
           <div class="flex items-center space-x-3">
-            <!-- 編集アイコン -->
-            <%= link_to edit_config_custom_emoji_path(emoji), 
-                data: { turbo_frame: "_top" },
-                class: "text-gray-600 hover:text-gray-900 transition-colors",
-                title: "編集" do %>
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-              </svg>
+            <!-- 編集アイコン（ローカル絵文字のみ） -->
+            <% if emoji.local? %>
+              <%= link_to edit_config_custom_emoji_path(emoji), 
+                  data: { turbo_frame: "_top" },
+                  class: "text-gray-600 hover:text-gray-900 transition-colors",
+                  title: "編集" do %>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+              <% end %>
+            <% else %>
+              <!-- リモート絵文字の場合はコピーアイコンを表示 -->
+              <%= button_to copy_remote_config_custom_emojis_path, 
+                  params: { emoji_ids: [emoji.id] },
+                  method: :post,
+                  class: "text-gray-600 hover:text-gray-900 transition-colors",
+                  title: "ローカルにコピー",
+                  form: { style: "display: inline;" },
+                  confirm: "絵文字「:#{emoji.shortcode}:」をローカルにコピーしますか？" do %>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+              <% end %>
             <% end %>
             
             <!-- 有効化/無効化アイコン -->
@@ -118,6 +158,43 @@
         </div>
       <% end %>
     </div>
+    
+    <!-- ページネーション -->
+    <% if defined?(@total_pages) && @total_pages > 1 %>
+      <div class="border-t border-gray-300 px-6 py-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <% if @has_prev_page %>
+              <%= link_to config_custom_emojis_path(params.to_unsafe_h.merge(page: @current_page - 1)), 
+                  class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors text-sm",
+                  style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
+                ← 前
+              <% end %>
+            <% else %>
+              <span class="px-3 py-1 border border-gray-200 text-gray-400 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">← 前</span>
+            <% end %>
+            
+            <span class="px-3 py-1 text-sm text-gray-600" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+              <%= @current_page %> / <%= @total_pages %>
+            </span>
+            
+            <% if @has_next_page %>
+              <%= link_to config_custom_emojis_path(params.to_unsafe_h.merge(page: @current_page + 1)), 
+                  class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors text-sm",
+                  style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
+                次 →
+              <% end %>
+            <% else %>
+              <span class="px-3 py-1 border border-gray-200 text-gray-400 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">次 →</span>
+            <% end %>
+          </div>
+          
+          <div class="text-sm text-gray-500" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+            <%= (@current_page - 1) * 20 + 1 %>-<%= [@current_page * 20, @total_count].min %> 件目 / 全<%= @total_count %>件
+          </div>
+        </div>
+      </div>
+    <% end %>
   </div>
 <% else %>
   <!-- 空状態 -->

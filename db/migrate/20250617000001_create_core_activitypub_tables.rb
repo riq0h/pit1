@@ -79,6 +79,9 @@ class CreateCoreActivitypubTables < ActiveRecord::Migration[8.0]
       # Local/remote flag
       t.boolean :local, default: false, index: true
       
+      # Relay tracking (for posts received via relay)
+      t.references :relay, foreign_key: true, type: :integer, null: true, index: true
+      
       # Social counts
       t.integer :replies_count, default: 0
       t.integer :reblogs_count, default: 0
@@ -141,5 +144,17 @@ class CreateCoreActivitypubTables < ActiveRecord::Migration[8.0]
     end
 
     add_index :status_edits, [:object_id, :created_at]
+
+    # ActivityPub Relays table
+    create_table :relays do |t|
+      t.string :inbox_url, null: false, index: { unique: true }
+      t.string :state, default: 'idle', null: false, index: true
+      t.string :follow_activity_id, index: true
+      t.datetime :followed_at
+      t.text :last_error
+      t.integer :delivery_attempts, default: 0
+      
+      t.timestamps
+    end
   end
 end

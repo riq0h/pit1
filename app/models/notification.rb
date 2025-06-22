@@ -36,6 +36,7 @@ class Notification < ApplicationRecord
 
   # コールバック
   after_create :send_push_notification
+  after_create :broadcast_notification
 
   # スコープ
   scope :unread, -> { where(read: false) }
@@ -119,5 +120,11 @@ class Notification < ApplicationRecord
     end
   rescue StandardError => e
     Rails.logger.error "Failed to send push notification: #{e.message}"
+  end
+
+  def broadcast_notification
+    StreamingBroadcastService.broadcast_notification(self)
+  rescue StandardError => e
+    Rails.logger.error "💥 Notification broadcast error: #{e.message}"
   end
 end

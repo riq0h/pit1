@@ -419,6 +419,9 @@ class Actor < ApplicationRecord
       'followers' => "#{actor_url}/followers",
       'following' => "#{actor_url}/following",
       'featured' => "#{actor_url}/collections/featured",
+      'endpoints' => {
+        'sharedInbox' => "#{base_url}/inbox"
+      },
       'publicKey' => {
         'id' => "#{actor_url}#main-key",
         'owner' => actor_url,
@@ -508,7 +511,7 @@ class Actor < ApplicationRecord
   def extract_actor_emojis
     # display_name、note、fieldsからemoji shortcodeを抽出
     text_content = [display_name, note].compact.join(' ')
-    
+
     # fieldsからもemoji shortcodeを抽出
     if fields.present?
       begin

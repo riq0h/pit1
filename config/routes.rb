@@ -73,6 +73,14 @@ Rails.application.routes.draw do
   patch '/config/custom_emojis/:id/enable', to: 'config#enable_custom_emoji', as: :enable_config_custom_emoji
   patch '/config/custom_emojis/:id/disable', to: 'config#disable_custom_emoji', as: :disable_config_custom_emoji
   post '/config/custom_emojis/bulk_action', to: 'config#bulk_action_custom_emojis', as: :bulk_action_config_custom_emojis
+  post '/config/custom_emojis/copy_remote', to: 'config#copy_remote_emojis', as: :copy_remote_config_custom_emojis
+  post '/config/custom_emojis/discover_remote', to: 'config#discover_remote_emojis', as: :discover_remote_config_custom_emojis
+  
+  # Relay management routes
+  get '/config/relays', to: 'config#relays', as: :config_relays
+  post '/config/relays', to: 'config#create_relay'
+  patch '/config/relays/:id', to: 'config#update_relay', as: :config_relay
+  delete '/config/relays/:id', to: 'config#destroy_relay'
 
   # ================================
   # Mastodon API (サードパーティクライアント用)
@@ -294,6 +302,11 @@ Rails.application.routes.draw do
       post '/media', to: 'media#create'
     end
   end
+
+  # ================================
+  # Action Cable (WebSocket)
+  # ================================
+  mount ActionCable.server => '/cable'
 
   # ================================
   # OAuth 2.0 Routes

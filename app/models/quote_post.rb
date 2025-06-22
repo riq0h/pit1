@@ -2,8 +2,8 @@
 
 class QuotePost < ApplicationRecord
   belongs_to :actor
-  belongs_to :object, class_name: 'ActivityPubObject', foreign_key: :object_id, primary_key: :id
-  belongs_to :quoted_object, class_name: 'ActivityPubObject', foreign_key: :quoted_object_id, primary_key: :id
+  belongs_to :object, class_name: 'ActivityPubObject', primary_key: :id
+  belongs_to :quoted_object, class_name: 'ActivityPubObject', primary_key: :id
 
   validates :object_id, uniqueness: { scope: :quoted_object_id }
   validates :visibility, inclusion: { in: ActivityPubObject::VISIBILITY_LEVELS }
@@ -24,9 +24,7 @@ class QuotePost < ApplicationRecord
     !shallow_quote
   end
 
-  def local?
-    actor.local?
-  end
+  delegate :local?, to: :actor
 
   def remote?
     !local?
@@ -43,8 +41,8 @@ class QuotePost < ApplicationRecord
       'published' => created_at.iso8601,
       'to' => build_audience_list(:to),
       'cc' => build_audience_list(:cc),
-      'quoteUrl' => quoted_object.ap_id,  # FEP-e232 compatibility
-      '_misskey_quote' => quoted_object.ap_id  # Misskey compatibility
+      'quoteUrl' => quoted_object.ap_id, # FEP-e232 compatibility
+      '_misskey_quote' => quoted_object.ap_id # Misskey compatibility
     }.tap do |json|
       json['content'] = quote_text if deep_quote? && quote_text.present?
     end.compact
@@ -97,7 +95,7 @@ class QuotePost < ApplicationRecord
   def build_direct_audience_list(type)
     case type
     when :to
-      [quoted_object.actor.ap_id]  # Quote the original author in DM
+      [quoted_object.actor.ap_id] # Quote the original author in DM
     when :cc
       []
     end

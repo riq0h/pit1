@@ -133,10 +133,10 @@ module Api
             image = MiniMagick::Image.read(file.read)
             metadata[:width] = image.width
             metadata[:height] = image.height
-            
+
             # Blurhashを生成
             metadata[:blurhash] = generate_blurhash(image)
-            
+
             # ファイルポインタをリセット
             file.rewind
           rescue StandardError => e
@@ -155,15 +155,15 @@ module Api
         # 元画像を変更しないよう複製を作成してからリサイズ
         temp_image = image.dup
         temp_image.resize '200x200>'
-        
+
         # RGBピクセルデータを取得
         pixels = temp_image.get_pixels
         width = temp_image.width
         height = temp_image.height
-        
+
         # ピクセルデータをBlurhash用にフラット化
         pixel_data = pixels.flatten.map(&:to_i)
-        
+
         # Blurhashを生成（4x4コンポーネント）
         Blurhash.encode(width, height, pixel_data, x_components: 4, y_components: 4)
       rescue StandardError => e

@@ -9,18 +9,16 @@ class ScheduledStatus < ApplicationRecord
   validate :validate_scheduled_time
   validate :validate_params_format
 
-  scope :due, -> { where('scheduled_at <= ?', Time.current) }
+  scope :due, -> { where(scheduled_at: ..Time.current) }
   scope :pending, -> { where('scheduled_at > ?', Time.current) }
   scope :for_actor, ->(actor) { where(actor: actor) }
 
   def self.process_due_statuses!
     due.find_each do |scheduled_status|
-      begin
-        scheduled_status.publish!
-      rescue StandardError => e
-        Rails.logger.error "Failed to publish scheduled status #{scheduled_status.id}: #{e.message}"
-        # Don't destroy on error - let it be retried or manually handled
-      end
+      scheduled_status.publish!
+    rescue StandardError => e
+      Rails.logger.error "Failed to publish scheduled status #{scheduled_status.id}: #{e.message}"
+      # Don't destroy on error - let it be retried or manually handled
     end
   end
 
@@ -28,7 +26,7 @@ class ScheduledStatus < ApplicationRecord
     ActiveRecord::Base.transaction do
       # Create the status using StatusService
       status_params = prepare_status_params
-      
+
       # Create the status
       status = actor.objects.create!(
         object_type: 'Note',
@@ -95,22 +93,20 @@ class ScheduledStatus < ApplicationRecord
       return
     end
 
-    unless params['status'].present?
-      errors.add(:params, 'must include status text')
-    end
+    errors.add(:params, 'must include status text') if params['status'].blank?
 
-    if params['status'].to_s.length > 9999
-      errors.add(:params, 'status text too long (maximum 9999 characters)')
-    end
+    return unless params['status'].to_s.length > 9999
+
+    errors.add(:params, 'status text too long (maximum 9999 characters)')
   end
 
   def prepare_status_params
     base_params = params.dup
-    
+
     # Ensure proper defaults
     base_params['visibility'] ||= 'public'
     base_params['sensitive'] ||= false
-    
+
     base_params.symbolize_keys
   end
 
@@ -134,7 +130,7 @@ class ScheduledStatus < ApplicationRecord
     return unless options.is_a?(Array) && options.length.between?(2, 4)
 
     expires_in = poll_params['expires_in'].to_i
-    expires_in = 86400 if expires_in <= 0 # Default to 24 hours
+    expires_in = 86_400 if expires_in <= 0 # Default to 24 hours
     expires_at = Time.current + expires_in.seconds
 
     formatted_options = options.map { |title| { 'title' => title.to_s } }

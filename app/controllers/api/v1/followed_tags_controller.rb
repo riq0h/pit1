@@ -10,7 +10,7 @@ module Api
       def index
         limit = [params.fetch(:limit, 100).to_i, 200].min
         followed_tags = current_user.followed_tags.includes(:tag).recent.limit(limit)
-        
+
         tags = followed_tags.map do |followed_tag|
           {
             name: followed_tag.tag.name,
@@ -19,12 +19,12 @@ module Api
             following: true
           }
         end
-        
+
         render json: tags
       end
-      
+
       private
-      
+
       def build_hashtag_history(tag)
         [
           {

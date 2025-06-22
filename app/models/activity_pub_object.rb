@@ -17,6 +17,7 @@ class ActivityPubObject < ApplicationRecord
 
   # === アソシエーション ===
   belongs_to :actor, inverse_of: :objects
+  belongs_to :relay, optional: true
   has_many :activities, dependent: :destroy, foreign_key: :object_ap_id, primary_key: :ap_id, inverse_of: :object
   has_many :favourites, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
   has_many :reblogs, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
@@ -57,9 +58,13 @@ class ActivityPubObject < ApplicationRecord
   after_create :create_activity, if: :local?
   after_create :process_text_content, if: -> { local? && content.present? }
   after_create :update_actor_posts_count, if: -> { local? && object_type == 'Note' }
+  after_create :distribute_to_relays, if: -> { local? && should_distribute_to_relays? }
+  after_create :broadcast_status_update, if: -> { object_type == 'Note' }
   after_update :process_text_content, if: -> { local? && saved_change_to_content? }
+  after_update :broadcast_status_update, if: -> { object_type == 'Note' && (saved_change_to_content? || saved_change_to_visibility?) }
   after_destroy :create_delete_activity, if: :local?
   after_destroy :update_actor_posts_count, if: -> { local? && object_type == 'Note' }
+  after_destroy :broadcast_status_delete, if: -> { object_type == 'Note' }
 
   # === URL生成メソッド ===
   def public_url
@@ -199,7 +204,7 @@ class ActivityPubObject < ApplicationRecord
         quote_post = quote_posts.first
         data['quoteUrl'] = quote_post.quoted_object.ap_id
         data['_misskey_quote'] = quote_post.quoted_object.ap_id
-        data['quoteUri'] = quote_post.quoted_object.ap_id  # Fedibird互換
+        data['quoteUri'] = quote_post.quoted_object.ap_id # Fedibird互換
       end
     end
   end
@@ -569,5 +574,35 @@ class ActivityPubObject < ApplicationRecord
     # 重複を除去して配信
     unique_inboxes = all_inboxes.uniq.compact
     SendActivityJob.perform_later(activity.id, unique_inboxes) if unique_inboxes.any?
+  end
+
+  # === リレー配信関連 ===
+
+  def should_distribute_to_relays?
+    return false unless object_type == 'Note'
+    return false if visibility == 'direct'
+    return false if visibility == 'private'
+
+    true
+  end
+
+  def distribute_to_relays
+    RelayDistributionService.new.distribute_to_relays(self)
+  rescue StandardError => e
+    Rails.logger.error "💥 Relay distribution error: #{e.message}"
+  end
+
+  # === Action Cableブロードキャスト ===
+
+  def broadcast_status_update
+    StreamingBroadcastService.broadcast_status_update(self)
+  rescue StandardError => e
+    Rails.logger.error "💥 Streaming broadcast error: #{e.message}"
+  end
+
+  def broadcast_status_delete
+    StreamingBroadcastService.broadcast_status_delete(id)
+  rescue StandardError => e
+    Rails.logger.error "💥 Streaming delete broadcast error: #{e.message}"
   end
 end

@@ -68,7 +68,7 @@ module AccountSerializer
 
     # display_nameとnoteからemoji shortcodeを抽出
     text_content = [account.display_name, account.note].compact.join(' ')
-    
+
     # fieldsからもemoji shortcodeを抽出
     if account.fields.present?
       begin
@@ -176,7 +176,11 @@ module AccountSerializer
 
     # プレーンなURLの場合はHTMLリンクとして返す（ローカルで設定した場合）
     if value.match?(/\Ahttps?:\/\//)
-      domain = URI.parse(value).host rescue value
+      domain = begin
+        URI.parse(value).host
+      rescue StandardError
+        value
+      end
       %(<a href="#{CGI.escapeHTML(value)}" target="_blank" rel="nofollow noopener noreferrer me">#{CGI.escapeHTML(domain)}</a>)
     else
       # プレーンテキストの場合はHTMLエスケープしてURLリンク化のみ
@@ -196,5 +200,4 @@ module AccountSerializer
                     '\1</a>'
     text.gsub(link_pattern, link_template)
   end
-
 end

@@ -4,7 +4,7 @@ class ActivitySender
   include HTTParty
 
   def initialize
-    @timeout = 30
+    @timeout = 60
   end
 
   def send_activity(activity:, target_inbox:, signing_actor:)
@@ -39,7 +39,13 @@ class ActivitySender
   end
 
   def perform_request(target_inbox, body, headers)
-    HTTParty.post(target_inbox, body: body, headers: headers, timeout: @timeout)
+    HTTParty.post(
+      target_inbox,
+      body: body,
+      headers: headers,
+      timeout: @timeout,
+      open_timeout: 30
+    )
   end
 
   def handle_response(response)

@@ -25,6 +25,10 @@ FOREIGN KEY ("object_id")
 CREATE INDEX "index_status_edits_on_object_id" ON "status_edits" ("object_id") /*application='Letter'*/;
 CREATE INDEX "index_status_edits_on_created_at" ON "status_edits" ("created_at") /*application='Letter'*/;
 CREATE INDEX "index_status_edits_on_object_id_and_created_at" ON "status_edits" ("object_id", "created_at") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "relays" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "inbox_url" varchar NOT NULL, "state" varchar DEFAULT 'idle' NOT NULL, "follow_activity_id" varchar, "followed_at" datetime(6), "last_error" text, "delivery_attempts" integer DEFAULT 0, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
+CREATE UNIQUE INDEX "index_relays_on_inbox_url" ON "relays" ("inbox_url") /*application='Letter'*/;
+CREATE INDEX "index_relays_on_state" ON "relays" ("state") /*application='Letter'*/;
+CREATE INDEX "index_relays_on_follow_activity_id" ON "relays" ("follow_activity_id") /*application='Letter'*/;
 CREATE TABLE IF NOT EXISTS "follows" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "actor_id" integer NOT NULL, "target_actor_id" integer NOT NULL, "ap_id" varchar, "follow_activity_ap_id" varchar, "accepted" boolean DEFAULT 0, "accepted_at" datetime(6), "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_66a3328916"
 FOREIGN KEY ("actor_id")
   REFERENCES "actors" ("id")
@@ -217,7 +221,10 @@ FOREIGN KEY ("actor_id")
 CREATE INDEX "index_conversation_participants_on_conversation_id" ON "conversation_participants" ("conversation_id") /*application='Letter'*/;
 CREATE INDEX "index_conversation_participants_on_actor_id" ON "conversation_participants" ("actor_id") /*application='Letter'*/;
 CREATE UNIQUE INDEX "idx_on_conversation_id_actor_id_a90cdc69d4" ON "conversation_participants" ("conversation_id", "actor_id") /*application='Letter'*/;
-CREATE TABLE IF NOT EXISTS "objects" ("id" varchar NOT NULL PRIMARY KEY, "ap_id" varchar NOT NULL, "object_type" varchar NOT NULL, "actor_id" integer NOT NULL, "content" text, "content_plaintext" text, "summary" text, "url" varchar, "language" varchar, "sensitive" boolean DEFAULT 0, "visibility" varchar DEFAULT 'public', "raw_data" text, "published_at" datetime(6), "local" boolean DEFAULT 0, "replies_count" integer DEFAULT 0, "reblogs_count" integer DEFAULT 0, "favourites_count" integer DEFAULT 0, "edited_at" datetime(6), "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, "in_reply_to_ap_id" varchar, "conversation_ap_id" varchar, "conversation_id" integer, CONSTRAINT "fk_rails_1377a551fa"
+CREATE TABLE IF NOT EXISTS "objects" ("id" varchar NOT NULL PRIMARY KEY, "ap_id" varchar NOT NULL, "object_type" varchar NOT NULL, "actor_id" integer NOT NULL, "content" text, "content_plaintext" text, "summary" text, "url" varchar, "language" varchar, "sensitive" boolean DEFAULT 0, "visibility" varchar DEFAULT 'public', "raw_data" text, "published_at" datetime(6), "local" boolean DEFAULT 0, "relay_id" integer, "replies_count" integer DEFAULT 0, "reblogs_count" integer DEFAULT 0, "favourites_count" integer DEFAULT 0, "edited_at" datetime(6), "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, "in_reply_to_ap_id" varchar, "conversation_ap_id" varchar, "conversation_id" integer, CONSTRAINT "fk_rails_73fd572a5f"
+FOREIGN KEY ("relay_id")
+  REFERENCES "relays" ("id")
+, CONSTRAINT "fk_rails_1377a551fa"
 FOREIGN KEY ("actor_id")
   REFERENCES "actors" ("id")
 , CONSTRAINT "fk_rails_eb0aea9dca"
@@ -230,6 +237,7 @@ CREATE INDEX "index_objects_on_actor_id" ON "objects" ("actor_id") /*application
 CREATE INDEX "index_objects_on_visibility" ON "objects" ("visibility") /*application='Letter'*/;
 CREATE INDEX "index_objects_on_published_at" ON "objects" ("published_at") /*application='Letter'*/;
 CREATE INDEX "index_objects_on_local" ON "objects" ("local") /*application='Letter'*/;
+CREATE INDEX "index_objects_on_relay_id" ON "objects" ("relay_id") /*application='Letter'*/;
 CREATE INDEX "index_objects_on_edited_at" ON "objects" ("edited_at") /*application='Letter'*/;
 CREATE INDEX "index_objects_on_in_reply_to_ap_id" ON "objects" ("in_reply_to_ap_id") /*application='Letter'*/;
 CREATE INDEX "index_objects_on_conversation_ap_id" ON "objects" ("conversation_ap_id") /*application='Letter'*/;

@@ -129,6 +129,20 @@
         </div>
 
         <div>
+          <%= form.label "actor[display_name]", "ユーザ名", 
+              class: "block text-sm text-gray-700 mb-2", 
+              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+          <%= form.text_field "actor[display_name]", 
+              value: current_user&.display_name,
+              placeholder: "表示名",
+              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
+              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+          <p class="text-xs text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+            プロフィールページで表示される名前です。
+          </p>
+        </div>
+
+        <div>
           <%= form.label "actor[note]", "自己紹介", 
               class: "block text-sm text-gray-700 mb-2", 
               style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
@@ -248,18 +262,27 @@
     </section>
 
     <!-- インスタンス管理セクション -->
-    <section class="border border-gray-300 p-6">
+    <section class="border border-gray-300 p-6 mt-8">
       <h2 class="text-lg text-gray-900 mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
         インスタンス管理
       </h2>
       
       <div class="space-y-4">
         <div>
+          <%= link_to "リレー管理", config_relays_path, 
+              class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
+              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+          <p class="text-sm text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+            リレーサーバとの接続を管理できます。
+          </p>
+        </div>
+        
+        <div>
           <%= link_to "カスタム絵文字の管理", config_custom_emojis_path, 
               class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
               style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
           <p class="text-sm text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
-            インスタンス独自の絵文字を追加・管理できます
+            インスタンス独自の絵文字を追加・管理できます。
           </p>
         </div>
         
@@ -267,7 +290,7 @@
     </section>
 
     <!-- Cloudflare R2 設定セクション -->
-    <section class="border border-gray-300 p-6">
+    <section class="border border-gray-300 p-6 mt-8">
       <h2 class="text-lg text-gray-900 mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
         オブジェクトストレージ設定
       </h2>
@@ -336,7 +359,7 @@
     </section>
 
     <!-- デザインセクション -->
-    <section class="border border-gray-300 p-6">
+    <section class="border border-gray-300 p-6 mt-8">
       <h2 class="text-lg text-gray-900 mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
         デザイン設定
       </h2>
@@ -368,12 +391,13 @@
     </section>
 
     <!-- 保存ボタン -->
-    <div class="pt-4 text-right">
+    <div class="mt-6 text-right">
       <%= form.submit "保存", 
           class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
           style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
     </div>
   <% end %>
+
 
   <!-- 成功メッセージ -->
   <% if flash[:notice] %>

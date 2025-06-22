@@ -35,9 +35,7 @@ module Api
         return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
 
         # Handle scheduled status
-        if params[:scheduled_at].present?
-          return create_scheduled_status
-        end
+        return create_scheduled_status if params[:scheduled_at].present?
 
         @status = build_status_object
         attach_media_to_status if @media_ids&.any?
@@ -136,7 +134,7 @@ module Api
       def quoted_by
         limit = [params.fetch(:limit, 40).to_i, 80].min
         quotes = @status.quotes_of_this.includes(:actor, :object).limit(limit)
-        
+
         # 引用したアクターを返す
         accounts = quotes.map(&:actor).uniq
         render json: accounts.map { |account| serialized_account(account) }
@@ -600,35 +598,33 @@ module Api
         if scheduled_status.save
           render json: scheduled_status.to_mastodon_api, status: :created
         else
-          render json: { 
-            error: scheduled_status.errors.full_messages.join(', ') 
+          render json: {
+            error: scheduled_status.errors.full_messages.join(', ')
           }, status: :unprocessable_entity
         end
       end
 
       def parse_scheduled_at
-        Time.parse(params[:scheduled_at])
+        Time.zone.parse(params[:scheduled_at])
       rescue ArgumentError
         nil
       end
 
       def prepare_scheduled_params
         base_params = params.permit(:status, :in_reply_to_id, :sensitive, :spoiler_text, :visibility, :language)
-                           .to_h
-                           .compact
-        
+                            .to_h
+                            .compact
+
         # Add poll parameters if present
-        if poll_params.present?
-          base_params['poll'] = poll_params
-        end
+        base_params['poll'] = poll_params if poll_params.present?
 
         base_params
       end
 
       def poll_params
-        return nil unless params[:poll].present?
+        return nil if params[:poll].blank?
 
-        params.require(:poll).permit(:expires_in, :multiple, :hide_totals, options: [])
+        params.expect(poll: [:expires_in, :multiple, :hide_totals, { options: [] }])
       end
 
       def create_poll_for_status
@@ -639,7 +635,7 @@ module Api
         return unless options.is_a?(Array) && options.length.between?(2, 4)
 
         expires_in = poll_data[:expires_in].to_i
-        expires_in = 86400 if expires_in <= 0 # Default to 24 hours
+        expires_in = 86_400 if expires_in <= 0 # Default to 24 hours
         expires_at = Time.current + expires_in.seconds
 
         formatted_options = options.map { |title| { 'title' => title.to_s } }

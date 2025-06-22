@@ -58,13 +58,22 @@ module ActivityPubFollowHandlers
 
     object = @activity['object']
     follow_ap_id = extract_activity_id(object)
+
+    # 通常のフォロー関係の Accept を確認
     follow = Follow.find_by(follow_activity_ap_id: follow_ap_id)
 
     if follow
       follow.update!(accepted: true)
       Rails.logger.info "✅ Follow accepted: #{follow.id}"
     else
-      Rails.logger.warn "⚠️ Follow not found for Accept: #{follow_ap_id}"
+      # リレーフォローの Accept を確認
+      relay = Relay.find_by(follow_activity_id: follow_ap_id)
+      if relay
+        relay.update!(state: 'accepted', last_error: nil, delivery_attempts: 0)
+        Rails.logger.info "✅ Relay follow accepted: #{relay.inbox_url}"
+      else
+        Rails.logger.warn "⚠️ Follow/Relay not found for Accept: #{follow_ap_id}"
+      end
     end
 
     head :accepted
@@ -76,13 +85,27 @@ module ActivityPubFollowHandlers
 
     object = @activity['object']
     follow_ap_id = extract_activity_id(object)
+
+    # 通常のフォロー関係の Reject を確認
     follow = Follow.find_by(follow_activity_ap_id: follow_ap_id)
 
     if follow
       follow.destroy!
       Rails.logger.info "❌ Follow rejected and deleted: #{follow_ap_id}"
     else
-      Rails.logger.warn "⚠️ Follow not found for Reject: #{follow_ap_id}"
+      # リレーフォローの Reject を確認
+      relay = Relay.find_by(follow_activity_id: follow_ap_id)
+      if relay
+        relay.update!(
+          state: 'rejected',
+          last_error: 'Follow request rejected by relay',
+          follow_activity_id: nil,
+          followed_at: nil
+        )
+        Rails.logger.info "❌ Relay follow rejected: #{relay.inbox_url}"
+      else
+        Rails.logger.warn "⚠️ Follow/Relay not found for Reject: #{follow_ap_id}"
+      end
     end
 
     head :accepted

@@ -21,8 +21,19 @@ class ConfigController < ApplicationController
 
   # GET /config/custom_emojis
   def custom_emojis
-    @custom_emojis = base_emoji_scope
+    @tab = params[:tab] || 'local'
+    @custom_emojis = base_emoji_scope_for_tab(@tab)
     @custom_emojis = apply_emoji_filters(@custom_emojis)
+
+    # リモートドメインの統計情報
+    return unless @tab == 'remote'
+
+    @remote_domains = CustomEmoji.remote.group(:domain).count
+  end
+
+  # GET /config/relays
+  def relays
+    @relays = Relay.all
   end
 
   # GET /config/custom_emojis/new
@@ -84,12 +95,105 @@ class ConfigController < ApplicationController
     action_type = params[:action_type]
 
     if emoji_ids.blank?
-      redirect_to config_custom_emojis_path, alert: t('custom_emojis.no_selection')
+      redirect_to config_custom_emojis_path(tab: params[:tab]), alert: '絵文字を選択してください'
       return
     end
 
     result = process_bulk_emoji_action(action_type, emoji_ids)
-    redirect_to config_custom_emojis_path, result
+    redirect_to config_custom_emojis_path(tab: params[:tab]), result
+  end
+
+  # POST /config/custom_emojis/copy_remote
+  def copy_remote_emojis
+    emoji_ids = params[:emoji_ids]&.reject(&:blank?)
+
+    if emoji_ids.blank?
+      redirect_to config_custom_emojis_path(tab: 'remote'), alert: 'コピーする絵文字を選択してください'
+      return
+    end
+
+    copy_service = RemoteEmojiCopyService.new
+    results = copy_service.copy_multiple(emoji_ids)
+
+    if results[:success_count].positive?
+      message = "#{results[:success_count]}個の絵文字をローカルにコピーしました"
+      message += "（#{results[:failed_count]}個は失敗）" if results[:failed_count].positive?
+      redirect_to config_custom_emojis_path(tab: 'local'), notice: message
+    else
+      error_details = results[:failed_copies].map { |f| "#{f[:emoji].shortcode}: #{f[:error]}" }.join(', ')
+      redirect_to config_custom_emojis_path(tab: 'remote'), alert: "すべての絵文字のコピーに失敗しました: #{error_details}"
+    end
+  end
+
+  # POST /config/custom_emojis/discover_remote
+  def discover_remote_emojis
+    domain = params[:domain]&.strip
+
+    if domain.present?
+      # 特定ドメインからの発見
+      RemoteEmojiDiscoveryJob.perform_later(domain)
+      redirect_to config_custom_emojis_path(tab: 'remote'), notice: "#{domain} からの絵文字発見を開始しました"
+    else
+      # 全ドメインからの発見
+      RemoteEmojiDiscoveryJob.perform_later
+      redirect_to config_custom_emojis_path(tab: 'remote'), notice: '接触済みドメインからの絵文字発見を開始しました'
+    end
+  end
+
+  # === Relay Management Actions ===
+
+  # POST /config/relays
+  def create_relay
+    inbox_url = params[:inbox_url]&.strip
+
+    if inbox_url.blank?
+      redirect_to config_relays_path, alert: 'リレーのinbox URLを入力してください'
+      return
+    end
+
+    relay = Relay.new(inbox_url: inbox_url, state: 'idle')
+
+    if relay.save
+      redirect_to config_relays_path, notice: 'リレーが追加されました'
+    else
+      redirect_to config_relays_path, alert: "リレーの追加に失敗しました: #{relay.errors.full_messages.join(', ')}"
+    end
+  end
+
+  # PATCH /config/relays/:id
+  def update_relay
+    relay = Relay.find(params[:id])
+    action = params[:action_type] || params[:relay]&.dig(:action)
+
+    case action
+    when 'enable'
+      enable_relay(relay)
+    when 'disable'
+      disable_relay(relay)
+    else
+      redirect_to config_relays_path, alert: '無効な操作です'
+    end
+  rescue ActiveRecord::RecordNotFound
+    redirect_to config_relays_path, alert: 'リレーが見つかりません'
+  end
+
+  # DELETE /config/relays/:id
+  def destroy_relay
+    relay = Relay.find(params[:id])
+
+    # 接続済みの場合は先に切断
+    if relay.accepted?
+      unfollow_service = RelayUnfollowService.new
+      unfollow_service.call(relay)
+    end
+
+    if relay.destroy
+      redirect_to config_relays_path, notice: 'リレーが削除されました'
+    else
+      redirect_to config_relays_path, alert: 'リレーの削除に失敗しました'
+    end
+  rescue ActiveRecord::RecordNotFound
+    redirect_to config_relays_path, alert: 'リレーが見つかりません'
   end
 
   private
@@ -108,7 +212,7 @@ class ConfigController < ApplicationController
   def update_user_profile
     return true if params[:actor].blank?
 
-    actor_params = params.require(:actor).permit(:note, :avatar, fields: [:name, :value])
+    actor_params = params.expect(actor: [:note, :avatar, :display_name, { fields: %i[name value] }])
 
     # fieldsをJSON形式で保存
     if actor_params[:fields].present?
@@ -147,21 +251,19 @@ class ConfigController < ApplicationController
   end
 
   def write_config_file(config_file, updated_config)
-    File.open(config_file, 'w') do |file|
-      file.write(updated_config.to_yaml)
-    end
+    File.write(config_file, updated_config.to_yaml)
   end
 
   def config_params
     return nil unless params[:config]
 
-    params.require(:config).permit(
-      :instance_name,
-      :instance_description,
-      :instance_contact_email,
-      :instance_maintainer,
-      :blog_footer,
-      :background_color
+    params.expect(
+      config: %i[instance_name
+                 instance_description
+                 instance_contact_email
+                 instance_maintainer
+                 blog_footer
+                 background_color]
     )
   end
 
@@ -169,19 +271,37 @@ class ConfigController < ApplicationController
     case action_type
     when 'enable'
       CustomEmoji.where(id: emoji_ids).update_all(disabled: false)
-      { notice: t('custom_emojis.bulk_enabled') }
+      { notice: "#{emoji_ids.count}個の絵文字を有効化しました" }
     when 'disable'
       CustomEmoji.where(id: emoji_ids).update_all(disabled: true)
-      { notice: t('custom_emojis.bulk_disabled') }
+      { notice: "#{emoji_ids.count}個の絵文字を無効化しました" }
     when 'delete'
       emojis_to_delete = CustomEmoji.where(id: emoji_ids).includes(:image_attachment)
+      deleted_count = emojis_to_delete.count
       emojis_to_delete.find_each do |emoji|
         emoji.image.purge if emoji.image.attached?
         emoji.delete
       end
-      { notice: t('custom_emojis.bulk_deleted') }
+      { notice: "#{deleted_count}個の絵文字を削除しました" }
+    when 'copy'
+      # リモート絵文字のコピー
+      remote_emojis = CustomEmoji.remote.where(id: emoji_ids)
+
+      return { alert: '選択された絵文字にリモート絵文字が含まれていません' } if remote_emojis.empty?
+
+      copy_service = RemoteEmojiCopyService.new
+      results = copy_service.copy_multiple(remote_emojis.pluck(:id))
+
+      if results[:success_count].positive?
+        message = "#{results[:success_count]}個の絵文字をローカルにコピーしました"
+        message += "（#{results[:failed_count]}個は失敗）" if results[:failed_count].positive?
+        { notice: message }
+      else
+        error_details = results[:failed_copies].map { |f| "#{f[:emoji].shortcode}: #{f[:error]}" }.join(', ')
+        { alert: "すべての絵文字のコピーに失敗しました: #{error_details}" }
+      end
     else
-      { alert: t('custom_emojis.invalid_action') }
+      { alert: "無効な操作: #{action_type}" }
     end
   end
 
@@ -207,17 +327,18 @@ class ConfigController < ApplicationController
   end
 
   def config_value(stored_config, key)
-    if key == 'background_color'
+    case key
+    when 'background_color'
       stored_config[key] || '#fdfbfb'
-    elsif key == 'instance_name'
+    when 'instance_name'
       stored_config[key] || 'letter'
-    elsif key == 'instance_description'
+    when 'instance_description'
       stored_config[key] || 'General Letter Publication System based on ActivityPub'
-    elsif key == 'instance_contact_email'
+    when 'instance_contact_email'
       stored_config[key] || 'admin@localhost'
-    elsif key == 'instance_maintainer'
+    when 'instance_maintainer'
       stored_config[key] || 'letter Administrator'
-    elsif key == 'blog_footer'
+    when 'blog_footer'
       stored_config[key] || 'General Letter Publication System based on ActivityPub'
     else
       stored_config[key]
@@ -250,14 +371,30 @@ class ConfigController < ApplicationController
     CustomEmoji.includes(:image_attachment).order(created_at: :desc)
   end
 
+  def base_emoji_scope_for_tab(tab)
+    scope = CustomEmoji.includes(:image_attachment)
+
+    scope = case tab
+            when 'local'
+              scope.local
+            when 'remote'
+              scope.remote
+            else
+              scope.local # デフォルトはローカル
+            end
+
+    scope.order(created_at: :desc)
+  end
+
   def apply_emoji_filters(scope)
     scope = filter_by_category(scope)
     scope = filter_by_search(scope)
+    scope = filter_by_domain(scope)
     paginate_emojis(scope)
   end
 
   def filter_by_category(scope)
-    return scope unless params[:enabled].present?
+    return scope if params[:enabled].blank?
 
     case params[:enabled]
     when 'true'
@@ -270,17 +407,66 @@ class ConfigController < ApplicationController
   end
 
   def filter_by_search(scope)
-    return scope unless params[:q].present?
+    return scope if params[:q].blank?
 
     search_term = "%#{params[:q].upcase}%"
     scope.where('UPPER(shortcode) LIKE ? OR UPPER(domain) LIKE ?', search_term, search_term)
   end
 
+  def filter_by_domain(scope)
+    return scope if params[:domain].blank?
+
+    scope.where(domain: params[:domain])
+  end
+
   def paginate_emojis(scope)
-    scope.limit(20)
+    page = params[:page]&.to_i || 1
+    per_page = 20
+    offset = (page - 1) * per_page
+
+    @current_page = page
+    @total_count = scope.count
+    @total_pages = (@total_count.to_f / per_page).ceil
+    @has_next_page = page < @total_pages
+    @has_prev_page = page > 1
+
+    scope.offset(offset).limit(per_page)
   end
 
   def custom_emoji_params
-    params.require(:custom_emoji).permit(:shortcode, :domain, :image, :disabled, :visible_in_picker)
+    params.expect(custom_emoji: %i[shortcode domain image disabled visible_in_picker])
+  end
+
+  def enable_relay(relay)
+    if relay.idle?
+      # ActivityPub Follow アクティビティを送信
+      follow_service = RelayFollowService.new
+      success = follow_service.call(relay)
+
+      if success
+        redirect_to config_relays_path, notice: 'リレーへの接続を開始しました'
+      else
+        redirect_to config_relays_path, alert: "リレーへの接続に失敗しました: #{relay.last_error}"
+      end
+    else
+      redirect_to config_relays_path, alert: 'このリレーは既に処理中です'
+    end
+  end
+
+  def disable_relay(relay)
+    if relay.accepted?
+      # ActivityPub Undo Follow アクティビティを送信
+      unfollow_service = RelayUnfollowService.new
+      success = unfollow_service.call(relay)
+
+      if success
+        redirect_to config_relays_path, notice: 'リレーから切断しました'
+      else
+        redirect_to config_relays_path, alert: "リレーからの切断に失敗しました: #{relay.last_error}"
+      end
+    else
+      relay.update!(state: 'idle')
+      redirect_to config_relays_path, notice: 'リレーの状態をリセットしました'
+    end
   end
 end

@@ -11,24 +11,61 @@ class HttpSignatureVerifier
   end
 
   def verify!(actor_uri)
-    # Signature header解析
     signature_params = parse_signature_header
+    return false unless validate_date_header
 
-    # アクター公開鍵取得
+    # 初回署名検証試行
     public_key = fetch_actor_public_key(actor_uri)
-
-    # 署名文字列構築
     signing_string = build_signing_string(signature_params['headers'])
 
-    # 署名検証
-    verify_signature(
+    result = verify_signature(
       signature: signature_params['signature'],
       signing_string: signing_string,
       public_key: public_key
     )
+
+    # 失敗時のフォールバック: アクターキーリフレッシュ
+    if !result && should_refresh_actor_key(actor_uri)
+      public_key = fetch_actor_public_key(actor_uri, refresh: true)
+      result = verify_signature(
+        signature: signature_params['signature'],
+        signing_string: signing_string,
+        public_key: public_key
+      )
+    end
+
+    # 失敗時のフォールバック: Pleroma式寛容な検証
+    result ||= verify_signature_pleroma_style(
+      signature: signature_params['signature'],
+      signing_string: signing_string,
+      public_key: public_key
+    )
+
+    result
   rescue StandardError => e
-    Rails.logger.error "🔒 Signature verification failed: #{e.message}"
+    Rails.logger.error "Signature verification failed: #{e.message}"
     false
+  end
+
+  def should_refresh_actor_key(actor_uri)
+    actor = Actor.find_by(ap_id: actor_uri)
+    return false unless actor
+
+    # 24時間以上前に作成されたアクターのキーをリフレッシュ対象とする
+    actor.created_at < 24.hours.ago
+  end
+
+  def validate_date_header
+    date_header = find_header_value('date')
+    return true unless date_header
+
+    begin
+      request_time = Time.httpdate(date_header)
+      time_diff = (Time.now.utc - request_time).abs
+      time_diff <= 3600
+    rescue ArgumentError
+      false
+    end
   end
 
   private
@@ -54,19 +91,16 @@ class HttpSignatureVerifier
   end
 
   # アクター公開鍵取得
-  def fetch_actor_public_key(actor_uri)
-    # キャッシュ確認
+  def fetch_actor_public_key(actor_uri, refresh: false)
     actor = Actor.find_by(ap_id: actor_uri)
 
-    return parse_public_key(actor.public_key) if actor&.public_key.present?
+    return parse_public_key(actor.public_key) if !refresh && actor&.public_key.present?
 
-    # リモートから取得
     response = fetch_actor_data(actor_uri)
     public_key_data = response.dig('publicKey', 'publicKeyPem')
 
     raise ActivityPub::SignatureError, 'No public key found in actor data' unless public_key_data
 
-    # アクター情報更新/作成
     if actor
       actor.update!(public_key: public_key_data)
     else
@@ -168,12 +202,21 @@ class HttpSignatureVerifier
 
   def standard_headers
     {
-      'host' => headers['Host'],
-      'date' => headers['Date'],
-      'digest' => headers['Digest'],
-      'content-type' => headers['Content-Type'],
-      'content-length' => headers['Content-Length']
+      'host' => find_header_value('host'),
+      'date' => find_header_value('date'),
+      'digest' => find_header_value('digest'),
+      'content-type' => find_header_value('content-type'),
+      'content-length' => find_header_value('content-length')
     }
+  end
+
+  def find_header_value(header_name)
+    # Railsのheadersオブジェクトは文字列キーではなく、別の形式の可能性
+    headers[header_name] ||
+      headers[header_name.downcase] ||
+      headers[header_name.upcase] ||
+      headers[header_name.titleize] ||
+      headers.find { |k, v| k.to_s.downcase == header_name.downcase }&.last
   end
 
   def build_request_target_header
@@ -185,7 +228,7 @@ class HttpSignatureVerifier
   end
 
   def build_custom_header(header_name)
-    value = headers[header_name] || headers[header_name.titleize]
+    value = find_header_value(header_name)
     "#{header_name.downcase}: #{value}"
   end
 
@@ -207,21 +250,49 @@ class HttpSignatureVerifier
   # 署名検証
   def verify_signature(signature:, signing_string:, public_key:)
     decoded_signature = Base64.decode64(signature)
+    signing_string_utf8 = signing_string.force_encoding('UTF-8')
 
+    # SHA256での検証を試行
     verified = public_key.verify(
       OpenSSL::Digest.new('SHA256'),
       decoded_signature,
-      signing_string
+      signing_string_utf8
     )
 
-    if verified
-      true
-    else
-      Rails.logger.warn '❌ Signature verification failed'
-      false
-    end
+    # 失敗時のフォールバック: SHA1での検証
+    verified ||= public_key.verify(
+      OpenSSL::Digest.new('SHA1'),
+      decoded_signature,
+      signing_string_utf8
+    )
+
+    verified
   rescue StandardError => e
-    Rails.logger.error "❌ Signature verification error: #{e.message}"
+    Rails.logger.error "Signature verification error: #{e.message}"
+    false
+  end
+
+  def verify_signature_pleroma_style(signature:, signing_string:, public_key:)
+    decoded_signature = Base64.decode64(signature)
+
+    # Pleroma式: より寛容なエンコーディングとアルゴリズム試行
+    %w[UTF-8 ASCII-8BIT].each do |encoding|
+      %w[SHA256 SHA1 SHA].each do |digest_name|
+        signing_string_encoded = signing_string.force_encoding(encoding)
+        verified = public_key.verify(
+          OpenSSL::Digest.new(digest_name),
+          decoded_signature,
+          signing_string_encoded
+        )
+        return true if verified
+      rescue StandardError
+        next
+      end
+    end
+
+    false
+  rescue StandardError => e
+    Rails.logger.error "Pleroma-style signature verification error: #{e.message}"
     false
   end
 end

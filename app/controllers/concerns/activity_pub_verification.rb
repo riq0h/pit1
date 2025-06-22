@@ -40,7 +40,8 @@ module ActivityPubVerification
 
   # Activity JSON解析
   def parse_activity_json
-    @activity = JSON.parse(request.body.read)
+    @raw_body = request.body.read
+    @activity = JSON.parse(@raw_body)
 
     validate_activity_structure
     check_json_ld_context
@@ -74,7 +75,51 @@ module ActivityPubVerification
     verifier = create_signature_verifier
     return if verifier.verify!(@activity['actor'])
 
+    # リレーからの活動かチェック
+    return if relay_activity?
+
     raise ::ActivityPub::SignatureError, 'Signature verification failed'
+  end
+
+  def relay_activity?
+    return false unless @activity['actor']
+
+    # 1. 直接リレーサーバーからの活動（Accept/Reject等）
+    direct_relay = (Relay.accepted.to_a + Relay.pending.to_a).any? do |relay|
+      relay.actor_uri == @activity['actor']
+    end
+    return true if direct_relay
+
+    # 2. リレー経由の投稿（HTTP SignatureのkeyIdでリレーを判定）
+    signature_header = request.headers['Signature']
+    return false unless signature_header
+
+    # keyIdを抽出
+    key_id = extract_key_id_from_signature(signature_header)
+    return false unless key_id
+
+    # keyIdがリレーサーバーのものかチェック
+    (Relay.accepted.to_a + Relay.pending.to_a).any? do |relay|
+      strict_relay_keyid_check(key_id, relay)
+    end
+  end
+
+  private
+
+  def extract_key_id_from_signature(signature_header)
+    match = signature_header.match(/keyId="([^"]*)"/)
+    match&.[](1)
+  end
+
+  def strict_relay_keyid_check(key_id, relay)
+    key_uri = URI.parse(key_id)
+    relay_uri = URI.parse(relay.actor_uri)
+
+    # ホストとパスの完全一致
+    key_uri.host == relay_uri.host &&
+      key_id.start_with?(relay.actor_uri)
+  rescue URI::InvalidURIError
+    false
   end
 
   def create_signature_verifier
@@ -82,7 +127,7 @@ module ActivityPubVerification
       method: request.method,
       path: request.fullpath,
       headers: request.headers,
-      body: @activity.to_json
+      body: @raw_body
     )
   end
 

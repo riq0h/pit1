@@ -43,35 +43,92 @@
     </div>
   </header>
 
+  <!-- タブナビゲーション -->
+  <div class="mb-6">
+    <nav class="flex space-x-1 border-b border-gray-200">
+      <%= link_to config_custom_emojis_path(tab: 'local'), 
+          class: "px-4 py-2 text-sm font-medium transition-colors #{@tab == 'local' ? 'border-b-2 border-gray-500 text-gray-900' : 'text-gray-500 hover:text-gray-700'}",
+          style: "font-family: 'Noto Sans JP', sans-serif;" do %>
+        ローカル
+        <span class="ml-1 text-xs text-gray-400">(<%= CustomEmoji.local.count %>)</span>
+      <% end %>
+      
+      <%= link_to config_custom_emojis_path(tab: 'remote'), 
+          class: "px-4 py-2 text-sm font-medium transition-colors #{@tab == 'remote' ? 'border-b-2 border-gray-500 text-gray-900' : 'text-gray-500 hover:text-gray-700'}",
+          style: "font-family: 'Noto Sans JP', sans-serif;" do %>
+        リモート
+        <span class="ml-1 text-xs text-gray-400">(<%= CustomEmoji.remote.count %>)</span>
+      <% end %>
+    </nav>
+  </div>
+
   <!-- 検索・フィルター -->
   <div class="mb-6">
     <%= form_with url: config_custom_emojis_path, method: :get, 
                   data: { turbo_frame: "emoji_results" }, 
-                  class: "flex items-center space-x-4" do |form| %>
-      <div class="flex-1">
-        <%= form.text_field :q, 
-            value: params[:q],
-            placeholder: "絵文字名で検索...",
-            class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
+                  class: "space-y-4" do |form| %>
+      
+      <%= form.hidden_field :tab, value: @tab %>
+      <%= form.hidden_field :page, value: params[:page] if params[:page].present? %>
+      
+      <div class="flex items-center space-x-4">
+        <div class="flex-1">
+          <%= form.text_field :q, 
+              value: params[:q],
+              placeholder: "絵文字名で検索...",
+              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
+              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+        </div>
+        
+        <div>
+          <%= form.select :enabled, 
+              options_for_select([
+                ['すべて', ''],
+                ['有効のみ', 'true'],
+                ['無効のみ', 'false']
+              ], params[:enabled]),
+              {},
+              class: "px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
+              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;",
+              onchange: "this.form.requestSubmit()" %>
+        </div>
+        
+        <% if @tab == 'remote' && @remote_domains.present? %>
+          <div>
+            <%= form.select :domain, 
+                options_for_select([['全ドメイン', '']] + @remote_domains.map { |domain, count| ["#{domain} (#{count})", domain] }, params[:domain]),
+                {},
+                class: "px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
+                style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;",
+                onchange: "this.form.requestSubmit()" %>
+          </div>
+        <% end %>
+        
+        <%= form.submit "検索", 
+            class: "px-3 py-2 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer",
             style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
       </div>
       
-      <div>
-        <%= form.select :enabled, 
-            options_for_select([
-              ['すべて', ''],
-              ['有効のみ', 'true'],
-              ['無効のみ', 'false']
-            ], params[:enabled]),
-            {},
-            class: "px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
-            style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;",
-            onchange: "this.form.requestSubmit()" %>
-      </div>
-      
-      <%= form.submit "検索", 
-          class: "px-3 py-2 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer",
-          style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+      <!-- リモート絵文字発見機能 -->
+      <% if @tab == 'remote' %>
+        <div class="flex items-center space-x-4">
+          <%= form_with url: discover_remote_config_custom_emojis_path, method: :post, class: "flex items-center space-x-4 w-full" do |discovery_form| %>
+            <div class="flex-1">
+              <%= discovery_form.text_field :domain, 
+                  placeholder: "特定ドメインから発見（例: mastodon.social）",
+                  class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
+                  style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+            </div>
+            <%= discovery_form.submit "発見", 
+                class: "px-3 py-2 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer",
+                style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+          <% end %>
+          <%= button_to "全ドメイン発見", discover_remote_config_custom_emojis_path, 
+              method: :post,
+              class: "px-3 py-2 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer",
+              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+        </div>
+      <% end %>
     <% end %>
   </div>
 
@@ -80,10 +137,13 @@
     <%= render "emoji_results", custom_emojis: @custom_emojis %>
   <% end %>
   
-  <!-- 新しい絵文字を追加ボタン -->
-  <div class="mt-8 text-right">
+  <!-- ボタン -->
+  <div class="mt-8 flex justify-between items-center">
+    <%= link_to "設定に戻る", config_path, 
+        class: "px-4 py-2 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors text-sm",
+        style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
     <%= link_to "新しい絵文字を追加", new_config_custom_emoji_path, 
-        class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
+        class: "px-4 py-2 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
         style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
   </div>
 </div>
@@ -151,7 +211,8 @@ function confirmBulkAction() {
   const actionNames = {
     'enable': '有効化',
     'disable': '無効化',
-    'delete': '削除'
+    'delete': '削除',
+    'copy': 'ローカルにコピー'
   };
   
   const message = `選択された${checkedBoxes.length}個の絵文字を${actionNames[actionType]}しますか？`;

@@ -5,24 +5,20 @@ module Api
     class ScheduledStatusesController < Api::BaseController
       before_action :doorkeeper_authorize!
       before_action :require_user!
-      before_action :set_scheduled_status, only: [:show, :update, :destroy]
+      before_action :set_scheduled_status, only: %i[show update destroy]
 
       # GET /api/v1/scheduled_statuses
       def index
         limit = [params.fetch(:limit, 20).to_i, 40].min
-        
+
         scheduled_statuses = current_user.scheduled_statuses
-                                        .pending
-                                        .order(scheduled_at: :asc)
-                                        .limit(limit)
+                                         .pending
+                                         .order(scheduled_at: :asc)
+                                         .limit(limit)
 
-        if params[:max_id].present?
-          scheduled_statuses = scheduled_statuses.where('id < ?', params[:max_id])
-        end
+        scheduled_statuses = scheduled_statuses.where(id: ...(params[:max_id])) if params[:max_id].present?
 
-        if params[:min_id].present?
-          scheduled_statuses = scheduled_statuses.where('id > ?', params[:min_id])
-        end
+        scheduled_statuses = scheduled_statuses.where('id > ?', params[:min_id]) if params[:min_id].present?
 
         render json: scheduled_statuses.map(&:to_mastodon_api)
       end
@@ -34,13 +30,13 @@ module Api
 
       # PUT /api/v1/scheduled_statuses/:id
       def update
-        new_scheduled_at = Time.parse(params[:scheduled_at])
-        
+        new_scheduled_at = Time.zone.parse(params[:scheduled_at])
+
         if @scheduled_status.update(scheduled_at: new_scheduled_at)
           render json: @scheduled_status.to_mastodon_api
         else
-          render json: { 
-            error: @scheduled_status.errors.full_messages.join(', ') 
+          render json: {
+            error: @scheduled_status.errors.full_messages.join(', ')
           }, status: :unprocessable_entity
         end
       rescue ArgumentError

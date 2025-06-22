@@ -5,7 +5,7 @@ module Api
     class PollsController < Api::BaseController
       before_action :doorkeeper_authorize!
       before_action :require_user!
-      before_action :set_poll, only: [:show, :vote]
+      before_action :set_poll, only: %i[show vote]
 
       # GET /api/v1/polls/:id
       def show
