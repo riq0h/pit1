@@ -276,7 +276,11 @@ module Api
       end
 
       def attach_media_to_status
-        media_attachments = current_user.media_attachments.where(id: @media_ids, object_id: nil)
+        media_attachments = current_user.media_attachments.where(
+          id: @media_ids, 
+          object_id: nil,
+          processed: true
+        )
         @status.media_attachments = media_attachments
       end
 
