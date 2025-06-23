@@ -55,7 +55,7 @@ class ActivityPubObject < ApplicationRecord
   before_validation :generate_snowflake_id, on: :create
   before_save :extract_plaintext
   before_save :set_conversation_id
-  after_create :create_activity, if: :local?
+  after_save :create_activity_if_needed, if: :local?
   after_create :process_text_content, if: -> { local? && content.present? }
   after_create :update_actor_posts_count, if: -> { local? && object_type == 'Note' }
   after_create :distribute_to_relays, if: -> { local? && should_distribute_to_relays? }
@@ -475,7 +475,12 @@ class ActivityPubObject < ApplicationRecord
     %w[Note Article].include?(object_type)
   end
 
-  def create_activity
+  def create_activity_if_needed
+    return unless saved_change_to_id? # 新規作成時のみ実行
+
+    existing_activity = Activity.find_by(object_ap_id: ap_id, activity_type: 'Create')
+    return existing_activity if existing_activity
+
     activity = Activity.create!(
       ap_id: "#{ap_id}#create",
       activity_type: 'Create',
@@ -485,8 +490,8 @@ class ActivityPubObject < ApplicationRecord
       local: true
     )
 
-    # ActivityPub配信をキュー
     queue_activity_delivery(activity)
+    activity
   end
 
   def create_delete_activity

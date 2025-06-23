@@ -52,6 +52,7 @@ module Api
           end
           
           handle_direct_message_conversation if @status.visibility == 'direct'
+          
           render json: serialized_status(@status), status: :created
         else
           render_validation_error(@status)
