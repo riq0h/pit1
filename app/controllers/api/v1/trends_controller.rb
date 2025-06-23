@@ -3,6 +3,7 @@
 module Api
   module V1
     class TrendsController < Api::BaseController
+      include StatusSerializationHelper
       before_action :doorkeeper_authorize!
 
       # GET /api/v1/trends
@@ -57,6 +58,7 @@ module Api
         # リモート投稿から人気の高いものを返す（ローカル投稿は除外）
         # いいねやリブログが多い投稿を基準とする
         ActivityPubObject.where(object_type: 'Note', local: false)
+                         .includes(:poll)
                          .joins('LEFT JOIN favourites ON favourites.object_id = objects.id')
                          .joins('LEFT JOIN reblogs ON reblogs.object_id = objects.id')
                          .where('objects.published_at > ?', 7.days.ago)
@@ -79,32 +81,6 @@ module Api
         }
       end
 
-      def serialized_status(status)
-        {
-          id: status.id,
-          created_at: status.published_at&.iso8601,
-          in_reply_to_id: status.in_reply_to_ap_id,
-          in_reply_to_account_id: nil,
-          sensitive: false,
-          spoiler_text: '',
-          visibility: status.visibility || 'public',
-          language: 'ja',
-          uri: status.ap_id,
-          url: status.ap_id,
-          replies_count: 0,
-          reblogs_count: status.reblogs.count,
-          favourites_count: status.favourites.count,
-          content: status.content || '',
-          reblog: nil,
-          account: serialized_account(status.actor),
-          media_attachments: [],
-          mentions: [],
-          tags: [],
-          emojis: [],
-          card: nil,
-          poll: nil
-        }
-      end
 
       def serialized_account(actor)
         {

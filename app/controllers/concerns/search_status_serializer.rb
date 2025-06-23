@@ -47,7 +47,9 @@ module SearchStatusSerializer
       media_attachments: serialized_media_attachments(status),
       mentions: [],
       tags: [],
-      emojis: []
+      emojis: [],
+      card: nil,
+      poll: serialize_poll_for_search(status)
     }
   end
 
@@ -79,5 +81,23 @@ module SearchStatusSerializer
     return nil unless attachment.width && attachment.height
 
     attachment.width.to_f / attachment.height
+  end
+
+  def serialize_poll_for_search(status)
+    return nil unless status.poll
+
+    poll = status.poll
+    {
+      id: poll.id.to_s,
+      expires_at: poll.expires_at.iso8601,
+      expired: poll.expired?,
+      multiple: poll.multiple,
+      votes_count: poll.votes_count,
+      voters_count: poll.multiple ? poll.voters_count : poll.votes_count,
+      options: poll.option_titles.map.with_index { |title, index| { title: title, votes_count: poll.option_votes_count(index) } },
+      emojis: [],
+      voted: false,
+      own_votes: []
+    }
   end
 end

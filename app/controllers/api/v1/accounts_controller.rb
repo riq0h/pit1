@@ -3,10 +3,7 @@
 module Api
   module V1
     class AccountsController < Api::BaseController
-      include AccountSerializer
       include StatusSerializationHelper
-      include MediaSerializer
-      include MentionTagSerializer
       before_action :doorkeeper_authorize!, except: [:show]
       before_action :doorkeeper_authorize!, only: [:show], if: -> { request.authorization.present? }
       before_action :set_account, only: %i[show statuses followers following follow unfollow block unblock mute unmute note]
@@ -44,7 +41,7 @@ module Api
         if pinned_only
           # Pinned statusesのみを返す
           pinned_statuses = @account.pinned_statuses
-                                    .includes(object: %i[actor media_attachments mentions tags])
+                                    .includes(object: %i[actor media_attachments mentions tags poll])
                                     .ordered
                                     .limit(limit)
           statuses = pinned_statuses.map(&:object)
@@ -62,14 +59,14 @@ module Api
           base_query = base_query.joins(:media_attachments).distinct if only_media
 
           # 通常の投稿を取得（ページネーション対応）
-          regular_statuses = base_query.order(published_at: :desc)
+          regular_statuses = base_query.includes(:poll, :actor, :media_attachments, :mentions, :tags).order(published_at: :desc)
           regular_statuses = apply_timeline_pagination(regular_statuses)
           regular_statuses = regular_statuses.limit(limit)
 
           # Pinned statusesを取得（self-viewの場合のみ）
           if current_user == @account
             pinned_objects = @account.pinned_statuses
-                                     .includes(object: %i[actor media_attachments mentions tags])
+                                     .includes(object: %i[actor media_attachments mentions tags poll])
                                      .ordered
                                      .map(&:object)
 

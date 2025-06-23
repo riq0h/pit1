@@ -3,10 +3,7 @@
 module Api
   module V1
     class TimelinesController < Api::BaseController
-      include AccountSerializer
-      include StatusSerializer
-      include MediaSerializer
-      include MentionTagSerializer
+      include StatusSerializationHelper
       before_action :doorkeeper_authorize!, only: [:home]
 
       # GET /api/v1/timelines/home
@@ -58,6 +55,7 @@ module Api
 
       def base_timeline_query
         query = ActivityPubObject.joins(:actor)
+                                 .includes(:poll)
                                  .where(object_type: 'Note')
                                  .order('objects.id DESC')
                                  .limit(params[:limit]&.to_i || 20)
@@ -105,54 +103,7 @@ module Api
         params[:local].present? && params[:local] != 'false'
       end
 
-      def serialized_status(status)
-        {
-          id: status.id.to_s,
-          created_at: status.published_at.iso8601,
-          in_reply_to_id: in_reply_to_id(status),
-          in_reply_to_account_id: in_reply_to_account_id(status),
-          sensitive: status.sensitive || false,
-          spoiler_text: status.summary || '',
-          visibility: status.visibility || 'public',
-          language: 'ja',
-          uri: status.ap_id || '',
-          url: status.public_url || status.ap_id || '',
-          replies_count: replies_count(status),
-          reblogs_count: status.reblogs_count || 0,
-          favourites_count: status.favourites_count || 0,
-          content: parse_content_links_only(status.content || ''),
-          reblog: nil,
-          account: serialized_account(status.actor),
-          media_attachments: serialized_media_attachments(status),
-          mentions: serialized_mentions(status),
-          tags: serialized_tags(status),
-          emojis: serialized_emojis(status),
-          card: nil,
-          poll: nil,
-          favourited: false,
-          reblogged: false
-        }
-      end
 
-      def in_reply_to_id(status)
-        return nil if status.in_reply_to_ap_id.blank?
-
-        in_reply_to = ActivityPubObject.find_by(ap_id: status.in_reply_to_ap_id)
-        in_reply_to&.id&.to_s
-      end
-
-      def in_reply_to_account_id(status)
-        return nil if status.in_reply_to_ap_id.blank?
-
-        in_reply_to = ActivityPubObject.find_by(ap_id: status.in_reply_to_ap_id)
-        return nil unless in_reply_to&.actor
-
-        in_reply_to.actor.id.to_s
-      end
-
-      def replies_count(status)
-        ActivityPubObject.where(in_reply_to_ap_id: status.ap_id).count
-      end
     end
   end
 end

@@ -3,11 +3,7 @@
 module Api
   module V1
     class BookmarksController < Api::BaseController
-      include StatusSerializer
       include StatusSerializationHelper
-      include AccountSerializer
-      include MediaSerializer
-      include MentionTagSerializer
 
       before_action :doorkeeper_authorize!
 
@@ -18,7 +14,7 @@ module Api
 
         bookmarks = current_user.bookmarks
                                 .joins(:object)
-                                .includes(object: %i[actor media_attachments mentions tags])
+                                .includes(object: %i[actor media_attachments mentions tags poll])
                                 .recent
                                 .limit(params[:limit] || 20)
 

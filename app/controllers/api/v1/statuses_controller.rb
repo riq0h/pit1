@@ -42,7 +42,15 @@ module Api
 
         if @status.save
           process_mentions_and_tags
-          create_poll_for_status if poll_params.present?
+          
+          if poll_params.present?
+            poll = create_poll_for_status
+            unless poll
+              @status.destroy
+              return render json: { error: 'Failed to create poll' }, status: :unprocessable_entity
+            end
+          end
+          
           handle_direct_message_conversation if @status.visibility == 'direct'
           render json: serialized_status(@status), status: :created
         else
@@ -293,6 +301,7 @@ module Api
 
       def set_status
         @status = ActivityPubObject.where(object_type: 'Note')
+                                   .includes(:poll)
                                    .find(params[:id])
       end
 
@@ -306,7 +315,7 @@ module Api
       end
 
       def permit_status_params
-        params.permit(:status, :in_reply_to_id, :sensitive, :spoiler_text, :visibility, :language, media_ids: [], mentions: [])
+        params.permit(:status, :in_reply_to_id, :sensitive, :spoiler_text, :visibility, :language, media_ids: [], mentions: [], poll: [:expires_in, :multiple, :hide_totals, { options: [] }])
       end
 
       def transform_param_keys(permitted_params)
@@ -337,6 +346,7 @@ module Api
       def extract_media_and_mentions(transformed_params)
         @media_ids = transformed_params.delete('media_ids')
         @mentions = transformed_params.delete('mentions')
+        transformed_params.delete('poll')
       end
 
       def apply_default_visibility(transformed_params)
@@ -628,21 +638,24 @@ module Api
       def poll_params
         return nil if params[:poll].blank?
 
-        params.expect(poll: [:expires_in, :multiple, :hide_totals, { options: [] }])
+        params.permit(poll: [:expires_in, :multiple, :hide_totals, { options: [] }])[:poll]
       end
 
       def create_poll_for_status
         poll_data = poll_params
-        return unless poll_data
+        return nil unless poll_data
 
         options = poll_data[:options]
-        return unless options.is_a?(Array) && options.length.between?(2, 4)
+        return nil unless options.is_a?(Array)
+        
+        filtered_options = options.reject(&:blank?)
+        return nil unless filtered_options.length.between?(2, 4)
 
         expires_in = poll_data[:expires_in].to_i
-        expires_in = 86_400 if expires_in <= 0 # Default to 24 hours
+        expires_in = 86_400 if expires_in <= 0
         expires_at = Time.current + expires_in.seconds
 
-        formatted_options = options.map { |title| { 'title' => title.to_s } }
+        formatted_options = filtered_options.map { |title| { 'title' => title.to_s } }
 
         Poll.create!(
           object: @status,
@@ -651,6 +664,9 @@ module Api
           hide_totals: poll_data[:hide_totals] || false,
           options: formatted_options
         )
+      rescue ActiveRecord::RecordInvalid => e
+        Rails.logger.error "Poll creation failed: #{e.message}"
+        nil
       end
     end
   end
