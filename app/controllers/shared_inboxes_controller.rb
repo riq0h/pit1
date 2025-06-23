@@ -57,6 +57,8 @@ class SharedInboxesController < ApplicationController
       handle_relay_reject
     when 'Announce'
       handle_relay_announce
+    when 'Create'
+      handle_relay_create
     when 'Undo'
       handle_relay_undo
     else
@@ -142,6 +144,20 @@ class SharedInboxesController < ApplicationController
     RelayAnnounceProcessorJob.perform_later(@activity, @relay.id)
 
     head :accepted
+  end
+
+  def handle_relay_create
+    return head :bad_request unless @relay
+
+    # リレー状態管理のみ行って、処理は既存フローに任せる
+    if @relay.pending?
+      @relay.update!(state: 'accepted', last_error: nil)
+    end
+    
+    # リレー情報を保持したまま通常処理へ
+    @preserve_relay_info = @relay
+    @is_relay_activity = false
+    handle_regular_activity
   end
 
   def handle_relay_undo

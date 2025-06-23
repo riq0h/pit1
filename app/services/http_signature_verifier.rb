@@ -131,7 +131,7 @@ class HttpSignatureVerifier
     username = actor_data['preferredUsername'] || File.basename(uri.path)
     domain = uri.host
 
-    Actor.create!(
+    actor = Actor.create!(
       ap_id: actor_uri,
       username: username,
       domain: domain,
@@ -141,13 +141,18 @@ class HttpSignatureVerifier
       outbox_url: actor_data['outbox'],
       followers_url: actor_data['followers'],
       following_url: actor_data['following'],
+      featured_url: actor_data['featured'],
       public_key: public_key_data,
       raw_data: actor_data.to_json,
       fields: extract_fields_from_attachments(actor_data).to_json,
       local: false
     )
-
+    
+    # Featured Collection（ピン留め投稿）を取得
+    fetch_featured_collection_async(actor)
+    
     Rails.logger.info "👤 Remote actor created: #{username}@#{domain}"
+    actor
   end
 
   # 公開鍵解析
@@ -294,5 +299,14 @@ class HttpSignatureVerifier
   rescue StandardError => e
     Rails.logger.error "Pleroma-style signature verification error: #{e.message}"
     false
+  end
+
+  def fetch_featured_collection_async(actor)
+    return unless actor.featured_url.present?
+    
+    # Featured Collection を非同期で取得
+    FeaturedCollectionFetcher.new.fetch_for_actor(actor)
+  rescue StandardError => e
+    Rails.logger.error "❌ Failed to fetch featured collection for #{actor.username}@#{actor.domain}: #{e.message}"
   end
 end

@@ -46,6 +46,9 @@ class ActorFetcher
     # emoji情報を処理
     process_actor_emojis(actor, actor_data)
 
+    # Featured Collection（ピン留め投稿）を取得
+    fetch_featured_collection_async(actor)
+
     Rails.logger.info "👤 Remote actor created: #{username}@#{domain}"
     actor
   rescue ActiveRecord::RecordInvalid => e
@@ -177,5 +180,14 @@ class ActorFetcher
     end
   rescue StandardError => e
     Rails.logger.error "❌ Failed to process actor emojis: #{e.message}"
+  end
+
+  def fetch_featured_collection_async(actor)
+    return unless actor.featured_url.present?
+    
+    # Featured Collection を非同期で取得
+    FeaturedCollectionFetcher.new.fetch_for_actor(actor)
+  rescue StandardError => e
+    Rails.logger.error "❌ Failed to fetch featured collection for #{actor.username}@#{actor.domain}: #{e.message}"
   end
 end

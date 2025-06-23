@@ -45,12 +45,6 @@ module Api
                                     .ordered
                                     .limit(limit)
           statuses = pinned_statuses.map(&:object)
-
-          # リモートユーザで、pinned statusesが空の場合は、featured collectionから取得を試行
-          if statuses.empty? && !@account.local? && @account.featured_url.present?
-            fetcher = FeaturedCollectionFetcher.new
-            statuses = fetcher.fetch_for_actor(@account)
-          end
         else
           # 通常の投稿一覧（pinned statusesを最上部に表示）
           base_query = @account.objects.where(object_type: 'Note')
@@ -78,12 +72,6 @@ module Api
                                      .includes(object: %i[actor media_attachments mentions tags poll])
                                      .ordered
                                      .map(&:object)
-
-            # リモートユーザで、pinned statusesが空の場合は、featured collectionから取得を試行
-            if pinned_objects.empty? && !@account.local? && @account.featured_url.present?
-              fetcher = FeaturedCollectionFetcher.new
-              pinned_objects = fetcher.fetch_for_actor(@account)
-            end
 
             # Pinned statusesを除いた通常投稿
             regular_statuses = regular_statuses.where.not(id: pinned_objects.map(&:id)) if pinned_objects.any?
