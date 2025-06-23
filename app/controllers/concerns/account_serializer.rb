@@ -148,43 +148,31 @@ module AccountSerializer
     auto_link_urls(text_with_emoji)
   end
 
-  # クライアント用のフィールドvalue処理（emoji + URLリンク化）
   def format_field_value_for_client(value)
     return '' if value.blank?
 
-    # invisible spanタグを除去
     cleaned_value = value.gsub(/<span class="invisible">[^<]*<\/span>/, '')
-    
-    # emoji解析
     value_with_emoji = parse_content_for_frontend(cleaned_value)
-    # URLリンク化
     auto_link_urls(value_with_emoji)
   end
 
-  # API用のテキスト処理（ショートコード + URLリンク化）
   def format_text_for_api(text)
     return '' if text.blank?
 
-    # 既にHTMLタグが含まれている場合はそのまま返す（外部から受信した場合）
     if text.include?('<') && text.include?('>')
       text
     else
-      # プレーンテキストの場合はHTMLエスケープ後URLリンク化（絵文字はショートコードのまま）
       escaped_text = CGI.escapeHTML(text).gsub("\n", '<br>')
       apply_url_links(escaped_text)
     end
   end
 
-  # API用のフィールドvalue処理（ショートコード + URLリンク化）
   def format_field_value_for_api(value)
     return '' if value.blank?
 
-    # 既にHTMLリンクが含まれている場合はinvisible spanタグのみ除去して返す（外部から受信した場合）
     if value.include?('<a href=')
-      # invisible spanタグを除去
       value.gsub(/<span class="invisible">[^<]*<\/span>/, '')
     elsif value.match?(/\Ahttps?:\/\//)
-      # プレーンなURLの場合はHTMLリンクとして返す（ローカルで設定した場合）
       domain = begin
         URI.parse(value).host
       rescue StandardError
@@ -192,7 +180,6 @@ module AccountSerializer
       end
       %(<a href="#{CGI.escapeHTML(value)}" target="_blank" rel="nofollow noopener noreferrer me">#{CGI.escapeHTML(domain)}</a>)
     else
-      # プレーンテキストの場合はHTMLエスケープしてURLリンク化のみ
       escaped_value = CGI.escapeHTML(value)
       apply_url_links(escaped_value)
     end

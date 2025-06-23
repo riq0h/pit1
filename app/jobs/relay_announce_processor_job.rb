@@ -28,10 +28,10 @@ class RelayAnnounceProcessorJob < ApplicationJob
     when 'Create'
       process_create_activity(object_data)
     else
-      Rails.logger.warn "⚠️ Unsupported object type from relay: #{object_data['type']}"
+      Rails.logger.warn "Unsupported object type from relay: #{object_data['type']}"
     end
   rescue StandardError => e
-    Rails.logger.error "💥 Relay announce processing error: #{e.message}"
+    Rails.logger.error "Relay announce processing error: #{e.message}"
   end
 
   private
@@ -83,7 +83,7 @@ class RelayAnnounceProcessorJob < ApplicationJob
     actor_fetcher = ActorFetcher.new
     actor_fetcher.create_actor_from_data(actor_id, actor_data)
   rescue StandardError => e
-    Rails.logger.error "❌ Failed to create actor from relay: #{e.message}"
+    Rails.logger.error "Failed to create actor from relay: #{e.message}"
     nil
   end
 
@@ -107,9 +107,9 @@ class RelayAnnounceProcessorJob < ApplicationJob
       relay_id: @relay.id
     )
 
-    Rails.logger.info "📝 Created relay post from #{actor.display_name || actor.username}@#{actor.domain}"
+    Rails.logger.info "Created relay post from #{actor.display_name || actor.username}@#{actor.domain}"
   rescue ActiveRecord::RecordInvalid => e
-    Rails.logger.error "💾 Failed to create ActivityPub object from relay: #{e.message}"
+    Rails.logger.error "Failed to create ActivityPub object from relay: #{e.message}"
   end
 
   def determine_visibility(object_data)

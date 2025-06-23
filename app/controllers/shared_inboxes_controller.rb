@@ -29,18 +29,24 @@ class SharedInboxesController < ApplicationController
   private
 
   def check_if_relay_activity
-    @is_relay_activity = false
+    @is_relay_activity = relay_activity?
 
-    # 送信者がリレーかどうかをチェック
-    return unless @sender
-
-    # リレーアクターのURIとマッチするリレーを探す（accepted・pending両方を対象）
-    relay = (Relay.accepted.to_a + Relay.pending.to_a).find do |r|
-      r.actor_uri == @sender.ap_id
+    if @is_relay_activity
+      # リレーアクターのURIとマッチするリレーを探す（accepted・pending両方を対象）
+      @relay = (Relay.accepted.to_a + Relay.pending.to_a).find do |r|
+        # 1. 直接リレーサーバーからの活動の場合
+        return r if r.actor_uri == @activity['actor']
+        
+        # 2. HTTP SignatureのkeyIdでリレーを判定
+        signature_header = request.headers['Signature']
+        next unless signature_header
+        
+        key_id = extract_key_id_from_signature(signature_header)
+        next unless key_id
+        
+        strict_relay_keyid_check(key_id, r)
+      end
     end
-
-    @is_relay_activity = !relay.nil?
-    @relay = relay if @is_relay_activity
   end
 
   def handle_relay_activity
@@ -117,6 +123,16 @@ class SharedInboxesController < ApplicationController
     # リレーからのAnnounce（投稿の再配信）を処理
     object_id = @activity['object']
     return head :bad_request unless object_id.is_a?(String)
+
+    # リレーが実際に投稿を送信している場合、自動的にaccepted状態に更新
+    if @relay.pending?
+      @relay.update!(
+        state: 'accepted',
+        last_error: nil,
+        delivery_attempts: 0
+      )
+      Rails.logger.info "Relay #{@relay.domain} automatically accepted due to active announcement"
+    end
 
     # 既に処理済みかチェック
     existing_object = ActivityPubObject.find_by(ap_id: object_id)
