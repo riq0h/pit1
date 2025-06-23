@@ -7,6 +7,7 @@ module StatusSerializationHelper
   include MentionTagSerializer
   include TextLinkingHelper
   include StatusSerializer
+  include PollSerializer
 
   private
 
@@ -142,16 +143,7 @@ module StatusSerializationHelper
 
   def serialize_poll(status)
     return nil unless status.poll
-
-    poll = status.poll
-    result = poll.to_mastodon_api
-
-    # Add current user specific data if authenticated
-    if current_user
-      result[:voted] = poll.voted_by?(current_user)
-      result[:own_votes] = poll.actor_choices(current_user)
-    end
-
-    result
+    
+    serialize_poll_with_user_votes(status.poll, current_user)
   end
 end

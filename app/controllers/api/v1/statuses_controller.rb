@@ -645,31 +645,7 @@ module Api
       end
 
       def create_poll_for_status
-        poll_data = poll_params
-        return nil unless poll_data
-
-        options = poll_data[:options]
-        return nil unless options.is_a?(Array)
-
-        filtered_options = options.reject(&:blank?)
-        return nil unless filtered_options.length.between?(2, 4)
-
-        expires_in = poll_data[:expires_in].to_i
-        expires_in = 86_400 if expires_in <= 0
-        expires_at = Time.current + expires_in.seconds
-
-        formatted_options = filtered_options.map { |title| { 'title' => title.to_s } }
-
-        Poll.create!(
-          object: @status,
-          expires_at: expires_at,
-          multiple: poll_data[:multiple] || false,
-          hide_totals: poll_data[:hide_totals] || false,
-          options: formatted_options
-        )
-      rescue ActiveRecord::RecordInvalid => e
-        Rails.logger.error "Poll creation failed: #{e.message}"
-        nil
+        PollCreationService.create_for_status(@status, poll_params)
       end
     end
   end

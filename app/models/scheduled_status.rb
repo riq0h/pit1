@@ -125,23 +125,11 @@ class ScheduledStatus < ApplicationRecord
   def create_poll_for_status(status)
     poll_params = params['poll']
     return unless poll_params.is_a?(Hash)
-
-    options = poll_params['options']
-    return unless options.is_a?(Array) && options.length.between?(2, 4)
-
-    expires_in = poll_params['expires_in'].to_i
-    expires_in = 86_400 if expires_in <= 0 # Default to 24 hours
-    expires_at = Time.current + expires_in.seconds
-
-    formatted_options = options.map { |title| { 'title' => title.to_s } }
-
-    Poll.create!(
-      object: status,
-      expires_at: expires_at,
-      multiple: poll_params['multiple'] || false,
-      hide_totals: poll_params['hide_totals'] || false,
-      options: formatted_options
-    )
+    
+    # パラメータをシンボルキーに変換
+    symbolized_params = poll_params.deep_symbolize_keys
+    
+    PollCreationService.create_for_status(status, symbolized_params)
   end
 
   def serialize_params
