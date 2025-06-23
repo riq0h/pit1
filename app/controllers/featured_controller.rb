@@ -10,13 +10,20 @@ class FeaturedController < ApplicationController
       return
     end
 
-    # Featured collection (currently empty - can be extended later)
+    # Featured collection（ピン留め投稿）
+    pinned_statuses = @actor.pinned_statuses
+                            .includes(object: [:actor])
+                            .ordered
+                            .map(&:object)
+
+    ordered_items = pinned_statuses.map(&:ap_id)
+
     featured_collection = {
       '@context' => 'https://www.w3.org/ns/activitystreams',
       'id' => "#{activitypub_base_url}/users/#{@actor.username}/collections/featured",
       'type' => 'OrderedCollection',
-      'totalItems' => 0,
-      'orderedItems' => []
+      'totalItems' => ordered_items.size,
+      'orderedItems' => ordered_items
     }
 
     render json: featured_collection, content_type: 'application/activity+json; charset=utf-8'

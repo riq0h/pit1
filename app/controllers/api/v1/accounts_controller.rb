@@ -45,6 +45,12 @@ module Api
                                     .ordered
                                     .limit(limit)
           statuses = pinned_statuses.map(&:object)
+
+          # リモートユーザで、pinned statusesが空の場合は、featured collectionから取得を試行
+          if statuses.empty? && !@account.local? && @account.featured_url.present?
+            fetcher = FeaturedCollectionFetcher.new
+            statuses = fetcher.fetch_for_actor(@account)
+          end
         else
           # 通常の投稿一覧（pinned statusesを最上部に表示）
           base_query = @account.objects.where(object_type: 'Note')
@@ -63,24 +69,34 @@ module Api
           regular_statuses = apply_timeline_pagination(regular_statuses)
           regular_statuses = regular_statuses.limit(limit)
 
-          # Pinned statusesを取得（self-viewの場合のみ）
-          if current_user == @account
+          # Pinned statusesは最初のページでのみ表示（ページネーションパラメータがない場合のみ）
+          is_first_page = params[:max_id].blank? && params[:since_id].blank? && params[:min_id].blank?
+          
+          if is_first_page
+            # Pinned statusesを取得（全ユーザ対象）
             pinned_objects = @account.pinned_statuses
                                      .includes(object: %i[actor media_attachments mentions tags poll])
                                      .ordered
                                      .map(&:object)
+
+            # リモートユーザで、pinned statusesが空の場合は、featured collectionから取得を試行
+            if pinned_objects.empty? && !@account.local? && @account.featured_url.present?
+              fetcher = FeaturedCollectionFetcher.new
+              pinned_objects = fetcher.fetch_for_actor(@account)
+            end
 
             # Pinned statusesを除いた通常投稿
             regular_statuses = regular_statuses.where.not(id: pinned_objects.map(&:id)) if pinned_objects.any?
 
             # Pinned statusesを先頭に配置
             statuses = pinned_objects + regular_statuses.to_a
-          else
-            statuses = regular_statuses
-          end
 
-          # 制限数に切り詰める
-          statuses = statuses.first(limit)
+            # 制限数に切り詰める
+            statuses = statuses.first(limit)
+          else
+            # ページネーション中はPinnedを表示しない
+            statuses = regular_statuses.to_a
+          end
         end
 
         render json: statuses.map { |status| serialized_status(status) }
