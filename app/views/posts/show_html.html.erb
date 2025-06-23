@@ -61,9 +61,9 @@
                  class="max-w-full max-h-96 object-contain border border-gray-200"
                  loading="lazy">
           <% elsif media.video? %>
-            <video class="max-w-full max-h-96 border border-gray-200" controls preload="metadata">
+            <video class="w-full border border-gray-200" controls preload="auto" style="max-height: 70vh; min-height: 300px;">
               <source src="<%= media.url %>" type="<%= media.content_type %>">
-              <%= I18n.t('media.video_not_supported') %>
+              お使いのブラウザは動画の再生に対応していません。
             </video>
           <% else %>
             <div class="flex items-center p-4 bg-gray-50 border border-gray-200">
@@ -158,9 +158,9 @@
                          class="max-w-full max-h-96 object-contain border border-gray-200"
                          loading="lazy">
                   <% elsif media.video? %>
-                    <video class="max-w-full max-h-96 border border-gray-200" controls preload="metadata">
+                    <video class="w-full border border-gray-200" controls preload="auto" style="max-height: 70vh; min-height: 300px;">
                       <source src="<%= media.url %>" type="<%= media.content_type %>">
-                      <%= I18n.t('media.video_not_supported') %>
+                      お使いのブラウザは動画の再生に対応していません。
                     </video>
                   <% else %>
                     <div class="flex items-center p-4 bg-gray-50 border border-gray-200">

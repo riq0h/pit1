@@ -47,7 +47,7 @@
       <%= hidden_field_tag :scope, @pre_auth.scope, id: nil %>
       <%= hidden_field_tag :code_challenge, @pre_auth.code_challenge, id: nil %>
       <%= hidden_field_tag :code_challenge_method, @pre_auth.code_challenge_method, id: nil %>
-      <%= submit_tag "許可", 
+      <%= submit_tag (@pre_auth.redirect_uri == 'urn:ietf:wg:oauth:2.0:oob' ? '許可（コード表示）' : '許可'), 
           class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
           style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
     <% end %>

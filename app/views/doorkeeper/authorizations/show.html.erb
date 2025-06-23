@@ -1,7 +1,63 @@
-<header class="page-header">
-  <h1><%= t('.title') %>:</h1>
-</header>
+<% content_for :title, "認証コード" %>
 
-<main role="main">
-  <code id="authorization_code"><%= params[:code] %></code>
-</main>
+<!-- ブログ風認証コード表示ページ -->
+<div class="max-w-sm sm:max-w-md mx-auto mt-8 sm:mt-16 px-4 sm:px-0">
+  <!-- ヘッダー -->
+  <header class="mb-6 sm:mb-8 text-center">
+    <h1 class="text-lg sm:text-xl md:text-2xl text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+      認証コード
+    </h1>
+  </header>
+
+  <!-- 認証コード表示（四角い枠で囲む） -->
+  <div class="p-4 sm:p-6 border-2 border-gray-400 mb-4 sm:mb-6">
+    <div class="space-y-4 sm:space-y-6">
+      <p class="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+        以下の認証コードをアプリケーションに入力してください：
+      </p>
+      
+      <!-- 認証コード -->
+      <div class="p-4 border border-gray-300 text-center">
+        <code id="authorization_code" class="text-lg sm:text-xl font-mono text-gray-900 select-all break-all">
+          <%= params[:code] %>
+        </code>
+      </div>
+      
+      <!-- コピーボタン -->
+      <div class="text-center">
+        <button onclick="copyCode()" 
+                class="px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm"
+                style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+          コードをコピー
+        </button>
+      </div>
+      
+      <p class="text-xs sm:text-sm text-gray-600 text-center" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+        このコードは10分間有効です。他の人と共有しないでください。
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+function copyCode() {
+  const code = document.getElementById('authorization_code').textContent;
+  navigator.clipboard.writeText(code).then(function() {
+    // 簡単なフィードバック
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = 'コピーしました！';
+    setTimeout(() => {
+      button.textContent = originalText;
+    }, 2000);
+  }).catch(function(err) {
+    // フォールバック：選択状態にする
+    const codeElement = document.getElementById('authorization_code');
+    const range = document.createRange();
+    range.selectNodeContents(codeElement);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+}
+</script>

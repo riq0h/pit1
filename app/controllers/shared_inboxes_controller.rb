@@ -59,6 +59,9 @@ class SharedInboxesController < ApplicationController
       handle_relay_announce
     when 'Undo'
       handle_relay_undo
+    when 'Create'
+      # リレーからのCreate活動は通常の投稿として処理
+      handle_create_activity
     else
       Rails.logger.warn "⚠️ Unsupported relay activity type: #{@activity['type']}"
       head :accepted
