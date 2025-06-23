@@ -1,0 +1,13 @@
+<%
+  # 投稿内容表示部分
+  # パラメータ: content
+%>
+
+<div class="post-card-content-container">
+  <% 
+    # 最適化された処理：メンションは投稿時/受信時に既にリンク化済み
+    # URLリンク化 + 絵文字HTML変換を一括処理
+    final_content = parse_content_for_frontend(content)
+  %>
+  <div class="post-card-content-text"><%= final_content.html_safe %></div>
+</div>

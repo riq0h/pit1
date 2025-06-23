@@ -1,0 +1,31 @@
+<%
+  # 投稿タイムライン表示の共通コンポーネント
+  # パラメータ:
+  # - posts: 投稿配列
+  # - more_posts_available: 追加読み込み可能フラグ
+  # - load_more_url: 追加読み込み用URL
+  # - frame_id: turbo_frame_tag ID (デフォルト: "load_more")
+  
+  frame_id ||= "load_more"
+%>
+
+<%= turbo_frame_tag frame_id do %>
+  <% posts.each do |timeline_item| %>
+    <% if timeline_item[:type] == :post %>
+      <%= render 'shared/unified_post_card', 
+                 post: timeline_item[:item], 
+                 border_style: 'normal' %>
+    <% elsif timeline_item[:type] == :reblog %>
+      <%= render 'shared/unified_post_card', 
+                 post: timeline_item[:item].object, 
+                 actor: timeline_item[:item].object.actor, 
+                 border_style: 'double' %>
+    <% end %>
+  <% end %>
+
+  <% if more_posts_available && load_more_url.present? %>
+    <%= turbo_frame_tag frame_id, src: load_more_url, loading: :lazy do %>
+      <%= render 'shared/loading_indicator' %>
+    <% end %>
+  <% end %>
+<% end %>

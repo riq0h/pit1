@@ -1,0 +1,30 @@
+<%
+  # 投稿カードヘッダー部分
+  # パラメータ: actor, published_at, post, pinned
+%>
+
+<header class="mb-2">
+  <div class="flex items-center justify-between mb-2">
+    <!-- 左側：ユーザアバター -->
+    <%= render 'shared/post_card_avatar', actor: actor %>
+    
+    <!-- 右側：ユーザ名と日時表示 -->
+    <div class="text-right">
+      <!-- ユーザ名 -->
+      <div class="post-card-username">
+        <%= render 'shared/post_card_username_link', actor: actor %>
+        <span class="post-card-handle">
+          @<%= actor.username %><%= actor.domain.present? ? "@#{actor.domain}" : "" %>
+        </span>
+      </div>
+      
+      <!-- 日時表示 -->
+      <div class="post-card-timestamp">
+        <% if pinned %>
+          <span class="mr-2">固定投稿</span>
+        <% end %>
+        <%= render 'shared/post_card_time_link', actor: actor, post: post, published_at: published_at %>
+      </div>
+    </div>
+  </div>
+</header>

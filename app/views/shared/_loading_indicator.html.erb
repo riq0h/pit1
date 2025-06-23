@@ -1,0 +1,24 @@
+<%
+  # ローディングインジケーター共通コンポーネント
+  # パラメータ: message (デフォルト: "通信中")
+  message ||= "通信中"
+%>
+
+<div class="text-center py-8">
+  <div class="inline-block w-8 h-3">
+    <svg viewBox="0 0 32 12" class="w-full h-full">
+      <path d="M0,6 L6,6 L8,2 L10,10 L12,4 L14,8 L16,6 L32,6" 
+            stroke="#6B7280" stroke-width="1" fill="none">
+        <animate attributeName="stroke-dasharray" 
+                 values="0,80;40,40;0,80" 
+                 dur="1.5s" 
+                 repeatCount="indefinite"/>
+        <animate attributeName="stroke-dashoffset" 
+                 values="0;-80" 
+                 dur="1.5s" 
+                 repeatCount="indefinite"/>
+      </path>
+    </svg>
+  </div>
+  <p class="mt-2 text-gray-600"><%= message %></p>
+</div>

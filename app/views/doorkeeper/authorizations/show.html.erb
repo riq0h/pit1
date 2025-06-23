@@ -4,7 +4,7 @@
 <div class="max-w-sm sm:max-w-md mx-auto mt-8 sm:mt-16 px-4 sm:px-0">
   <!-- ヘッダー -->
   <header class="mb-6 sm:mb-8 text-center">
-    <h1 class="text-lg sm:text-xl md:text-2xl text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+    <h1 class="page-heading">
       認証コード
     </h1>
   </header>
@@ -12,7 +12,7 @@
   <!-- 認証コード表示（四角い枠で囲む） -->
   <div class="p-4 sm:p-6 border-2 border-gray-400 mb-4 sm:mb-6">
     <div class="space-y-4 sm:space-y-6">
-      <p class="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+      <p class="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4 text-normal">
         以下の認証コードをアプリケーションに入力してください：
       </p>
       
@@ -26,13 +26,12 @@
       <!-- コピーボタン -->
       <div class="text-center">
         <button onclick="copyCode()" 
-                class="px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm"
-                style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                class="px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm btn-secondary btn-sm">
           コードをコピー
         </button>
       </div>
       
-      <p class="text-xs sm:text-sm text-gray-600 text-center" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+      <p class="text-xs sm:text-sm text-gray-600 text-center text-normal">
         このコードは10分間有効です。他の人と共有しないでください。
       </p>
     </div>

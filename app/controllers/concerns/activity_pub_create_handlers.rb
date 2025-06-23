@@ -44,9 +44,10 @@ module ActivityPubCreateHandlers
     handle_media_attachments(object, object_data)
     handle_mentions(object, object_data)
     handle_emojis(object, object_data)
+    handle_poll(object, object_data) if object_data['type'] == 'Question'
     handle_direct_message_conversation(object, object_data) if object.visibility == 'direct'
     update_reply_count_if_needed(object)
-    
+
     # アクティビティベースでpin投稿を更新
     update_pin_posts_if_needed(object.actor)
 
@@ -71,10 +72,10 @@ module ActivityPubCreateHandlers
       raw_data: object_data.to_json,
       local: false
     }
-    
+
     # リレー経由の投稿の場合はrelay_idを設定
     attributes[:relay_id] = @preserve_relay_info.id if @preserve_relay_info
-    
+
     attributes
   end
 
@@ -178,13 +179,40 @@ module ActivityPubCreateHandlers
     return if last_pin_update && last_pin_update > 24.hours.ago
 
     Rails.logger.info "🔄 Updating pin posts for #{actor.username}@#{actor.domain} (activity-based)"
-    
+
     # 既存のpin投稿を削除して再取得
     actor.pinned_statuses.destroy_all
-    
+
     # バックグラウンドで実行して応答時間に影響しないようにする
     UpdatePinPostsJob.perform_later(actor.id)
   rescue StandardError => e
     Rails.logger.error "❌ Failed to trigger pin posts update for #{actor.username}@#{actor.domain}: #{e.message}"
+  end
+
+  def handle_poll(object, object_data)
+    poll_options = object_data['oneOf'] || object_data['anyOf']
+    return unless poll_options.present?
+
+    options = poll_options.map { |option| { 'title' => option['name'] } }
+    
+    expires_at = if object_data['endTime'].present?
+                   Time.parse(object_data['endTime'])
+                 else
+                   1.day.from_now
+                 end
+
+    poll = Poll.create!(
+      object: object,
+      options: options,
+      expires_at: expires_at,
+      multiple: object_data['anyOf'].present?,
+      hide_totals: false,
+      votes_count: 0,
+      voters_count: object_data['votersCount'] || 0
+    )
+
+    Rails.logger.info "📊 Poll created with #{options.count} options for object #{object.id}"
+  rescue StandardError => e
+    Rails.logger.error "❌ Failed to create poll: #{e.message}"
   end
 end

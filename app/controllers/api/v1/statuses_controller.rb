@@ -42,7 +42,7 @@ module Api
 
         if @status.save
           process_mentions_and_tags
-          
+
           if poll_params.present?
             poll = create_poll_for_status
             unless poll
@@ -50,9 +50,9 @@ module Api
               return render json: { error: 'Failed to create poll' }, status: :unprocessable_entity
             end
           end
-          
+
           handle_direct_message_conversation if @status.visibility == 'direct'
-          
+
           render json: serialized_status(@status), status: :created
         else
           render_validation_error(@status)
@@ -286,7 +286,7 @@ module Api
 
       def attach_media_to_status
         media_attachments = current_user.media_attachments.where(
-          id: @media_ids, 
+          id: @media_ids,
           object_id: nil,
           processed: true
         )
@@ -316,7 +316,8 @@ module Api
       end
 
       def permit_status_params
-        params.permit(:status, :in_reply_to_id, :sensitive, :spoiler_text, :visibility, :language, media_ids: [], mentions: [], poll: [:expires_in, :multiple, :hide_totals, { options: [] }])
+        params.permit(:status, :in_reply_to_id, :sensitive, :spoiler_text, :visibility, :language, media_ids: [], mentions: [],
+                                                                                                   poll: [:expires_in, :multiple, :hide_totals, { options: [] }])
       end
 
       def transform_param_keys(permitted_params)
@@ -452,6 +453,7 @@ module Api
         base_url = Rails.application.config.activitypub.base_url
         "#{base_url}/users/#{current_user.username}/posts/#{Letter::Snowflake.generate}"
       end
+
 
       def build_ancestors(status)
         return [] if status.in_reply_to_ap_id.blank?
@@ -648,7 +650,7 @@ module Api
 
         options = poll_data[:options]
         return nil unless options.is_a?(Array)
-        
+
         filtered_options = options.reject(&:blank?)
         return nil unless filtered_options.length.between?(2, 4)
 

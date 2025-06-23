@@ -1,0 +1,22 @@
+<%
+  # 時刻リンク部分
+  # パラメータ: actor, post, published_at
+%>
+
+<% if actor.local? %>
+  <%= link_to post_html_path(actor.username, post.id), 
+              class: "post-card-time-link",
+              data: { turbo_frame: "_top" } do %>
+    <time datetime="<%= published_at.iso8601 %>" title="<%= l(published_at, format: :long) %>">
+      <%= l(published_at, format: :long) %>
+    </time>
+  <% end %>
+<% else %>
+  <%= link_to post.ap_id, 
+              class: "post-card-time-link",
+              data: { turbo_frame: "_top" } do %>
+    <time datetime="<%= published_at.iso8601 %>" title="<%= l(published_at, format: :long) %>">
+      <%= l(published_at, format: :long) %>
+    </time>
+  <% end %>
+<% end %>

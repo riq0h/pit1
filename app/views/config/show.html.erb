@@ -5,7 +5,7 @@
 <div class="max-w-2xl mx-auto">
   <!-- 設定ページヘッダー -->
   <header class="mb-12 text-center">
-    <h1 class="text-xl sm:text-2xl text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+    <h1 class="page-heading">
       設定
     </h1>
   </header>
@@ -15,65 +15,55 @@
     
     <!-- インスタンス情報セクション -->
     <section class="border border-gray-300 p-6">
-      <h2 class="text-lg text-gray-900 mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+      <h2 class="text-lg section-heading mb-4">
         インスタンス情報
       </h2>
       
       <div class="space-y-4">
         <div>
           <%= form.label "config[instance_name]", "インスタンス名", 
-              class: "block text-sm text-gray-700 mb-2", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              class: "form-label" %>
           <%= form.text_field "config[instance_name]", 
               value: @config[:instance_name],
               placeholder: "インスタンス名（ブログタイトル）",
-              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              class: "w-full form-input" %>
         </div>
 
         <div>
           <%= form.label "config[instance_description]", "説明", 
-              class: "block text-sm text-gray-700 mb-2", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              class: "form-label" %>
           <%= form.text_area "config[instance_description]", 
               value: @config[:instance_description],
               placeholder: "インスタンスの説明",
               rows: 3,
-              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors resize-none",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              class: "w-full form-input resize-none" %>
         </div>
 
         <div>
           <%= form.label "config[instance_contact_email]", "連絡先メール", 
-              class: "block text-sm text-gray-700 mb-2", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              class: "form-label" %>
           <%= form.email_field "config[instance_contact_email]", 
               value: @config[:instance_contact_email],
               placeholder: "contact@example.com",
-              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              class: "w-full form-input" %>
         </div>
 
         <div>
           <%= form.label "config[instance_maintainer]", "管理者名", 
-              class: "block text-sm text-gray-700 mb-2", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              class: "form-label" %>
           <%= form.text_field "config[instance_maintainer]", 
               value: @config[:instance_maintainer],
               placeholder: "管理者名",
-              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              class: "w-full form-input" %>
         </div>
 
         <div>
           <%= form.label "config[blog_footer]", "フッター", 
-              class: "block text-sm text-gray-700 mb-2", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              class: "form-label" %>
           <%= form.text_field "config[blog_footer]", 
               value: @config[:blog_footer],
               placeholder: "フッターに表示するテキスト",
-              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              class: "w-full form-input" %>
         </div>
 
       </div>
@@ -82,19 +72,17 @@
     <!-- ユーザプロフィールセクション -->
     <section class="border border-gray-300 p-6">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+        <h2 class="text-lg section-heading">
           プロフィール設定
         </h2>
         <%= link_to "プロフィールページを表示", profile_path(current_user.username), 
-            class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
-            style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;",
+            class: "btn-secondary btn-sm",
             target: "_blank" %>
       </div>
       <div class="space-y-4">
         <div>
           <%= form.label "actor[avatar]", "プロフィール画像", 
-              class: "block text-sm text-gray-700 mb-2", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              class: "form-label" %>
           
           <div class="border border-gray-300 border-dashed p-6 text-center hover:border-gray-400 transition-colors">
             <%= form.file_field "actor[avatar]", 
@@ -109,7 +97,7 @@
                 <% else %>
                   <img id="avatar_image_preview" class="mx-auto max-w-16 max-h-16 object-contain mb-2 rounded">
                 <% end %>
-                <p class="text-sm text-gray-600" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                <p class="text-sm text-gray-600" class="text-normal">
                   クリックして変更
                 </p>
               </div>
@@ -117,10 +105,10 @@
                 <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                   <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
-                <p class="mt-2 text-sm text-gray-600" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                <p class="mt-2 text-sm text-gray-600" class="text-normal">
                   <span class="font-medium">クリックしてファイルを選択</span> またはドラッグ&ドロップ
                 </p>
-                <p class="text-xs text-gray-500" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+                <p class="text-xs text-gray-500" class="page-heading">
                   PNG, JPG, GIF, WebP対応
                 </p>
               </div>
@@ -130,29 +118,25 @@
 
         <div>
           <%= form.label "actor[display_name]", "ユーザ名", 
-              class: "block text-sm text-gray-700 mb-2", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              class: "form-label" %>
           <%= form.text_field "actor[display_name]", 
               value: current_user&.display_name,
               placeholder: "表示名",
-              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-          <p class="text-xs text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+              class: "w-full form-input" %>
+          <p class="text-xs text-gray-500 mt-1" class="page-heading">
             プロフィールページで表示される名前です。
           </p>
         </div>
 
         <div>
           <%= form.label "actor[note]", "自己紹介", 
-              class: "block text-sm text-gray-700 mb-2", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              class: "form-label" %>
           <%= form.text_area "actor[note]", 
               value: current_user&.note,
               placeholder: "あなたの自己紹介を入力してください",
               rows: 4,
-              class: "w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors resize-none",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-          <p class="text-xs text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+              class: "w-full form-input resize-none" %>
+          <p class="text-xs text-gray-500 mt-1" class="page-heading">
             https://から始まるURLは自動的にリンクになります。:絵文字名:でカスタム絵文字が使用できます。
           </p>
         </div>
@@ -160,12 +144,12 @@
         <!-- URL設定欄 -->
         <div>
           <div class="flex items-center justify-between mb-3">
-            <label class="block text-sm text-gray-700" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+            <label class="block text-sm text-gray-700" class="text-normal">
               プロフィールリンク
             </label>
             <button type="button" onclick="addProfileLink()" 
                     class="px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm"
-                    style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                    class="text-normal">
               追加
             </button>
           </div>
@@ -182,19 +166,19 @@
                              value="<%= link['name'] %>"
                              placeholder="ラベル"
                              class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
-                             style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                             class="text-normal">
                     </div>
                     <div class="flex-1 mx-3">
                       <input type="text" name="actor[fields][][value]" 
                              value="<%= link['value'] %>"
                              placeholder="値を入力"
                              class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
-                             style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                             class="text-normal">
                     </div>
                     <div class="ml-2">
                       <button type="button" onclick="removeProfileLink(this)" 
                               class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm <%= 'hidden' if existing_links.length <= 1 %>"
-                              style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                              class="text-normal">
                         削除
                       </button>
                     </div>
@@ -208,19 +192,19 @@
                            value=""
                            placeholder="ラベル"
                            class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
-                           style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                           class="text-normal">
                   </div>
                   <div class="flex-1 mx-3">
                     <input type="text" name="actor[fields][][value]" 
                            value=""
                            placeholder="値を入力"
                            class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
-                           style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                           class="text-normal">
                   </div>
                   <div class="ml-2">
                     <button type="button" onclick="removeProfileLink(this)" 
                             class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm hidden"
-                            style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                            class="text-normal">
                       削除
                     </button>
                   </div>
@@ -234,19 +218,19 @@
                          value=""
                          placeholder="ラベル"
                          class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
-                         style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                         class="text-normal">
                 </div>
                 <div class="flex-1 mx-3">
                   <input type="text" name="actor[fields][][value]" 
                          value=""
                          placeholder="値を入力"
                          class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
-                         style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                         class="text-normal">
                 </div>
                 <div class="ml-2">
                   <button type="button" onclick="removeProfileLink(this)" 
                           class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm hidden"
-                          style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+                          class="text-normal">
                     削除
                   </button>
                 </div>
@@ -254,7 +238,7 @@
             <% end %>
           </div>
           
-          <p class="text-xs text-gray-500 mt-3" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+          <p class="text-xs text-gray-500 mt-3" class="page-heading">
             プロフィールページに表示されるリンクを設定できます（最大5個まで）。ラベルと値で:絵文字名:が使用できます。
           </p>
         </div>
@@ -263,25 +247,23 @@
 
     <!-- インスタンス管理セクション -->
     <section class="border border-gray-300 p-6 mt-8">
-      <h2 class="text-lg text-gray-900 mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+      <h2 class="text-lg section-heading mb-4">
         インスタンス管理
       </h2>
       
       <div class="space-y-4">
         <div>
           <%= link_to "リレー管理", config_relays_path, 
-              class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-          <p class="text-sm text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+              class: "btn-secondary btn-sm" %>
+          <p class="text-sm text-gray-500 mt-1">
             リレーサーバとの接続を管理できます。
           </p>
         </div>
         
         <div>
           <%= link_to "カスタム絵文字の管理", config_custom_emojis_path, 
-              class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
-          <p class="text-sm text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+              class: "btn-secondary btn-sm" %>
+          <p class="text-sm text-gray-500 mt-1">
             インスタンス独自の絵文字を追加・管理できます。
           </p>
         </div>
@@ -291,17 +273,17 @@
 
     <!-- Cloudflare R2 設定セクション -->
     <section class="border border-gray-300 p-6 mt-8">
-      <h2 class="text-lg text-gray-900 mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+      <h2 class="text-lg section-heading mb-4">
         オブジェクトストレージ設定
       </h2>
       
       <div class="space-y-4">
         <div>
-          <label class="block text-sm text-gray-700 mb-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+          <label class="block text-sm text-gray-700 mb-2" class="text-normal">
             ステータス
           </label>
           <div class="flex items-center">
-            <span class="<%= @config[:s3_enabled] ? 'text-green-600' : 'text-gray-500' %> text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+            <span class="<%= @config[:s3_enabled] ? 'text-green-600' : 'text-gray-500' %> text-sm" class="text-normal">
               <%= @config[:s3_enabled] ? '✓ 有効' : '無効' %>
             </span>
           </div>
@@ -309,47 +291,47 @@
         
         <% if @config[:s3_enabled] %>
           <div>
-            <label class="block text-sm text-gray-700 mb-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+            <label class="block text-sm text-gray-700 mb-2" class="text-normal">
               エンドポイント
             </label>
-            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" class="text-normal">
               <%= @config[:s3_endpoint] || '未設定' %>
             </div>
           </div>
           
           <div>
-            <label class="block text-sm text-gray-700 mb-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+            <label class="block text-sm text-gray-700 mb-2" class="text-normal">
               バケット名
             </label>
-            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" class="text-normal">
               <%= @config[:s3_bucket] || '未設定' %>
             </div>
           </div>
           
           <div>
-            <label class="block text-sm text-gray-700 mb-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+            <label class="block text-sm text-gray-700 mb-2" class="text-normal">
               アクセスキーID
             </label>
-            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" class="text-normal">
               <%= @config[:r2_access_key_id] ? @config[:r2_access_key_id][0..7] + '...' : '未設定' %>
             </div>
           </div>
           
           <div>
-            <label class="block text-sm text-gray-700 mb-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+            <label class="block text-sm text-gray-700 mb-2" class="text-normal">
               シークレットアクセスキー
             </label>
-            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" class="text-normal">
               <%= @config[:r2_secret_access_key] ? '••••••••••••••••' : '未設定' %>
             </div>
           </div>
           
           <% if @config[:s3_alias_host].present? %>
             <div>
-              <label class="block text-sm text-gray-700 mb-2" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+              <label class="block text-sm text-gray-700 mb-2" class="text-normal">
                 カスタムドメイン
               </label>
-              <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+              <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" class="text-normal">
                 <%= @config[:s3_alias_host] %>
               </div>
             </div>
@@ -360,15 +342,14 @@
 
     <!-- デザインセクション -->
     <section class="border border-gray-300 p-6 mt-8">
-      <h2 class="text-lg text-gray-900 mb-4" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+      <h2 class="text-lg section-heading mb-4">
         デザイン設定
       </h2>
       
       <div class="space-y-4">
         <div>
           <%= form.label "config[background_color]", "背景色", 
-              class: "block text-sm text-gray-700 mb-2", 
-              style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+              class: "form-label" %>
           <div class="flex items-center space-x-3">
             <%= form.text_field "config[background_color]", 
                 value: @config[:background_color],
@@ -383,7 +364,7 @@
                  title="現在の背景色"
                  id="color_preview"></div>
           </div>
-          <p class="text-xs text-gray-500 mt-1" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 300;">
+          <p class="text-xs text-gray-500 mt-1" class="page-heading">
             #から始まる6桁のカラーコードで入力してください（例: #fdfbfb）
           </p>
         </div>
@@ -402,7 +383,7 @@
   <!-- 成功メッセージ -->
   <% if flash[:notice] %>
     <div class="mt-6 p-4 bg-green-50 border border-green-200">
-      <p class="text-sm text-green-700" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+      <p class="text-sm text-green-700" class="text-normal">
         <%= flash[:notice] %>
       </p>
     </div>
@@ -411,7 +392,7 @@
   <!-- エラーメッセージ -->
   <% if flash[:alert] %>
     <div class="mt-6 p-4 bg-red-50 border border-red-200">
-      <p class="text-sm text-red-700" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+      <p class="text-sm text-red-700" class="text-normal">
         <%= flash[:alert] %>
       </p>
     </div>
@@ -538,19 +519,19 @@ function addProfileLink() {
              value=""
              placeholder="ラベル"
              class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
-             style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+             class="text-normal">
     </div>
     <div class="flex-1 mx-3">
       <input type="text" name="actor[fields][][value]" 
              value=""
              placeholder="値を入力"
              class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
-             style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+             class="text-normal">
     </div>
     <div class="ml-2">
       <button type="button" onclick="removeProfileLink(this)" 
               class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm"
-              style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+              class="text-normal">
         削除
       </button>
     </div>

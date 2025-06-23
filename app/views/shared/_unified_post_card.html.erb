@@ -1,0 +1,52 @@
+<%
+  pinned ||= false
+  border_style ||= 'normal'
+  actor ||= nil
+  
+  display_actor = actor || post.actor
+  display_content = post.content
+  display_published_at = post.published_at
+  display_replies_count = post.replies_count
+  display_media = post.media_attachments
+  
+  # ボーダースタイルの決定
+  border_classes = case border_style
+                   when 'double'
+                     'mb-8 p-6'
+                   when 'pinned'
+                     'mb-8 p-6 border-2 border-gray-400'
+                   else
+                     'mb-8 p-6 border border-gray-300'
+                   end
+  
+  # 動的スタイルの生成（インライン優先度確保）
+  border_style_attr = border_style == 'double' ? 'border: 3px double #d1d5db;' : ''
+%>
+
+<article class="<%= border_classes %>" 
+         <% if border_style_attr.present? %>style="<%= border_style_attr %>"<% end %>>
+  
+  <!-- 共通ヘッダー -->
+  <%= render 'shared/post_card_header', 
+             actor: display_actor, 
+             published_at: display_published_at, 
+             post: post,
+             pinned: pinned %>
+
+  <!-- 共通本文 -->
+  <%= render 'shared/post_card_content', 
+             content: display_content %>
+
+  <!-- 共通返信カウント -->
+  <% if display_replies_count > 0 %>
+    <%= render 'shared/post_card_replies', 
+               replies_count: display_replies_count %>
+  <% end %>
+
+  <!-- 共通メディア -->
+  <% if display_media.any? %>
+    <%= render 'shared/post_card_media', 
+               media_attachments: display_media %>
+  <% end %>
+
+</article>

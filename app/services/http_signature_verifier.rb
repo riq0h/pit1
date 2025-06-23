@@ -147,10 +147,10 @@ class HttpSignatureVerifier
       fields: extract_fields_from_attachments(actor_data).to_json,
       local: false
     )
-    
+
     # Featured Collection（ピン留め投稿）を取得
     fetch_featured_collection_async(actor)
-    
+
     Rails.logger.info "👤 Remote actor created: #{username}@#{domain}"
     actor
   end
@@ -303,7 +303,7 @@ class HttpSignatureVerifier
 
   def fetch_featured_collection_async(actor)
     return unless actor.featured_url.present?
-    
+
     # Featured Collection を非同期で取得
     FeaturedCollectionFetcher.new.fetch_for_actor(actor)
   rescue StandardError => e

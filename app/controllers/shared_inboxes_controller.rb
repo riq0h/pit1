@@ -31,21 +31,21 @@ class SharedInboxesController < ApplicationController
   def check_if_relay_activity
     @is_relay_activity = relay_activity?
 
-    if @is_relay_activity
-      # リレーアクターのURIとマッチするリレーを探す（accepted・pending両方を対象）
-      @relay = (Relay.accepted.to_a + Relay.pending.to_a).find do |r|
-        # 1. 直接リレーサーバーからの活動の場合
-        return r if r.actor_uri == @activity['actor']
-        
-        # 2. HTTP SignatureのkeyIdでリレーを判定
-        signature_header = request.headers['Signature']
-        next unless signature_header
-        
-        key_id = extract_key_id_from_signature(signature_header)
-        next unless key_id
-        
-        strict_relay_keyid_check(key_id, r)
-      end
+    return unless @is_relay_activity
+
+    # リレーアクターのURIとマッチするリレーを探す（accepted・pending両方を対象）
+    @relay = (Relay.accepted.to_a + Relay.pending.to_a).find do |r|
+      # 1. 直接リレーサーバーからの活動の場合
+      return r if r.actor_uri == @activity['actor']
+
+      # 2. HTTP SignatureのkeyIdでリレーを判定
+      signature_header = request.headers['Signature']
+      next unless signature_header
+
+      key_id = extract_key_id_from_signature(signature_header)
+      next unless key_id
+
+      strict_relay_keyid_check(key_id, r)
     end
   end
 
@@ -150,10 +150,8 @@ class SharedInboxesController < ApplicationController
     return head :bad_request unless @relay
 
     # リレー状態管理のみ行って、処理は既存フローに任せる
-    if @relay.pending?
-      @relay.update!(state: 'accepted', last_error: nil)
-    end
-    
+    @relay.update!(state: 'accepted', last_error: nil) if @relay.pending?
+
     # リレー情報を保持したまま通常処理へ
     @preserve_relay_info = @relay
     @is_relay_activity = false

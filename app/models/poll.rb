@@ -105,7 +105,7 @@ class Poll < ApplicationRecord
   def validate_expiry_time
     return unless expires_at
 
-    min_expiry = Time.current + 5.minutes - 10.seconds
+    min_expiry = 5.minutes.from_now - 10.seconds
     max_expiry = 1.month.from_now
 
     if expires_at < min_expiry

@@ -8,10 +8,10 @@ class UpdatePinPostsJob < ApplicationJob
     return unless actor && !actor.local? && actor.featured_url.present?
 
     Rails.logger.info "🔄 Background update of pin posts for #{actor.username}@#{actor.domain}"
-    
+
     fetcher = FeaturedCollectionFetcher.new
     pinned_objects = fetcher.fetch_for_actor(actor)
-    
+
     if pinned_objects.any?
       Rails.logger.info "✅ Updated #{pinned_objects.count} pin posts for #{actor.username}@#{actor.domain}"
     else

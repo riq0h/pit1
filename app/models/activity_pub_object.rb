@@ -55,7 +55,6 @@ class ActivityPubObject < ApplicationRecord
   before_validation :generate_snowflake_id, on: :create
   before_save :extract_plaintext
   before_save :set_conversation_id
-  after_save :create_activity_if_needed, if: :local?
   after_create :process_text_content, if: -> { local? && content.present? }
   after_create :update_actor_posts_count, if: -> { local? && object_type == 'Note' }
   after_create :distribute_to_relays, if: -> { local? && should_distribute_to_relays? }
@@ -65,6 +64,7 @@ class ActivityPubObject < ApplicationRecord
   after_destroy :create_delete_activity, if: :local?
   after_destroy :update_actor_posts_count, if: -> { local? && object_type == 'Note' }
   after_destroy :broadcast_status_delete, if: -> { object_type == 'Note' }
+  after_save :create_activity_if_needed, if: :local?
 
   # === URL生成メソッド ===
   def public_url
@@ -165,9 +165,25 @@ class ActivityPubObject < ApplicationRecord
   # === ActivityPub JSON-LD出力 ===
 
   def to_activitypub
-    base_activitypub_data.merge(
+    data = base_activitypub_data.merge(
       extended_activitypub_data
     ).compact
+
+    # Poll(投票)がある場合はQuestionタイプに変更
+    if poll.present?
+      data['type'] = 'Question'
+      data['endTime'] = poll.expires_at.iso8601 if poll.expires_at
+      data['votersCount'] = poll.voters_count || 0
+      
+      # 投票オプションを追加
+      if poll.multiple
+        data['anyOf'] = build_poll_options
+      else
+        data['oneOf'] = build_poll_options
+      end
+    end
+
+    data
   end
 
   def base_activitypub_data
@@ -295,6 +311,21 @@ class ActivityPubObject < ApplicationRecord
   end
 
   private
+
+  def build_poll_options
+    return [] unless poll.present? && poll.options.present?
+
+    poll.options.map.with_index do |option, index|
+      {
+        'type' => 'Note',
+        'name' => option['title'],
+        'replies' => {
+          'type' => 'Collection',
+          'totalItems' => poll.option_votes_count(index)
+        }
+      }
+    end
+  end
 
   # === ActivityPub ヘルパーメソッド ===
 

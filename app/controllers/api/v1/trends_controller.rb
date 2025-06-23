@@ -81,7 +81,6 @@ module Api
         }
       end
 
-
       def serialized_account(actor)
         {
           id: actor.id.to_s,

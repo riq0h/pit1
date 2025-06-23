@@ -184,7 +184,7 @@ class ActorFetcher
 
   def fetch_featured_collection_async(actor)
     return unless actor.featured_url.present?
-    
+
     # Featured Collection を非同期で取得
     FeaturedCollectionFetcher.new.fetch_for_actor(actor)
   rescue StandardError => e

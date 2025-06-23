@@ -1,0 +1,17 @@
+<%
+  # アバター表示部分
+  # パラメータ: actor
+%>
+
+<div class="post-card-avatar-container">
+  <% if actor.avatar_url.present? %>
+    <img src="<%= actor.avatar_url %>" 
+         alt="<%= actor.display_name.presence || actor.username %>" 
+         class="post-card-avatar-image"
+         loading="lazy">
+  <% else %>
+    <span class="post-card-avatar-fallback">
+      <%= actor.display_name&.first&.upcase || actor.username.first.upcase %>
+    </span>
+  <% end %>
+</div>

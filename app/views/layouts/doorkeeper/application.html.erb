@@ -16,6 +16,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   
   <!-- Custom Styles -->
+  <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
   <style>
     body {
       font-family: 'Noto Sans JP', sans-serif;
@@ -23,7 +24,7 @@
     }
   </style>
 </head>
-<body class="text-gray-900" style="background-color: <%= background_color %>">
+<body class="text-gray-900" style="background-color: <%= background_color %>; --page-background-color: <%= background_color %>;">
   <div class="min-h-screen">
     <%- if flash[:notice].present? %>
       <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">

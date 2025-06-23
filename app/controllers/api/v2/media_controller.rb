@@ -113,55 +113,50 @@ module Api
       end
 
       def extract_image_metadata(file, metadata)
-        begin
-          # MiniMagickを使用して画像のメタデータを抽出
-          image = MiniMagick::Image.read(file.read)
-          metadata[:width] = image.width
-          metadata[:height] = image.height
+        # MiniMagickを使用して画像のメタデータを抽出
+        image = MiniMagick::Image.read(file.read)
+        metadata[:width] = image.width
+        metadata[:height] = image.height
 
-          # Blurhashを生成
-          metadata[:blurhash] = generate_blurhash(image)
+        # Blurhashを生成
+        metadata[:blurhash] = generate_blurhash(image)
 
-          # ファイルポインタをリセット
-          file.rewind
-        rescue StandardError => e
-          Rails.logger.warn "Failed to extract image metadata: #{e.message}"
-          # フォールバック値
-          metadata[:width] = nil
-          metadata[:height] = nil
-          metadata[:blurhash] = nil
-        end
+        # ファイルポインタをリセット
+        file.rewind
+      rescue StandardError => e
+        Rails.logger.warn "Failed to extract image metadata: #{e.message}"
+        # フォールバック値
+        metadata[:width] = nil
+        metadata[:height] = nil
+        metadata[:blurhash] = nil
       end
 
       def extract_basic_video_metadata(file, metadata)
-        begin
-          # 動画の1フレーム目からサムネイルを生成
-          temp_file = file.tempfile
-          image = MiniMagick::Image.open(temp_file.path + '[0]')
-          
-          metadata[:width] = image.width
-          metadata[:height] = image.height
-          metadata[:duration] = 0
-          
-          # サムネイル用にリサイズしてBlurhash生成
-          thumbnail = image.dup
-          thumbnail.resize '200x200>'  
-          metadata[:blurhash] = generate_blurhash(thumbnail)
-          
-        rescue StandardError => e
-          Rails.logger.warn "Could not extract video thumbnail: #{e.message}"
-          # フォールバック: デフォルト値
-          metadata[:width] = 640
-          metadata[:height] = 480
-          metadata[:duration] = 0
-          metadata[:blurhash] = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj'
-        end
+        # 動画の1フレーム目からサムネイルを生成
+        temp_file = file.tempfile
+        image = MiniMagick::Image.open(temp_file.path + '[0]')
+
+        metadata[:width] = image.width
+        metadata[:height] = image.height
+        metadata[:duration] = 0
+
+        # サムネイル用にリサイズしてBlurhash生成
+        thumbnail = image.dup
+        thumbnail.resize '200x200>'
+        metadata[:blurhash] = generate_blurhash(thumbnail)
+      rescue StandardError => e
+        Rails.logger.warn "Could not extract video thumbnail: #{e.message}"
+        # フォールバック: デフォルト値
+        metadata[:width] = 640
+        metadata[:height] = 480
+        metadata[:duration] = 0
+        metadata[:blurhash] = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj'
       end
 
       def extract_basic_audio_metadata(file, metadata)
         # 音声の基本情報のみ設定（外部依存なし）
         metadata[:duration] = 0
-        metadata[:sample_rate] = 44100
+        metadata[:sample_rate] = 44_100
       end
 
       def generate_blurhash(image)

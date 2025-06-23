@@ -122,13 +122,20 @@ module StatusSerializationHelper
     quote_post = status.quote_posts.first
     return nil unless quote_post
 
+    quoted_actor = quote_post.quoted_object.actor
     {
       id: quote_post.quoted_object.id.to_s,
       created_at: quote_post.quoted_object.published_at&.iso8601,
       uri: quote_post.quoted_object.ap_id,
       url: quote_post.quoted_object.public_url,
       content: parse_content_links_only(quote_post.quoted_object.content || ''),
-      account: serialized_account(quote_post.quoted_object.actor),
+      account: {
+        id: quoted_actor.id.to_s,
+        username: quoted_actor.username,
+        acct: quoted_actor.acct,
+        display_name: quoted_actor.display_name || quoted_actor.username,
+        avatar: quoted_actor.avatar_url
+      },
       shallow_quote: quote_post.shallow_quote?
     }
   end

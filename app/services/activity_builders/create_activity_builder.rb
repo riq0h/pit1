@@ -22,7 +22,8 @@ module ActivityBuilders
     end
 
     def build_create_object_data(object)
-      object_base_fields(object).merge(object_extended_fields(object)).compact
+      # オブジェクト自体のActivityPub表現を使用（Poll対応含む）
+      object.to_activitypub
     end
 
     def base_fields

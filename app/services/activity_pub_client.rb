@@ -8,7 +8,7 @@ class ActivityPubClient
   end
 
   def fetch_object(uri)
-    Rails.logger.debug "🌐 Fetching ActivityPub object: #{uri}"
+    Rails.logger.debug { "🌐 Fetching ActivityPub object: #{uri}" }
 
     response = HTTParty.get(
       uri,

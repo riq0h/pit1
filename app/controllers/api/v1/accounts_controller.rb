@@ -65,7 +65,7 @@ module Api
 
           # Pinned statusesは最初のページでのみ表示（ページネーションパラメータがない場合のみ）
           is_first_page = params[:max_id].blank? && params[:since_id].blank? && params[:min_id].blank?
-          
+
           if is_first_page
             # Pinned statusesを取得（全ユーザ対象）
             pinned_objects = @account.pinned_statuses

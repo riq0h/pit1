@@ -10,10 +10,10 @@ class FeaturedCollectionFetcher
 
     # 既存のPinnedStatusがある場合は、それらのオブジェクトを返す
     existing_pinned_objects = actor.pinned_statuses
-                                   .includes(object: [:actor, :media_attachments, :mentions, :tags, :poll])
+                                   .includes(object: %i[actor media_attachments mentions tags poll])
                                    .ordered
                                    .map(&:object)
-    
+
     return existing_pinned_objects if existing_pinned_objects.any?
 
     Rails.logger.info "📌 Fetching featured collection for #{actor.username}@#{actor.domain}"
@@ -46,7 +46,7 @@ class FeaturedCollectionFetcher
 
   def extract_featured_items(collection_data)
     items = []
-    
+
     # OrderedCollectionの場合
     if collection_data['orderedItems']
       items = collection_data['orderedItems']
@@ -62,9 +62,9 @@ class FeaturedCollectionFetcher
     items.map do |item|
       case item
       when String
-        item  # すでにURIの文字列
+        item # すでにURIの文字列
       when Hash
-        item['id'] || item['url']  # オブジェクトの場合はidまたはurlを抽出
+        item['id'] || item['url'] # オブジェクトの場合はidまたはurlを抽出
       else
         nil
       end

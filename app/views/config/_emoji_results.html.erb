@@ -6,8 +6,8 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <label class="inline-flex items-center">
-              <input type="checkbox" id="select_all" class="custom-checkbox" style="appearance: none; width: 1rem; height: 1rem; border: 1px solid #d1d5db; background-color: white; position: relative; cursor: pointer;">
-              <span class="ml-2 text-sm text-gray-600" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">すべて選択</span>
+              <input type="checkbox" id="select_all" class="custom-checkbox">
+              <span class="ml-2 text-sm text-gray-600">すべて選択</span>
             </label>
             
             <div class="flex items-center space-x-2">
@@ -21,8 +21,7 @@
                       ['削除', 'delete']
                     ]),
                     {},
-                    class: "px-3 py-1 border border-gray-300 text-sm",
-                    style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+                    class: "form-select btn-sm" %>
               <% else %>
                 <%= form.select :action_type, 
                     options_for_select([
@@ -32,20 +31,18 @@
                       ['削除', 'delete']
                     ]),
                     {},
-                    class: "px-3 py-1 border border-gray-300 text-sm",
-                    style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" %>
+                    class: "form-select btn-sm" %>
               <% end %>
               
               <%= form.submit "実行", 
-                  class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm",
-                  style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;",
+                  class: "btn-secondary btn-sm",
                   onclick: "return confirmBulkAction()" %>
               
               <%= form.hidden_field :tab, value: params[:tab] %>
             </div>
           </div>
           
-          <div class="text-sm text-gray-500" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+          <div class="text-sm text-gray-500" >
             <%= defined?(@total_count) ? @total_count : custom_emojis.count %>件の絵文字
             <% if defined?(@current_page) && @total_pages > 1 %>
               （<%= @current_page %>/<%= @total_pages %>ページ）
@@ -62,7 +59,6 @@
           <div class="flex items-center space-x-4">
             <input type="checkbox" name="emoji_ids[]" value="<%= emoji.id %>" 
                    class="emoji-checkbox custom-checkbox"
-                   style="appearance: none; width: 1rem; height: 1rem; border: 1px solid #d1d5db; background-color: white; position: relative; cursor: pointer;"
                    form="bulk_form">
             
             <div class="flex items-center space-x-3">
@@ -171,10 +167,10 @@
                 ← 前
               <% end %>
             <% else %>
-              <span class="px-3 py-1 border border-gray-200 text-gray-400 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">← 前</span>
+              <span class="px-3 py-1 border border-gray-200 text-gray-400 text-sm" >← 前</span>
             <% end %>
             
-            <span class="px-3 py-1 text-sm text-gray-600" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+            <span class="px-3 py-1 text-sm text-gray-600" >
               <%= @current_page %> / <%= @total_pages %>
             </span>
             
@@ -185,11 +181,11 @@
                 次 →
               <% end %>
             <% else %>
-              <span class="px-3 py-1 border border-gray-200 text-gray-400 text-sm" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">次 →</span>
+              <span class="px-3 py-1 border border-gray-200 text-gray-400 text-sm" >次 →</span>
             <% end %>
           </div>
           
-          <div class="text-sm text-gray-500" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400;">
+          <div class="text-sm text-gray-500" >
             <%= (@current_page - 1) * 20 + 1 %>-<%= [@current_page * 20, @total_count].min %> 件目 / 全<%= @total_count %>件
           </div>
         </div>

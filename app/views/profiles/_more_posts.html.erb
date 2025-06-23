@@ -1,37 +1,4 @@
-<%= turbo_frame_tag "load_more" do %>
-  <% @posts.each do |timeline_item| %>
-    <% if timeline_item.is_a?(Hash) %>
-      <% if timeline_item[:type] == :post %>
-        <%= render 'shared/post_card', post: timeline_item[:item] %>
-      <% elsif timeline_item[:type] == :reblog %>
-        <%= render 'shared/reblog_card', reblog: timeline_item[:item] %>
-      <% end %>
-    <% else %>
-      <!-- 後方互換性のため（メディアタブなど） -->
-      <%= render 'shared/post_card', post: timeline_item %>
-    <% end %>
-  <% end %>
-
-  <% if @more_posts_available %>
-    <%= turbo_frame_tag "load_more", src: profile_path(@actor.username, tab: @current_tab, max_id: @older_max_id), loading: :lazy do %>
-      <div class="text-center py-8">
-        <div class="inline-block w-8 h-3">
-          <svg viewBox="0 0 32 12" class="w-full h-full">
-            <path d="M0,6 L6,6 L8,2 L10,10 L12,4 L14,8 L16,6 L32,6" 
-                  stroke="#6B7280" stroke-width="1" fill="none">
-              <animate attributeName="stroke-dasharray" 
-                       values="0,80;40,40;0,80" 
-                       dur="1.5s" 
-                       repeatCount="indefinite"/>
-              <animate attributeName="stroke-dashoffset" 
-                       values="0;-80" 
-                       dur="1.5s" 
-                       repeatCount="indefinite"/>
-            </path>
-          </svg>
-        </div>
-        <p class="mt-2 text-gray-600">通信中</p>
-      </div>
-    <% end %>
-  <% end %>
-<% end %>
+<%= render 'shared/post_timeline',
+           posts: @posts,
+           more_posts_available: @more_posts_available,
+           load_more_url: @more_posts_available ? profile_path(@actor.username, tab: @current_tab, max_id: @older_max_id) : nil %>
