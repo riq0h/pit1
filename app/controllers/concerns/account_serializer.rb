@@ -152,8 +152,11 @@ module AccountSerializer
   def format_field_value_for_client(value)
     return '' if value.blank?
 
+    # invisible spanタグを除去
+    cleaned_value = value.gsub(/<span class="invisible">[^<]*<\/span>/, '')
+    
     # emoji解析
-    value_with_emoji = parse_content_for_frontend(value)
+    value_with_emoji = parse_content_for_frontend(cleaned_value)
     # URLリンク化
     auto_link_urls(value_with_emoji)
   end
@@ -162,20 +165,26 @@ module AccountSerializer
   def format_text_for_api(text)
     return '' if text.blank?
 
-    # HTMLエスケープ後URLリンク化のみ（絵文字はショートコードのまま）
-    escaped_text = CGI.escapeHTML(text).gsub("\n", '<br>')
-    apply_url_links(escaped_text)
+    # 既にHTMLタグが含まれている場合はそのまま返す（外部から受信した場合）
+    if text.include?('<') && text.include?('>')
+      text
+    else
+      # プレーンテキストの場合はHTMLエスケープ後URLリンク化（絵文字はショートコードのまま）
+      escaped_text = CGI.escapeHTML(text).gsub("\n", '<br>')
+      apply_url_links(escaped_text)
+    end
   end
 
   # API用のフィールドvalue処理（ショートコード + URLリンク化）
   def format_field_value_for_api(value)
     return '' if value.blank?
 
-    # 既にHTMLリンクが含まれている場合はそのまま返す（外部から受信した場合）
-    return value if value.include?('<a href=')
-
-    # プレーンなURLの場合はHTMLリンクとして返す（ローカルで設定した場合）
-    if value.match?(/\Ahttps?:\/\//)
+    # 既にHTMLリンクが含まれている場合はinvisible spanタグのみ除去して返す（外部から受信した場合）
+    if value.include?('<a href=')
+      # invisible spanタグを除去
+      value.gsub(/<span class="invisible">[^<]*<\/span>/, '')
+    elsif value.match?(/\Ahttps?:\/\//)
+      # プレーンなURLの場合はHTMLリンクとして返す（ローカルで設定した場合）
       domain = begin
         URI.parse(value).host
       rescue StandardError
