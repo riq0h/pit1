@@ -75,7 +75,7 @@
         <h2 class="text-lg section-heading">
           プロフィール設定
         </h2>
-        <%= link_to "プロフィールページを表示", profile_path(current_user.username), 
+        <%= link_to "プロフィールを表示", profile_path(current_user.username), 
             class: "btn-secondary btn-sm",
             target: "_blank" %>
       </div>
@@ -294,7 +294,7 @@
             <label class="block text-sm text-gray-700 mb-2" class="text-normal">
               エンドポイント
             </label>
-            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" class="text-normal">
+            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm break-all" class="text-normal">
               <%= @config[:s3_endpoint] || '未設定' %>
             </div>
           </div>
@@ -312,8 +312,8 @@
             <label class="block text-sm text-gray-700 mb-2" class="text-normal">
               アクセスキーID
             </label>
-            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" class="text-normal">
-              <%= @config[:r2_access_key_id] ? @config[:r2_access_key_id][0..7] + '...' : '未設定' %>
+            <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm break-all" class="text-normal">
+              <%= @config[:r2_access_key_id] || '未設定' %>
             </div>
           </div>
           

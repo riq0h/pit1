@@ -192,12 +192,12 @@ module ActivityPubCreateHandlers
 
   def handle_poll(object, object_data)
     poll_options = object_data['oneOf'] || object_data['anyOf']
-    return unless poll_options.present?
+    return if poll_options.blank?
 
     options = poll_options.map { |option| { 'title' => option['name'] } }
-    
+
     expires_at = if object_data['endTime'].present?
-                   Time.parse(object_data['endTime'])
+                   Time.zone.parse(object_data['endTime'])
                  else
                    1.day.from_now
                  end
@@ -219,7 +219,7 @@ module ActivityPubCreateHandlers
 
   def handle_vote(object, object_data)
     # 投票オブジェクトは通常、inReplyToで投票対象を指している
-    return unless object_data['inReplyTo'].present?
+    return if object_data['inReplyTo'].blank?
 
     # 投票対象の投稿を探す
     target_object = ActivityPubObject.find_by(ap_id: object_data['inReplyTo'])
@@ -235,7 +235,7 @@ module ActivityPubCreateHandlers
 
     # 投票を記録
     target_object.poll.vote_for!(object.actor, [choice_index])
-    
+
     Rails.logger.info "🗳️ Vote recorded: #{object.actor.username} voted '#{choice_name}' on poll #{target_object.poll.id}"
   rescue StandardError => e
     Rails.logger.error "❌ Failed to process vote: #{e.message}"

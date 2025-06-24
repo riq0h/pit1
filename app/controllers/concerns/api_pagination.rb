@@ -19,24 +19,24 @@ module ApiPagination
 
   def pagination_links(items)
     links = []
-    
+
     # Get the actual records (handle both arrays and AR relations)
     records = items.respond_to?(:to_a) ? items.to_a : items
-    
+
     return '' if records.empty?
 
     # Extract IDs from records
     ids = extract_ids(records)
-    
+
     # Build pagination links
     links << link_next(ids) if ids.size >= limit_param
     links << link_prev(ids) if ids.any?
-    
+
     links.compact.join(', ')
   end
 
   def extract_ids(records)
-    records.map do |record|
+    records.filter_map do |record|
       case record
       when ActivityPubObject
         record.id
@@ -55,12 +55,12 @@ module ApiPagination
       else
         record.id if record.respond_to?(:id)
       end
-    end.compact
+    end
   end
 
   def link_next(ids)
     return unless ids.any?
-    
+
     # The last ID in the current page becomes max_id for next page
     max_id = ids.last
     "<#{api_pagination_url(max_id: max_id)}>; rel=\"next\""
@@ -68,7 +68,7 @@ module ApiPagination
 
   def link_prev(ids)
     return unless ids.any?
-    
+
     # The first ID in the current page becomes since_id for prev page
     since_id = ids.first
     "<#{api_pagination_url(since_id: since_id)}>; rel=\"prev\""
@@ -76,7 +76,7 @@ module ApiPagination
 
   def api_pagination_url(params_hash)
     url_params = request.query_parameters.merge(params_hash)
-    
+
     # Remove conflicting parameters
     if params_hash[:max_id]
       url_params.delete(:since_id)
@@ -85,17 +85,17 @@ module ApiPagination
       url_params.delete(:max_id)
       url_params.delete(:min_id)
     end
-    
+
     # Ensure limit is included
     url_params[:limit] = limit_param
-    
+
     # Build URL
     "#{request.base_url}#{request.path}?#{url_params.to_query}"
   end
 
   def limit_param
-    return DEFAULT_LIMIT unless params[:limit].present?
-    
+    return DEFAULT_LIMIT if params[:limit].blank?
+
     [params[:limit].to_i, MAX_LIMIT].min
   end
 
@@ -118,6 +118,7 @@ module ApiPagination
 
   def total_count(items)
     return items.count if items.respond_to?(:count)
+
     items.size
   end
 

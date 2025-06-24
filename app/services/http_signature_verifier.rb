@@ -18,7 +18,7 @@ class HttpSignatureVerifier
     # 初回署名検証試行
     public_key = fetch_actor_public_key(actor_uri)
     return false unless public_key
-    
+
     signing_string = build_signing_string(signature_params['headers'])
 
     result = verify_signature(
@@ -39,7 +39,6 @@ class HttpSignatureVerifier
         public_key: public_key
       )
     end
-
 
     result
   rescue StandardError => e
@@ -85,9 +84,7 @@ class HttpSignatureVerifier
     required_params = %w[keyId algorithm headers signature]
     missing = required_params - params.keys
 
-    if missing.any?
-      raise ActivityPub::SignatureError, "Missing signature parameters: #{missing.join(', ')}"
-    end
+    raise ActivityPub::SignatureError, "Missing signature parameters: #{missing.join(', ')}" if missing.any?
 
     params
   end
@@ -193,7 +190,7 @@ class HttpSignatureVerifier
   def build_signature_parts(header_names)
     header_names.map do |header_name|
       part = build_signature_part(header_name)
-        part
+      part
     end
   end
 
@@ -220,35 +217,29 @@ class HttpSignatureVerifier
 
   def find_header_value(header_name)
     # Railsのheadersオブジェクトは文字列キーではなく、別の形式の可能性
-    value = headers[header_name] ||
+    headers[header_name] ||
       headers[header_name.downcase] ||
       headers[header_name.upcase] ||
       headers[header_name.titleize] ||
       headers.find { |k, v| k.to_s.downcase == header_name.downcase }&.last
-    
-    
-    value
   end
 
   def build_request_target_header
-    target = "(request-target): #{method.downcase} #{path}"
-    target
+    "(request-target): #{method.downcase} #{path}"
   end
 
   def build_standard_header(header_name)
     value = standard_headers[header_name]
     # Mastodon標準: ヘッダー値の前後の空白を除去し、内部の連続空白を単一空白に正規化
     normalized_value = value.to_s.strip.gsub(/\s+/, ' ')
-    header_line = "#{header_name}: #{normalized_value}"
-    header_line
+    "#{header_name}: #{normalized_value}"
   end
 
   def build_custom_header(header_name)
     value = find_header_value(header_name)
     # Mastodon標準: ヘッダー値の正規化
     normalized_value = value.to_s.strip.gsub(/\s+/, ' ')
-    header_line = "#{header_name.downcase}: #{normalized_value}"
-    header_line
+    "#{header_name.downcase}: #{normalized_value}"
   end
 
   # ActivityPub attachmentからfieldsを抽出
@@ -270,13 +261,13 @@ class HttpSignatureVerifier
   def verify_signature(signature:, signing_string:, public_key:)
     # Base64デコード
     decoded_signature = Base64.decode64(signature.gsub(/\s+/, ''))
-    
+
     # 署名文字列を正規化
     normalized_signing_string = signing_string.encode('UTF-8', invalid: :replace, undef: :replace)
-    
+
     # RSA-SHA256で検証
     result = public_key.verify('SHA256', decoded_signature, normalized_signing_string)
-    
+
     # 253バイト署名の場合はパディングして再試行
     unless result
       key_size_bytes = public_key.n.num_bytes
@@ -286,17 +277,17 @@ class HttpSignatureVerifier
         result = public_key.verify('SHA256', adjusted_signature, normalized_signing_string)
       end
     end
-    
+
     result
   rescue StandardError => e
-    Rails.logger.debug "Signature verification error: #{e.message}"
+    Rails.logger.debug { "Signature verification error: #{e.message}" }
     false
   end
-  
+
   private
 
   def fetch_featured_collection_async(actor)
-    return unless actor.featured_url.present?
+    return if actor.featured_url.blank?
 
     # Featured Collection を非同期で取得
     FeaturedCollectionFetcher.new.fetch_for_actor(actor)

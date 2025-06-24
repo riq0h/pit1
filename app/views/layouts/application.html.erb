@@ -55,15 +55,15 @@
     <!-- ブログ風シンプルヘッダー -->
     <header class="max-w-4xl mx-auto px-6 py-8">
       <div class="flex justify-between items-center">
-        <div>
-          <%= link_to root_path, class: "text-lg sm:text-2xl text-gray-900 hover:text-gray-600 transition-colors", style: "font-weight: 300;" do %>
+        <div class="flex-1 min-w-0">
+          <%= link_to root_path, class: "text-base sm:text-lg md:text-2xl text-gray-900 hover:text-gray-600 transition-colors truncate block text-left", style: "font-weight: 300;" do %>
             <%= blog_title %>
           <% end %>
         </div>
         
         <!-- 右上のログインリンク（ログイン画面では非表示） -->
         <% unless controller_name == 'sessions' %>
-          <div class="flex items-center space-x-4 text-sm">
+          <div class="flex items-center justify-end space-x-2 sm:space-x-4 text-xs sm:text-sm flex-shrink-0" style="min-width: 120px;">
             <!-- 検索ボックス（ホーム画面と個別プロフィール画面でのみ表示） -->
             <% if %w[home profiles].include?(controller_name) %>
               <%= form_with url: search_index_path, method: :get, 
@@ -76,7 +76,7 @@
                                     autocomplete: "off",
                                     autocorrect: "off",
                                     spellcheck: "false",
-                                    class: "px-2 py-1 border border-gray-300 text-sm h-6 w-20 focus:outline-none focus:border-gray-500",
+                                    class: "px-2 py-1 border border-gray-300 text-xs sm:text-sm h-6 w-16 sm:w-20 focus:outline-none focus:border-gray-500",
                                     data: { turbo_action: "advance" } %>
                 <% if controller_name == 'profiles' && @actor %>
                   <%= form.hidden_field :username, value: @actor.username %>

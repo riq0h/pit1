@@ -34,13 +34,13 @@ class PollCreationService
   private
 
   def valid_params?
-    return false unless @poll_params.present?
+    return false if @poll_params.blank?
     return false unless @poll_params[:options].is_a?(Array)
-    
+
     # 空でない選択肢をフィルタリング
-    filtered_options = @poll_params[:options].reject(&:blank?)
+    filtered_options = @poll_params[:options].compact_blank
     return false unless filtered_options.length.between?(2, 4)
-    
+
     # フィルタリングされた選択肢を使用
     @poll_params[:options] = filtered_options
     true
@@ -54,13 +54,13 @@ class PollCreationService
 
   def calculate_expiry
     expires_in = @poll_params[:expires_in].to_i
-    
+
     # デフォルトは1日（86400秒）
     expires_in = 86_400 if expires_in.zero?
-    
+
     # 最小5分、最大7日
     expires_in = expires_in.clamp(300, 604_800)
-    
+
     Time.current + expires_in.seconds
   end
 end

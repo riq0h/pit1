@@ -7,7 +7,7 @@ module Api
       include AccountSerializer
       include TextLinkingHelper
       include ApiPagination
-      
+
       before_action :doorkeeper_authorize!, only: [:home]
       after_action :insert_pagination_headers
 
@@ -39,16 +39,16 @@ module Api
 
       def build_home_timeline_query
         followed_ids = current_user.followed_actors.pluck(:id) + [current_user.id]
-        
+
         statuses = base_timeline_query.where(actors: { id: followed_ids })
         statuses = apply_pagination_filters(statuses).limit(limit_param * 2)
-        
+
         reblogs = Reblog.joins(:actor, :object)
-                       .where(actor_id: followed_ids)
-                       .where(objects: { visibility: %w[public unlisted] })
-                       .includes(:object, :actor)
+                        .where(actor_id: followed_ids)
+                        .where(objects: { visibility: %w[public unlisted] })
+                        .includes(:object, :actor)
         reblogs = apply_reblog_pagination_filters(reblogs).limit(limit_param * 2)
-        
+
         merge_timeline_items(statuses, reblogs)
       end
 
@@ -73,7 +73,7 @@ module Api
       def base_timeline_query
         query = ActivityPubObject.joins(:actor)
                                  .includes(:poll)
-                                 .where(object_type: ['Note', 'Question'])
+                                 .where(object_type: %w[Note Question])
                                  .order('objects.id DESC')
 
         # Apply user-specific filters if authenticated
@@ -115,7 +115,6 @@ module Api
         query = query.where('objects.id > ?', params[:min_id]) if params[:min_id].present?
         query
       end
-      
 
       def local_only?
         params[:local].present? && params[:local] != 'false'
@@ -124,45 +123,43 @@ module Api
       def apply_reblog_pagination_filters(query)
         if params[:max_id].present?
           max_object = ActivityPubObject.find_by(id: params[:max_id])
-          if max_object
-            query = query.where('reblogs.created_at < ?', max_object.published_at)
-          else
-            return Reblog.none
-          end
+          return Reblog.none unless max_object
+
+          query = query.where(reblogs: { created_at: ...max_object.published_at })
+
         end
-        
+
         if params[:since_id].present? && params[:min_id].blank?
           since_object = ActivityPubObject.find_by(id: params[:since_id])
           query = query.where('reblogs.created_at > ?', since_object.published_at) if since_object
         end
-        
+
         if params[:min_id].present?
           min_object = ActivityPubObject.find_by(id: params[:min_id])
           query = query.where('reblogs.created_at > ?', min_object.published_at) if min_object
         end
-        
+
         query
       end
 
       def merge_timeline_items(statuses, reblogs)
         status_array = statuses.to_a
         reblog_array = reblogs.to_a
-        
+
         return [] if status_array.empty? && reblog_array.empty?
-        
+
         seen_status_ids = Set.new
         merged_items = []
-        all_items = []
-        
-        status_array.each do |status|
-          all_items << {
+
+        all_items = status_array.map do |status|
+          {
             item: status,
             timestamp: status.published_at,
             is_reblog: false,
             status_id: status.id
           }
         end
-        
+
         reblog_array.each do |reblog|
           all_items << {
             item: reblog,
@@ -171,19 +168,19 @@ module Api
             status_id: reblog.object_id
           }
         end
-        
+
         all_items.sort_by! { |item| -item[:timestamp].to_f }
-        
+
         all_items.each do |item_data|
           status_id = item_data[:status_id]
-          
-          unless seen_status_ids.include?(status_id)
-            seen_status_ids.add(status_id)
-            merged_items << item_data[:item]
-            break if merged_items.length >= limit_param
-          end
+
+          next if seen_status_ids.include?(status_id)
+
+          seen_status_ids.add(status_id)
+          merged_items << item_data[:item]
+          break if merged_items.length >= limit_param
         end
-        
+
         merged_items
       end
 
@@ -195,8 +192,8 @@ module Api
         when Reblog
           # リブログ - リブログされた元投稿をラップして返す
           reblogged_status = serialized_status(item.object)
-          reblogged_status[:reblog] = nil  # ネストしたリブログを防ぐ
-          
+          reblogged_status[:reblog] = nil # ネストしたリブログを防ぐ
+
           # リブログ情報を追加
           {
             id: item.object.id.to_s,
@@ -265,7 +262,6 @@ module Api
           fields: []
         }
       end
-
     end
   end
 end

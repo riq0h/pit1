@@ -11,9 +11,9 @@ module Api
       include StatusSerializationHelper
       include TextLinkingHelper
       include ApiPagination
-      
+
       before_action :doorkeeper_authorize!, except: [:show]
-      after_action :insert_pagination_headers, only: [:reblogged_by, :favourited_by]
+      after_action :insert_pagination_headers, only: %i[reblogged_by favourited_by]
       before_action :doorkeeper_authorize!, only: [:show], if: -> { request.authorization.present? }
       before_action :set_status, except: [:create]
 
@@ -53,7 +53,7 @@ module Api
           # DB IDが確定したのでAP IDを設定
           base_url = Rails.application.config.activitypub.base_url
           @status.update_column(:ap_id, "#{base_url}/users/#{current_user.username}/posts/#{@status.id}")
-          
+
           process_mentions_and_tags
 
           # 投票を作成（ステータス保存後）
@@ -147,7 +147,7 @@ module Api
           # DB IDが確定したのでAP IDを設定
           base_url = Rails.application.config.activitypub.base_url
           @status.update_column(:ap_id, "#{base_url}/users/#{current_user.username}/posts/#{@status.id}")
-          
+
           create_quote_post_record(quoted_status, quote_params)
           process_mentions_and_tags if @status.content.present?
           @status.create_quote_activity(quoted_status) if @status.local?
@@ -318,7 +318,7 @@ module Api
       end
 
       def set_status
-        @status = ActivityPubObject.where(object_type: ['Note', 'Question'])
+        @status = ActivityPubObject.where(object_type: %w[Note Question])
                                    .includes(:poll)
                                    .find(params[:id])
       end
@@ -465,8 +465,6 @@ module Api
       def generate_delete_activity_ap_id(status)
         "#{status.ap_id}#delete-#{Time.current.to_i}"
       end
-
-
 
       def build_ancestors(status)
         return [] if status.in_reply_to_ap_id.blank?

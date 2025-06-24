@@ -7,7 +7,7 @@ module PollSerializer
 
   # 基本的なPollデータをシリアライズ
   def serialize_poll_base(poll)
-    return nil unless poll.present?
+    return nil if poll.blank?
 
     # Pollモデルの既存メソッドを活用
     poll.to_mastodon_api

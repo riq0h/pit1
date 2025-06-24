@@ -19,7 +19,8 @@
       <%= render 'shared/unified_post_card', 
                  post: timeline_item[:item].object, 
                  actor: timeline_item[:item].object.actor, 
-                 border_style: 'double' %>
+                 border_style: 'double',
+                 reblog: true %>
     <% end %>
   <% end %>
 

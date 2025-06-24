@@ -6,7 +6,7 @@ class FeaturedCollectionFetcher
   end
 
   def fetch_for_actor(actor)
-    return [] unless actor.featured_url.present?
+    return [] if actor.featured_url.blank?
 
     # 既存のPinnedStatusがある場合は、それらのオブジェクトを返す
     existing_pinned_objects = actor.pinned_statuses
@@ -59,7 +59,7 @@ class FeaturedCollectionFetcher
     end
 
     # itemsの内容を正規化：URIの文字列に変換
-    items.map do |item|
+    items.filter_map do |item|
       case item
       when String
         item # すでにURIの文字列
@@ -68,7 +68,7 @@ class FeaturedCollectionFetcher
       else
         nil
       end
-    end.compact
+    end
   end
 
   def create_pinned_status_record(actor, object)

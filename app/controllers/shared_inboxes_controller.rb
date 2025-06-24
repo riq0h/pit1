@@ -35,7 +35,7 @@ class SharedInboxesController < ApplicationController
 
     # リレーアクターのURIとマッチするリレーを探す（accepted・pending両方を対象）
     @relay = (Relay.accepted.to_a + Relay.pending.to_a).find do |r|
-      # 1. 直接リレーサーバーからの活動の場合
+      # 1. 直接リレーサーバからの活動の場合
       return r if r.actor_uri == @activity['actor']
 
       # 2. HTTP SignatureのkeyIdでリレーを判定

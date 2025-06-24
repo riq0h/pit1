@@ -125,10 +125,10 @@ class ScheduledStatus < ApplicationRecord
   def create_poll_for_status(status)
     poll_params = params['poll']
     return unless poll_params.is_a?(Hash)
-    
+
     # パラメータをシンボルキーに変換
     symbolized_params = poll_params.deep_symbolize_keys
-    
+
     PollCreationService.create_for_status(status, symbolized_params)
   end
 

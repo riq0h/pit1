@@ -41,6 +41,7 @@
         
         <!-- 日時表示 -->
         <div class="text-sm text-gray-500 mt-1 text-right" style="font-weight: 300;">
+          <span class="mr-2">再投稿</span>
           <% if reblog.object.actor.local? %>
             <%= link_to post_html_path(reblog.object.actor.username, reblog.object.id), 
                         class: "hover:text-gray-700 transition-colors",

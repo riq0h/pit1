@@ -83,5 +83,4 @@ module SearchStatusSerializer
 
     attachment.width.to_f / attachment.height
   end
-
 end

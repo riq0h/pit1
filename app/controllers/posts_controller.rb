@@ -8,7 +8,7 @@ class PostsController < ApplicationController
   def redirect_to_frontend
     username = params[:username]
     id = params[:id]
-    
+
     redirect_to post_html_path(username: username, id: id), status: :moved_permanently
   end
 

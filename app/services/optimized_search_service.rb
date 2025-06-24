@@ -122,10 +122,13 @@ class OptimizedSearchService
     fts_query = build_japanese_friendly_fts_query
 
     sql = <<~SQL.squish
-      SELECT object_id
-      FROM letter_post_search_fts5
-      WHERE letter_post_search_fts5 MATCH ?
-      ORDER BY object_id DESC
+      SELECT fts.object_id
+      FROM letter_post_search_fts5 fts
+      INNER JOIN objects o ON fts.object_id = o.id
+      INNER JOIN actors a ON o.actor_id = a.id
+      WHERE fts.content_plaintext MATCH ?
+        AND a.local = 1
+      ORDER BY fts.object_id DESC
       LIMIT ? OFFSET ?
     SQL
 
@@ -141,16 +144,19 @@ class OptimizedSearchService
 
   def try_like_search
     sql = <<~SQL.squish
-      SELECT object_id
-      FROM letter_post_search
-      WHERE content_plaintext LIKE ? OR content LIKE ?
-      ORDER BY object_id DESC
+      SELECT lps.object_id
+      FROM letter_post_search lps
+      INNER JOIN objects o ON lps.object_id = o.id
+      INNER JOIN actors a ON o.actor_id = a.id
+      WHERE lps.content_plaintext LIKE ?
+        AND a.local = 1
+      ORDER BY lps.object_id DESC
       LIMIT ? OFFSET ?
     SQL
 
     like_query = "%#{query}%"
     results = ActiveRecord::Base.connection.execute(
-      ActiveRecord::Base.sanitize_sql([sql, like_query, like_query, limit, offset])
+      ActiveRecord::Base.sanitize_sql([sql, like_query, limit, offset])
     )
 
     results.pluck('object_id')
@@ -176,7 +182,14 @@ class OptimizedSearchService
   def build_japanese_query
     keywords = query.split(/\s+/).compact_blank
     if keywords.length > 1
-      keywords.map { |word| "\"#{word}\"" }.join(' OR ')
+      # 複数キーワードの場合はOR検索で部分一致も許可
+      keywords.map do |word|
+        if word.length >= 2
+          "#{word}*"
+        else
+          "\"#{word}\""
+        end
+      end.join(' OR ')
     else
       build_single_word_query
     end
@@ -188,7 +201,12 @@ class OptimizedSearchService
   end
 
   def build_single_word_query
-    "\"#{query}\""
+    # 部分一致を可能にするため、完全一致だけでなく前方一致もサポート
+    if query.length >= 2
+      "#{query}*"
+    else
+      "\"#{query}\""
+    end
   end
 
   def fts5_table?

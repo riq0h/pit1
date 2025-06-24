@@ -1,5 +1,6 @@
 <%
   pinned ||= false
+  reblog ||= false
   border_style ||= 'normal'
   actor ||= nil
   
@@ -31,7 +32,8 @@
              actor: display_actor, 
              published_at: display_published_at, 
              post: post,
-             pinned: pinned %>
+             pinned: pinned,
+             reblog: reblog %>
 
   <!-- 共通本文 -->
   <%= render 'shared/post_card_content', 

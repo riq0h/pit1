@@ -134,7 +134,7 @@ module Api
       def extract_basic_video_metadata(file, metadata)
         # 動画の1フレーム目からサムネイルを生成
         temp_file = file.tempfile
-        image = MiniMagick::Image.open(temp_file.path + '[0]')
+        image = MiniMagick::Image.open("#{temp_file.path}[0]")
 
         metadata[:width] = image.width
         metadata[:height] = image.height

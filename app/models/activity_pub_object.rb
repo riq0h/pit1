@@ -174,7 +174,7 @@ class ActivityPubObject < ApplicationRecord
       data['type'] = 'Question'
       data['endTime'] = poll.expires_at.iso8601 if poll.expires_at
       data['votersCount'] = poll.voters_count || 0
-      
+
       # 投票オプションを追加
       if poll.multiple
         data['anyOf'] = build_poll_options

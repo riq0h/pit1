@@ -74,7 +74,7 @@ module ActivityPubVerification
   def verify_signature
     verifier = create_signature_verifier
     signature_result = verifier.verify!(@activity['actor'])
-    
+
     if signature_result
       Rails.logger.info "✅ Direct follow: Signature verified for #{@activity['actor']}"
       return
@@ -93,11 +93,11 @@ module ActivityPubVerification
   def relay_activity?
     return false unless @activity['actor']
 
-    # 1. 直接リレーサーバーからの活動（Accept/Reject等）
+    # 1. 直接リレーサーバからの活動（Accept/Reject等）
     direct_relay = (Relay.accepted.to_a + Relay.pending.to_a).any? do |relay|
       relay.actor_uri == @activity['actor']
     end
-    
+
     if direct_relay
       Rails.logger.info "🔗 Direct relay activity from #{@activity['actor']}"
       return true
@@ -111,15 +111,13 @@ module ActivityPubVerification
     key_id = extract_key_id_from_signature(signature_header)
     return false unless key_id
 
-    # keyIdがリレーサーバーのものかチェック
+    # keyIdがリレーサーバのものかチェック
     relay_match = (Relay.accepted.to_a + Relay.pending.to_a).any? do |relay|
       strict_relay_keyid_check(key_id, relay)
     end
 
-    if relay_match
-      Rails.logger.info "🔗 Relay activity via keyId from #{@activity['actor']}"
-    end
-    
+    Rails.logger.info "🔗 Relay activity via keyId from #{@activity['actor']}" if relay_match
+
     relay_match
   end
 

@@ -5,9 +5,9 @@ module Api
     class AccountsController < Api::BaseController
       include StatusSerializationHelper
       include ApiPagination
-      
+
       before_action :doorkeeper_authorize!, except: [:show]
-      after_action :insert_pagination_headers, only: [:statuses, :followers, :following]
+      after_action :insert_pagination_headers, only: %i[statuses followers following]
       before_action :doorkeeper_authorize!, only: [:show], if: -> { request.authorization.present? }
       before_action :set_account, only: %i[show statuses followers following follow unfollow block unblock mute unmute note]
       before_action :set_account_for_featured_tags, only: [:featured_tags]
@@ -50,7 +50,7 @@ module Api
           statuses = pinned_statuses.map(&:object)
         else
           # 通常の投稿一覧（pinned statusesを最上部に表示）
-          base_query = @account.objects.where(object_type: ['Note', 'Question'])
+          base_query = @account.objects.where(object_type: %w[Note Question])
 
           # ローカル投稿とリモート投稿の両方を含める
           base_query = base_query.where(local: [true, false])

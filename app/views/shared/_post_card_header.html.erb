@@ -1,6 +1,6 @@
 <%
   # 投稿カードヘッダー部分
-  # パラメータ: actor, published_at, post, pinned
+  # パラメータ: actor, published_at, post, pinned, reblog
 %>
 
 <header class="mb-2">
@@ -22,6 +22,9 @@
       <div class="post-card-timestamp">
         <% if pinned %>
           <span class="mr-2">固定投稿</span>
+        <% end %>
+        <% if reblog %>
+          <span class="mr-2">再投稿</span>
         <% end %>
         <%= render 'shared/post_card_time_link', actor: actor, post: post, published_at: published_at %>
       </div>
