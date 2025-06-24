@@ -3,50 +3,47 @@
     <!-- 一括操作バー -->
     <div class="border-b border-gray-300 px-4 sm:px-6 py-3">
       <%= form_with url: bulk_action_config_custom_emojis_path, method: :post, local: true, id: "bulk_form" do |form| %>
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-          <div class="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+        <div class="flex items-center justify-between space-x-4">
+          <div class="flex items-center space-x-4">
             <label class="inline-flex items-center flex-shrink-0">
               <input type="checkbox" id="select_all" class="custom-checkbox">
-              <span class="ml-2 text-sm text-gray-600 whitespace-nowrap">すべて選択</span>
+              <span class="ml-2 text-xs text-gray-600 whitespace-nowrap">すべて選択</span>
             </label>
             
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-1">
               <% if params[:tab] == 'remote' %>
                 <%= form.select :action_type, 
                     options_for_select([
-                      ['一括操作を選択', ''],
-                      ['ローカルにコピー', 'copy'],
+                      ['操作選択', ''],
+                      ['コピー', 'copy'],
                       ['有効化', 'enable'],
                       ['無効化', 'disable'],
                       ['削除', 'delete']
                     ]),
                     {},
-                    class: "form-select btn-sm text-xs sm:text-sm" %>
+                    class: "form-select text-xs" %>
               <% else %>
                 <%= form.select :action_type, 
                     options_for_select([
-                      ['一括操作を選択', ''],
+                      ['操作選択', ''],
                       ['有効化', 'enable'],
                       ['無効化', 'disable'],
                       ['削除', 'delete']
                     ]),
                     {},
-                    class: "form-select btn-sm text-xs sm:text-sm" %>
+                    class: "form-select text-xs" %>
               <% end %>
               
               <%= form.submit "実行", 
-                  class: "btn-secondary btn-sm text-xs sm:text-sm whitespace-nowrap",
+                  class: "btn-secondary text-xs whitespace-nowrap",
                   onclick: "return confirmBulkAction()" %>
               
               <%= form.hidden_field :tab, value: params[:tab] %>
             </div>
           </div>
           
-          <div class="text-xs sm:text-sm text-gray-500 flex-shrink-0">
+          <div class="text-xs text-gray-500 flex-shrink-0">
             <%= defined?(@total_count) ? @total_count : custom_emojis.count %>件の絵文字
-            <% if defined?(@current_page) && @total_pages > 1 %>
-              <span class="hidden sm:inline">（<%= @current_page %>/<%= @total_pages %>ページ）</span>
-            <% end %>
           </div>
         </div>
       <% end %>
@@ -164,8 +161,7 @@
           <div class="flex items-center space-x-2">
             <% if @has_prev_page %>
               <%= link_to config_custom_emojis_path(params.to_unsafe_h.merge(page: @current_page - 1)), 
-                  class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors text-sm",
-                  style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
+                  class: "btn-secondary btn-sm" do %>
                 ← 前
               <% end %>
             <% else %>
@@ -178,8 +174,7 @@
             
             <% if @has_next_page %>
               <%= link_to config_custom_emojis_path(params.to_unsafe_h.merge(page: @current_page + 1)), 
-                  class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors text-sm",
-                  style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
+                  class: "btn-secondary btn-sm" do %>
                 次 →
               <% end %>
             <% else %>

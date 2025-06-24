@@ -38,7 +38,7 @@
                     </span>
                     <span class="text-xs text-gray-600 text-normal">
                       <%= case relay.state
-                          when 'accepted' then '接続済'
+                          when 'accepted' then '接続済み'
                           when 'pending' then '接続中'
                           when 'rejected' then '拒否'
                           else '未接続'
@@ -53,18 +53,18 @@
                     <%= form_with url: config_relay_path(relay), method: :patch, local: true, class: "inline" do |f| %>
                       <%= f.hidden_field :action_type, value: 'enable' %>
                       <%= f.submit "接続", 
-                          class: "px-3 py-2 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors text-sm btn-secondary btn-sm" %>
+                          class: "btn-secondary btn-sm" %>
                     <% end %>
                   <% elsif relay.accepted? %>
                     <%= form_with url: config_relay_path(relay), method: :patch, local: true, class: "inline" do |f| %>
                       <%= f.hidden_field :action_type, value: 'disable' %>
                       <%= f.submit "切断", 
-                          class: "px-3 py-2 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors text-sm btn-secondary btn-sm" %>
+                          class: "btn-secondary btn-sm" %>
                     <% end %>
                   <% end %>
                   <%= form_with url: config_relay_path(relay), method: :delete, local: true, class: "inline", data: { confirm: "本当に削除しますか？" } do |f| %>
                     <%= f.submit "削除", 
-                        class: "px-3 py-2 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors text-sm btn-secondary btn-sm" %>
+                        class: "btn-secondary btn-sm" %>
                   <% end %>
                 </div>
               </div>
@@ -99,6 +99,6 @@
 
   <div class="mt-6">
     <%= link_to "設定に戻る", config_path, 
-        class: "px-3 py-1 border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer text-sm btn-secondary btn-sm" %>
+        class: "btn-secondary btn-sm" %>
   </div>
 </div>

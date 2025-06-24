@@ -43,55 +43,83 @@
       <%= form.hidden_field :tab, value: @tab %>
       <%= form.hidden_field :page, value: params[:page] if params[:page].present? %>
       
-      <div class="flex items-center space-x-4">
-        <div class="flex-1">
-          <%= form.text_field :q, 
-              value: params[:q],
-              placeholder: "絵文字名で検索...",
-              class: "w-full form-input" %>
-        </div>
-        
-        <div>
-          <%= form.select :enabled, 
-              options_for_select([
-                ['すべて', ''],
-                ['有効のみ', 'true'],
-                ['無効のみ', 'false']
-              ], params[:enabled]),
-              {},
-              class: "form-select",
-              onchange: "this.form.requestSubmit()" %>
-        </div>
-        
-        <% if @tab == 'remote' && @remote_domains.present? %>
-          <div>
-            <%= form.select :domain, 
-                options_for_select([['全ドメイン', '']] + @remote_domains.map { |domain, count| ["#{domain} (#{count})", domain] }, params[:domain]),
+      <% if @tab == 'local' %>
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+          <div class="flex-1 max-w-xs sm:max-w-sm">
+            <%= form.text_field :q, 
+                value: params[:q],
+                placeholder: "絵文字名で検索...",
+                class: "w-full form-input" %>
+          </div>
+          
+          <div class="flex-shrink-0">
+            <%= form.select :enabled, 
+                options_for_select([
+                  ['すべて', ''],
+                  ['有効のみ', 'true'],
+                  ['無効のみ', 'false']
+                ], params[:enabled]),
                 {},
                 class: "form-select",
                 onchange: "this.form.requestSubmit()" %>
           </div>
-        <% end %>
-        
-        <%= form.submit "検索", 
-            class: "btn-secondary" %>
-      </div>
+          
+          <%= form.submit "検索", 
+              class: "btn-secondary whitespace-nowrap" %>
+        </div>
+      <% end %>
+      
+      <% if @tab == 'remote' %>
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+          <div class="flex-1 max-w-xs sm:max-w-sm">
+            <%= form.text_field :q, 
+                value: params[:q],
+                placeholder: "絵文字名で検索...",
+                class: "w-full form-input" %>
+          </div>
+          
+          <div class="flex-shrink-0">
+            <%= form.select :enabled, 
+                options_for_select([
+                  ['すべて', ''],
+                  ['有効のみ', 'true'],
+                  ['無効のみ', 'false']
+                ], params[:enabled]),
+                {},
+                class: "form-select",
+                onchange: "this.form.requestSubmit()" %>
+          </div>
+          
+          <% if @remote_domains.present? %>
+            <div class="flex-shrink-0">
+              <%= form.select :domain, 
+                  options_for_select([['全ドメイン', '']] + @remote_domains.map { |domain, count| ["#{domain} (#{count})", domain] }, params[:domain]),
+                  {},
+                  class: "form-select",
+                  onchange: "this.form.requestSubmit()" %>
+            </div>
+          <% end %>
+          
+          <%= form.submit "検索", 
+              class: "btn-secondary whitespace-nowrap" %>
+        </div>
+      <% end %>
       
       <!-- リモート絵文字発見機能 -->
       <% if @tab == 'remote' %>
-        <div class="flex items-center space-x-4">
-          <%= form_with url: discover_remote_config_custom_emojis_path, method: :post, class: "flex items-center space-x-4 w-full" do |discovery_form| %>
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+          <%= form_with url: discover_remote_config_custom_emojis_path, method: :post, class: "flex items-center space-x-2 flex-1" do |discovery_form| %>
             <div class="flex-1">
               <%= discovery_form.text_field :domain, 
-                  placeholder: "特定ドメインから発見（例: mastodon.social）",
+                  placeholder: "ドメインから発見（例: mastodon.social）",
                   class: "w-full form-input" %>
             </div>
             <%= discovery_form.submit "発見", 
-                class: "btn-secondary" %>
+                class: "btn-secondary whitespace-nowrap" %>
           <% end %>
           <%= button_to "全ドメイン発見", discover_remote_config_custom_emojis_path, 
               method: :post,
-              class: "btn-secondary" %>
+              class: "btn-secondary w-full sm:w-auto" %>
         </div>
       <% end %>
     <% end %>
