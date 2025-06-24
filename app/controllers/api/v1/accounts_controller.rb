@@ -47,7 +47,7 @@ module Api
           statuses = pinned_statuses.map(&:object)
         else
           # 通常の投稿一覧（pinned statusesを最上部に表示）
-          base_query = @account.objects.where(object_type: 'Note')
+          base_query = @account.objects.where(object_type: ['Note', 'Question'])
 
           # ローカル投稿とリモート投稿の両方を含める
           base_query = base_query.where(local: [true, false])

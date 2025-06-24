@@ -143,7 +143,18 @@ module StatusSerializationHelper
 
   def serialize_poll(status)
     return nil unless status.poll
-    
-    serialize_poll_with_user_votes(status.poll, current_user)
+
+    poll = status.poll
+    result = poll.to_mastodon_api
+
+    # Add current user specific data if authenticated
+    if current_user
+      # 一度のクエリで投票情報を取得
+      user_votes = poll.poll_votes.where(actor: current_user)
+      result[:voted] = user_votes.exists?
+      result[:own_votes] = user_votes.pluck(:choice)
+    end
+
+    result
   end
 end

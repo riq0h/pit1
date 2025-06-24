@@ -40,11 +40,22 @@ module Api
         @status = build_status_object
         attach_media_to_status if @media_ids&.any?
 
+        # 投票パラメータがある場合は先に作成
+        if poll_params.present?
+          # 一時的に投票データを保存
+          @poll_data = poll_params
+        end
+
         if @status.save
+          # DB IDが確定したのでAP IDを設定
+          base_url = Rails.application.config.activitypub.base_url
+          @status.update_column(:ap_id, "#{base_url}/users/#{current_user.username}/posts/#{@status.id}")
+          
           process_mentions_and_tags
 
-          if poll_params.present?
-            poll = create_poll_for_status
+          # 投票を作成（ステータス保存後）
+          if @poll_data.present?
+            poll = create_poll_for_status_with_data(@poll_data)
             unless poll
               @status.destroy
               return render json: { error: 'Failed to create poll' }, status: :unprocessable_entity
@@ -130,6 +141,10 @@ module Api
         @status = build_quote_status_object(quoted_status, quote_params)
 
         if @status.save
+          # DB IDが確定したのでAP IDを設定
+          base_url = Rails.application.config.activitypub.base_url
+          @status.update_column(:ap_id, "#{base_url}/users/#{current_user.username}/posts/#{@status.id}")
+          
           create_quote_post_record(quoted_status, quote_params)
           process_mentions_and_tags if @status.content.present?
           @status.create_quote_activity(quoted_status) if @status.local?
@@ -279,8 +294,7 @@ module Api
         status_params.merge(
           object_type: 'Note',
           published_at: Time.current,
-          local: true,
-          ap_id: generate_status_ap_id
+          local: true
         )
       end
 
@@ -301,7 +315,7 @@ module Api
       end
 
       def set_status
-        @status = ActivityPubObject.where(object_type: 'Note')
+        @status = ActivityPubObject.where(object_type: ['Note', 'Question'])
                                    .includes(:poll)
                                    .find(params[:id])
       end
@@ -449,10 +463,6 @@ module Api
         "#{status.ap_id}#delete-#{Time.current.to_i}"
       end
 
-      def generate_status_ap_id
-        base_url = Rails.application.config.activitypub.base_url
-        "#{base_url}/users/#{current_user.username}/posts/#{Letter::Snowflake.generate}"
-      end
 
 
       def build_ancestors(status)
@@ -583,8 +593,7 @@ module Api
           summary: quote_params[:spoiler_text],
           object_type: 'Note',
           published_at: Time.current,
-          local: true,
-          ap_id: generate_status_ap_id
+          local: true
         )
       end
 
@@ -646,6 +655,10 @@ module Api
 
       def create_poll_for_status
         PollCreationService.create_for_status(@status, poll_params)
+      end
+
+      def create_poll_for_status_with_data(poll_data)
+        PollCreationService.create_for_status(@status, poll_data)
       end
     end
   end

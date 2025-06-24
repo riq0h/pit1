@@ -56,6 +56,9 @@ Rails.application.routes.draw do
   # 個別投稿表示 (ap_id の末尾部分を使用)
   get '/@:username/:id', to: 'posts#show_html', as: :post_html
 
+  # API形式URLからフロントエンド形式URLへのリダイレクト
+  get '/users/:username/posts/:id', to: 'posts#redirect_to_frontend', as: :post_redirect
+
   # 認証・管理
   get '/login', to: 'sessions#new'
   post '/login', to: 'sessions#create'

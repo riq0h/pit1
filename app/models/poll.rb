@@ -131,10 +131,13 @@ class Poll < ApplicationRecord
   def serialize_options
     return [] unless options.is_a?(Array)
 
+    # 全投票データを一度に取得してN+1クエリを回避
+    vote_counts_by_choice = poll_votes.group(:choice).count
+
     options.each_with_index.map do |option, index|
       {
         title: option['title'] || option[:title],
-        votes_count: option_votes_count(index)
+        votes_count: vote_counts_by_choice[index] || 0
       }
     end
   end

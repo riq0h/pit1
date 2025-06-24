@@ -4,7 +4,7 @@ class ActivityPubObject < ApplicationRecord
   self.table_name = 'objects'
 
   # === 定数 ===
-  OBJECT_TYPES = %w[Note Article Image Video Audio Document Page].freeze
+  OBJECT_TYPES = %w[Note Article Image Video Audio Document Page Question Vote].freeze
   VISIBILITY_LEVELS = %w[public unlisted private direct].freeze
 
   # === バリデーション ===
@@ -503,6 +503,7 @@ class ActivityPubObject < ApplicationRecord
   def requires_content?
     return false if media_attachments.any?
 
+    # Vote、Question、メディア付きオブジェクトはcontentが不要
     %w[Note Article].include?(object_type)
   end
 

@@ -3,6 +3,15 @@
 class PostsController < ApplicationController
   before_action :set_post, only: [:show_html]
 
+  # GET /users/{username}/posts/{id}
+  # API形式URLからフロントエンド形式URLへのリダイレクト
+  def redirect_to_frontend
+    username = params[:username]
+    id = params[:id]
+    
+    redirect_to post_html_path(username: username, id: id), status: :moved_permanently
+  end
+
   # GET /@{username}/{id}
   # HTML表示用
   def show_html

@@ -44,7 +44,8 @@ module ActivityPubCreateHandlers
     handle_media_attachments(object, object_data)
     handle_mentions(object, object_data)
     handle_emojis(object, object_data)
-    handle_poll(object, object_data) if object_data['type'] == 'Question'
+    handle_poll(object, object_data) if object_data['type'] == 'Question' || object_data['oneOf'] || object_data['anyOf']
+    handle_vote(object, object_data) if object_data['type'] == 'Vote'
     handle_direct_message_conversation(object, object_data) if object.visibility == 'direct'
     update_reply_count_if_needed(object)
 
@@ -214,5 +215,29 @@ module ActivityPubCreateHandlers
     Rails.logger.info "📊 Poll created with #{options.count} options for object #{object.id}"
   rescue StandardError => e
     Rails.logger.error "❌ Failed to create poll: #{e.message}"
+  end
+
+  def handle_vote(object, object_data)
+    # 投票オブジェクトは通常、inReplyToで投票対象を指している
+    return unless object_data['inReplyTo'].present?
+
+    # 投票対象の投稿を探す
+    target_object = ActivityPubObject.find_by(ap_id: object_data['inReplyTo'])
+    return unless target_object&.poll
+
+    # 投票の選択肢を解析
+    choice_name = object_data['name'] || object_data['content']
+    return unless choice_name
+
+    # 投票の選択肢インデックスを見つける
+    choice_index = target_object.poll.option_titles.index(choice_name)
+    return unless choice_index
+
+    # 投票を記録
+    target_object.poll.vote_for!(object.actor, [choice_index])
+    
+    Rails.logger.info "🗳️ Vote recorded: #{object.actor.username} voted '#{choice_name}' on poll #{target_object.poll.id}"
+  rescue StandardError => e
+    Rails.logger.error "❌ Failed to process vote: #{e.message}"
   end
 end
