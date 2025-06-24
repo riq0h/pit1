@@ -16,7 +16,7 @@ class FeaturedController < ApplicationController
                             .ordered
                             .map(&:object)
 
-    ordered_items = pinned_statuses.map(&:ap_id)
+    ordered_items = pinned_statuses.map { |status| status.to_activitypub }
 
     featured_collection = {
       '@context' => 'https://www.w3.org/ns/activitystreams',
