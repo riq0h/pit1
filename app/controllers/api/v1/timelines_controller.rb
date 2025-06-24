@@ -45,6 +45,8 @@ module Api
                         .includes(:actor, object: [:actor, :media_attachments])
                         .order(created_at: :desc)
                         .limit(params[:limit]&.to_i || 20)
+                        
+        reblogs = apply_reblog_pagination_filters(reblogs)
         
         # 両方を時系列で結合
         combine_statuses_and_reblogs(statuses, reblogs)
@@ -109,13 +111,44 @@ module Api
       end
 
       def apply_pagination_filters(query)
-        query = query.where(objects: { id: ...(params[:max_id]) }) if params[:max_id].present?
-        query = query.where('objects.id > ?', params[:min_id]) if params[:min_id].present?
+        if params[:max_id].present?
+          return ActivityPubObject.none unless ActivityPubObject.exists?(id: params[:max_id])
+          query = query.where('objects.id < ?', params[:max_id])
+        end
+        
+        if params[:since_id].present? && params[:min_id].blank?
+          query = query.where('objects.id > ?', params[:since_id])
+        end
+        
+        if params[:min_id].present?
+          query = query.where('objects.id > ?', params[:min_id])
+        end
+        
         query
       end
 
       def local_only?
         params[:local].present? && params[:local] != 'false'
+      end
+
+      def apply_reblog_pagination_filters(query)
+        if params[:max_id].present?
+          return Reblog.none unless ActivityPubObject.exists?(id: params[:max_id])
+          max_object = ActivityPubObject.find_by(id: params[:max_id])
+          query = query.where('reblogs.created_at < ?', max_object.published_at) if max_object
+        end
+        
+        if params[:since_id].present? && params[:min_id].blank?
+          since_object = ActivityPubObject.find_by(id: params[:since_id])
+          query = query.where('reblogs.created_at > ?', since_object.published_at) if since_object
+        end
+        
+        if params[:min_id].present?
+          min_object = ActivityPubObject.find_by(id: params[:min_id])
+          query = query.where('reblogs.created_at > ?', min_object.published_at) if min_object
+        end
+        
+        query
       end
 
       def combine_statuses_and_reblogs(statuses, reblogs)

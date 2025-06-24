@@ -12,10 +12,13 @@ class HttpSignatureVerifier
 
   def verify!(actor_uri)
     signature_params = parse_signature_header
+    return false unless signature_params
     return false unless validate_date_header
 
     # 初回署名検証試行
     public_key = fetch_actor_public_key(actor_uri)
+    return false unless public_key
+    
     signing_string = build_signing_string(signature_params['headers'])
 
     result = verify_signature(
@@ -24,8 +27,11 @@ class HttpSignatureVerifier
       public_key: public_key
     )
 
+    Rails.logger.info "🔐 Signature verification #{result ? 'successful' : 'failed'} for #{actor_uri}"
+
     # 失敗時のフォールバック: アクターキーリフレッシュ
     if !result && should_refresh_actor_key(actor_uri)
+      Rails.logger.info "🔐 Refreshing public key for #{actor_uri}"
       public_key = fetch_actor_public_key(actor_uri, refresh: true)
       result = verify_signature(
         signature: signature_params['signature'],
@@ -34,12 +40,6 @@ class HttpSignatureVerifier
       )
     end
 
-    # 失敗時のフォールバック: Pleroma式寛容な検証
-    result ||= verify_signature_pleroma_style(
-      signature: signature_params['signature'],
-      signing_string: signing_string,
-      public_key: public_key
-    )
 
     result
   rescue StandardError => e
@@ -85,7 +85,9 @@ class HttpSignatureVerifier
     required_params = %w[keyId algorithm headers signature]
     missing = required_params - params.keys
 
-    raise ActivityPub::SignatureError, "Missing signature parameters: #{missing.join(', ')}" if missing.any?
+    if missing.any?
+      raise ActivityPub::SignatureError, "Missing signature parameters: #{missing.join(', ')}"
+    end
 
     params
   end
@@ -190,7 +192,8 @@ class HttpSignatureVerifier
 
   def build_signature_parts(header_names)
     header_names.map do |header_name|
-      build_signature_part(header_name)
+      part = build_signature_part(header_name)
+        part
     end
   end
 
@@ -217,24 +220,35 @@ class HttpSignatureVerifier
 
   def find_header_value(header_name)
     # Railsのheadersオブジェクトは文字列キーではなく、別の形式の可能性
-    headers[header_name] ||
+    value = headers[header_name] ||
       headers[header_name.downcase] ||
       headers[header_name.upcase] ||
       headers[header_name.titleize] ||
       headers.find { |k, v| k.to_s.downcase == header_name.downcase }&.last
+    
+    
+    value
   end
 
   def build_request_target_header
-    "(request-target): #{method.downcase} #{path}"
+    target = "(request-target): #{method.downcase} #{path}"
+    target
   end
 
   def build_standard_header(header_name)
-    "#{header_name}: #{standard_headers[header_name]}"
+    value = standard_headers[header_name]
+    # Mastodon標準: ヘッダー値の前後の空白を除去し、内部の連続空白を単一空白に正規化
+    normalized_value = value.to_s.strip.gsub(/\s+/, ' ')
+    header_line = "#{header_name}: #{normalized_value}"
+    header_line
   end
 
   def build_custom_header(header_name)
     value = find_header_value(header_name)
-    "#{header_name.downcase}: #{value}"
+    # Mastodon標準: ヘッダー値の正規化
+    normalized_value = value.to_s.strip.gsub(/\s+/, ' ')
+    header_line = "#{header_name.downcase}: #{normalized_value}"
+    header_line
   end
 
   # ActivityPub attachmentからfieldsを抽出
@@ -254,52 +268,32 @@ class HttpSignatureVerifier
 
   # 署名検証
   def verify_signature(signature:, signing_string:, public_key:)
-    decoded_signature = Base64.decode64(signature)
-    signing_string_utf8 = signing_string.force_encoding('UTF-8')
-
-    # SHA256での検証を試行
-    verified = public_key.verify(
-      OpenSSL::Digest.new('SHA256'),
-      decoded_signature,
-      signing_string_utf8
-    )
-
-    # 失敗時のフォールバック: SHA1での検証
-    verified ||= public_key.verify(
-      OpenSSL::Digest.new('SHA1'),
-      decoded_signature,
-      signing_string_utf8
-    )
-
-    verified
-  rescue StandardError => e
-    Rails.logger.error "Signature verification error: #{e.message}"
-    false
-  end
-
-  def verify_signature_pleroma_style(signature:, signing_string:, public_key:)
-    decoded_signature = Base64.decode64(signature)
-
-    # Pleroma式: より寛容なエンコーディングとアルゴリズム試行
-    %w[UTF-8 ASCII-8BIT].each do |encoding|
-      %w[SHA256 SHA1 SHA].each do |digest_name|
-        signing_string_encoded = signing_string.force_encoding(encoding)
-        verified = public_key.verify(
-          OpenSSL::Digest.new(digest_name),
-          decoded_signature,
-          signing_string_encoded
-        )
-        return true if verified
-      rescue StandardError
-        next
+    # Base64デコード
+    decoded_signature = Base64.decode64(signature.gsub(/\s+/, ''))
+    
+    # 署名文字列を正規化
+    normalized_signing_string = signing_string.encode('UTF-8', invalid: :replace, undef: :replace)
+    
+    # RSA-SHA256で検証
+    result = public_key.verify('SHA256', decoded_signature, normalized_signing_string)
+    
+    # 253バイト署名の場合はパディングして再試行
+    unless result
+      key_size_bytes = public_key.n.num_bytes
+      if decoded_signature.length < key_size_bytes
+        padding_needed = key_size_bytes - decoded_signature.length
+        adjusted_signature = ("\x00" * padding_needed) + decoded_signature
+        result = public_key.verify('SHA256', adjusted_signature, normalized_signing_string)
       end
     end
-
-    false
+    
+    result
   rescue StandardError => e
-    Rails.logger.error "Pleroma-style signature verification error: #{e.message}"
+    Rails.logger.debug "Signature verification error: #{e.message}"
     false
   end
+  
+  private
 
   def fetch_featured_collection_async(actor)
     return unless actor.featured_url.present?
@@ -307,6 +301,6 @@ class HttpSignatureVerifier
     # Featured Collection を非同期で取得
     FeaturedCollectionFetcher.new.fetch_for_actor(actor)
   rescue StandardError => e
-    Rails.logger.error "❌ Failed to fetch featured collection for #{actor.username}@#{actor.domain}: #{e.message}"
+    Rails.logger.error "Failed to fetch featured collection for #{actor.username}@#{actor.domain}: #{e.message}"
   end
 end

@@ -73,11 +73,20 @@ module ActivityPubVerification
 
   def verify_signature
     verifier = create_signature_verifier
-    return if verifier.verify!(@activity['actor'])
+    signature_result = verifier.verify!(@activity['actor'])
+    
+    if signature_result
+      Rails.logger.info "✅ Direct follow: Signature verified for #{@activity['actor']}"
+      return
+    end
 
     # リレーからの活動かチェック
-    return if relay_activity?
+    if relay_activity?
+      Rails.logger.info "🔗 Relay activity: Signature verification bypassed for #{@activity['actor']}"
+      return
+    end
 
+    Rails.logger.warn "❌ Direct follow: Signature verification failed for #{@activity['actor']}"
     raise ::ActivityPub::SignatureError, 'Signature verification failed'
   end
 
@@ -88,7 +97,11 @@ module ActivityPubVerification
     direct_relay = (Relay.accepted.to_a + Relay.pending.to_a).any? do |relay|
       relay.actor_uri == @activity['actor']
     end
-    return true if direct_relay
+    
+    if direct_relay
+      Rails.logger.info "🔗 Direct relay activity from #{@activity['actor']}"
+      return true
+    end
 
     # 2. リレー経由の投稿（HTTP SignatureのkeyIdでリレーを判定）
     signature_header = request.headers['Signature']
@@ -99,9 +112,15 @@ module ActivityPubVerification
     return false unless key_id
 
     # keyIdがリレーサーバーのものかチェック
-    (Relay.accepted.to_a + Relay.pending.to_a).any? do |relay|
+    relay_match = (Relay.accepted.to_a + Relay.pending.to_a).any? do |relay|
       strict_relay_keyid_check(key_id, relay)
     end
+
+    if relay_match
+      Rails.logger.info "🔗 Relay activity via keyId from #{@activity['actor']}"
+    end
+    
+    relay_match
   end
 
   private
