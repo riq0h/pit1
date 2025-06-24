@@ -17,7 +17,6 @@ class WebPushNotificationService
     Rails.logger.info "📱 Sending push notification for #{subscription.actor.username}: #{payload.to_json}"
 
     begin
-      # web-push gem を使用した実際のプッシュ通知送信
       WebPush.payload_send(
         message: payload.to_json,
         endpoint: subscription.endpoint,
@@ -27,7 +26,9 @@ class WebPushNotificationService
           subject: Rails.application.config.activitypub.base_url,
           public_key: vapid_public_key,
           private_key: vapid_private_key
-        }
+        },
+        ttl: 3600 * 24,
+        urgency: 'normal'
       )
       Rails.logger.info "✅ Push notification sent successfully to #{subscription.endpoint[0..50]}..."
       true
@@ -37,11 +38,12 @@ class WebPushNotificationService
       false
     rescue StandardError => e
       Rails.logger.error "Push notification failed for #{subscription.actor.username}: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n") if Rails.env.development?
       false
     end
   end
 
-  def self.notification_for_follow(follower, target)
+  def self.notification_for_follow(follower, target, notification_id = nil)
     return unless target.local?
 
     send_notification(
@@ -50,14 +52,14 @@ class WebPushNotificationService
       "#{follower.display_name_or_username}さんがあなたをフォローしました",
       follower.note.present? ? strip_tags(follower.note) : '',
       {
-        notification_id: nil,
+        notification_id: notification_id,
         url: "#{Rails.application.config.activitypub.base_url}/@#{follower.username}",
         icon: follower.avatar_url
       }
     )
   end
 
-  def self.notification_for_mention(status, mentioned_actor)
+  def self.notification_for_mention(status, mentioned_actor, notification_id = nil)
     return unless mentioned_actor.local?
 
     send_notification(
@@ -66,14 +68,14 @@ class WebPushNotificationService
       "#{status.actor.display_name_or_username}さんからメンション",
       strip_tags(status.content || ''),
       {
-        notification_id: nil,
+        notification_id: notification_id,
         url: status.ap_id,
         icon: status.actor.avatar_url
       }
     )
   end
 
-  def self.notification_for_favourite(favourite)
+  def self.notification_for_favourite(favourite, notification_id = nil)
     return unless favourite.object.actor.local?
 
     send_notification(
@@ -82,14 +84,14 @@ class WebPushNotificationService
       "#{favourite.actor.display_name_or_username}さんがいいねしました",
       strip_tags(favourite.object.content || ''),
       {
-        notification_id: nil,
+        notification_id: notification_id,
         url: favourite.object.ap_id,
         icon: favourite.actor.avatar_url
       }
     )
   end
 
-  def self.notification_for_reblog(reblog)
+  def self.notification_for_reblog(reblog, notification_id = nil)
     return unless reblog.object.actor.local?
 
     send_notification(
@@ -98,9 +100,73 @@ class WebPushNotificationService
       "#{reblog.actor.display_name_or_username}さんがリブログしました",
       strip_tags(reblog.object.content || ''),
       {
-        notification_id: nil,
+        notification_id: notification_id,
         url: reblog.object.ap_id,
         icon: reblog.actor.avatar_url
+      }
+    )
+  end
+
+  def self.notification_for_follow_request(follower, target, notification_id = nil)
+    return unless target.local?
+
+    send_notification(
+      target,
+      'follow_request',
+      "#{follower.display_name_or_username}さんからフォローリクエスト",
+      follower.note.present? ? strip_tags(follower.note) : '',
+      {
+        notification_id: notification_id,
+        url: "#{Rails.application.config.activitypub.base_url}/@#{follower.username}",
+        icon: follower.avatar_url
+      }
+    )
+  end
+
+  def self.notification_for_poll(status, account, notification_id = nil)
+    return unless account.local?
+
+    send_notification(
+      account,
+      'poll',
+      "投票が終了しました",
+      strip_tags(status.content || ''),
+      {
+        notification_id: notification_id,
+        url: status.ap_id,
+        icon: status.actor.avatar_url
+      }
+    )
+  end
+
+  def self.notification_for_status(status, account, notification_id = nil)
+    return unless account.local?
+
+    send_notification(
+      account,
+      'status',
+      "#{status.actor.display_name_or_username}さんが投稿しました",
+      strip_tags(status.content || ''),
+      {
+        notification_id: notification_id,
+        url: status.ap_id,
+        icon: status.actor.avatar_url
+      }
+    )
+  end
+
+  def self.notification_for_update(status, account, notification_id = nil)
+    return unless account.local?
+
+    send_notification(
+      account,
+      'update',
+      "#{status.actor.display_name_or_username}さんが投稿を編集しました",
+      strip_tags(status.content || ''),
+      {
+        notification_id: notification_id,
+        url: status.ap_id,
+        icon: status.actor.avatar_url
       }
     )
   end
@@ -115,19 +181,10 @@ class WebPushNotificationService
   end
 
   def self.vapid_public_key
-    ENV['VAPID_PUBLIC_KEY'] || generate_default_vapid_keys[:public]
+    ENV['VAPID_PUBLIC_KEY'] || Rails.application.credentials.dig(:vapid, :public_key)
   end
 
   def self.vapid_private_key
-    ENV['VAPID_PRIVATE_KEY'] || generate_default_vapid_keys[:private]
-  end
-
-  def self.generate_default_vapid_keys
-    # 開発環境用のデフォルトVAPIDキー（本番では環境変数を使用）
-    keys = WebPush.generate_key
-    {
-      public: keys.public_key,
-      private: keys.private_key
-    }
+    ENV['VAPID_PRIVATE_KEY'] || Rails.application.credentials.dig(:vapid, :private_key)
   end
 end

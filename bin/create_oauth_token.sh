@@ -139,13 +139,13 @@ begin
     app = Doorkeeper::Application.find_or_create_by(uid: "letter_client_#{username}") do |a|
       a.name = "Letter API Client (#{username})"
       a.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
-      a.scopes = "read write follow"
+      a.scopes = "read write follow push"
     end
 
     token = Doorkeeper::AccessToken.create!(
       application: app,
       resource_owner_id: actor.id,
-      scopes: "read write follow"
+      scopes: "read write follow push"
     )
 
     puts "success|OAuth トークンが正常に作成されました！"

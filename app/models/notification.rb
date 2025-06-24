@@ -105,18 +105,29 @@ class Notification < ApplicationRecord
   def send_push_notification
     case notification_type
     when 'follow'
-      WebPushNotificationService.notification_for_follow(from_account, account)
+      WebPushNotificationService.notification_for_follow(from_account, account, id)
+    when 'follow_request'
+      WebPushNotificationService.notification_for_follow_request(from_account, account, id)
     when 'mention'
       status = activity
-      WebPushNotificationService.notification_for_mention(status, account) if status
+      WebPushNotificationService.notification_for_mention(status, account, id) if status
     when 'favourite'
       status = activity
       favourite = Favourite.find_by(actor: from_account, object: status)
-      WebPushNotificationService.notification_for_favourite(favourite) if favourite && status
+      WebPushNotificationService.notification_for_favourite(favourite, id) if favourite && status
     when 'reblog'
       status = activity
       reblog = Reblog.find_by(actor: from_account, object: status)
-      WebPushNotificationService.notification_for_reblog(reblog) if reblog && status
+      WebPushNotificationService.notification_for_reblog(reblog, id) if reblog && status
+    when 'poll'
+      status = activity
+      WebPushNotificationService.notification_for_poll(status, account, id) if status
+    when 'status'
+      status = activity
+      WebPushNotificationService.notification_for_status(status, account, id) if status
+    when 'update'
+      status = activity
+      WebPushNotificationService.notification_for_update(status, account, id) if status
     end
   rescue StandardError => e
     Rails.logger.error "Failed to send push notification: #{e.message}"

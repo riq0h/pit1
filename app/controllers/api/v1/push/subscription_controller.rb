@@ -23,14 +23,17 @@ module Api
 
           return render_validation_error('Missing required subscription data') if subscription_params.nil?
 
-          @subscription = current_user.web_push_subscriptions.find_or_initialize_by(
+          @subscription = current_account.web_push_subscriptions.find_or_initialize_by(
             endpoint: subscription_params[:endpoint]
           )
 
           @subscription.assign_attributes(
             p256dh_key: subscription_params[:keys][:p256dh],
             auth_key: subscription_params[:keys][:auth],
-            data: { alerts: extract_alerts }.to_json
+            data: { 
+              alerts: extract_alerts,
+              policy: params.dig(:data, :policy) || 'all'
+            }.to_json
           )
 
           if @subscription.save
@@ -46,8 +49,10 @@ module Api
         # PUT /api/v1/push/subscription
         def update
           if @subscription
-            alerts = extract_alerts
-            @subscription.alerts = alerts
+            current_data = @subscription.data_hash
+            current_data['alerts'] = extract_alerts
+            current_data['policy'] = params.dig(:data, :policy) if params.dig(:data, :policy).present?
+            @subscription.data_hash = current_data
 
             if @subscription.save
               render json: serialized_subscription(@subscription)
@@ -75,7 +80,7 @@ module Api
         private
 
         def set_subscription
-          @subscription = current_user.web_push_subscriptions.first
+          @subscription = current_account.web_push_subscriptions.first
         end
 
         def extract_subscription_params
@@ -96,7 +101,7 @@ module Api
           default_alerts = WebPushSubscription.new.default_alerts
 
           # Strong Parametersを適切に処理
-          permitted_alerts = alerts_params.permit(*default_alerts.keys)
+          permitted_alerts = alerts_params.permit(*default_alerts.keys, 'admin.sign_up', 'admin.report')
           default_alerts.merge(permitted_alerts.to_h)
         end
 
@@ -109,8 +114,13 @@ module Api
             id: subscription.id.to_s,
             endpoint: subscription.endpoint,
             alerts: subscription.alerts,
-            server_key: WebPushNotificationService.send(:vapid_public_key)
+            server_key: vapid_public_key,
+            policy: subscription.data_hash['policy'] || 'all'
           }
+        end
+
+        def vapid_public_key
+          ENV['VAPID_PUBLIC_KEY'] || Rails.application.credentials.dig(:vapid, :public_key)
         end
       end
     end

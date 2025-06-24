@@ -14,7 +14,7 @@ bin/ディレクトリには、ActivityPub機能を管理するためのスク�
 #### `cleanup_and_start.sh`
 **用途**: 強制リセット＆再起動  
 **使用法**: `./cleanup_and_start.sh`  
-**説明**: 全プロセスを強制終了し、設定を修正してから再起動します。問題発生時に使用。
+**説明**: 全プロセスを強制終了し、設定を修正してから再起動します。
 
 #### `load_env.sh`
 **用途**: 環境変数読み込みヘルパー  
@@ -45,6 +45,12 @@ bin/ディレクトリには、ActivityPub機能を管理するためのスク�
 **用途**: OAuth トークン生成  
 **使用法**: `./create_oauth_token.sh`  
 **説明**: 指定したユーザ用のOAuthアクセストークンを生成します。API使用に必要。
+
+#### `generate_vapid.sh`
+**用途**: VAPID キー生成  
+**使用法**: `./generate_vapid.sh`  
+**説明**: Web Push通知用のVAPID (Voluntary Application Server Identification) キーペアを生成します。
+**注意**: VAPIDキー変更により既存のプッシュ通知サブスクリプションが無効化されます。
 
 #### `delete_account.sh`
 **用途**: アカウント削除  

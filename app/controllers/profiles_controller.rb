@@ -209,12 +209,7 @@ class ProfilesController < ApplicationController
   end
 
   def get_post_display_id(timeline_item)
-    if timeline_item.is_a?(Hash)
-      timeline_item[:id]
-    else
-      # 後方互換性のため
-      timeline_item.id
-    end
+    timeline_item[:id]
   end
 
   def setup_pagination
