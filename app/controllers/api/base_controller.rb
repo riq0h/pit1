@@ -109,6 +109,7 @@ module Api
       headers['Access-Control-Allow-Methods'] = 'POST, PUT, DELETE, GET, PATCH, OPTIONS'
       headers['Access-Control-Request-Method'] = '*'
       headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+      headers['Access-Control-Expose-Headers'] = 'Link, X-Total-Count'
     end
 
     def not_found

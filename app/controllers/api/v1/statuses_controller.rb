@@ -10,7 +10,10 @@ module Api
       include StatusActivityHandlers
       include StatusSerializationHelper
       include TextLinkingHelper
+      include ApiPagination
+      
       before_action :doorkeeper_authorize!, except: [:show]
+      after_action :insert_pagination_headers, only: [:reblogged_by, :favourited_by]
       before_action :doorkeeper_authorize!, only: [:show], if: -> { request.authorization.present? }
       before_action :set_status, except: [:create]
 
@@ -116,17 +119,17 @@ module Api
 
       # GET /api/v1/statuses/:id/reblogged_by
       def reblogged_by
-        limit = [params.fetch(:limit, 40).to_i, 80].min
-        reblogs = @status.reblogs.includes(:actor).limit(limit)
+        reblogs = @status.reblogs.includes(:actor).limit(limit_param)
         accounts = reblogs.map(&:actor)
+        @paginated_items = accounts
         render json: accounts.map { |account| serialized_account(account) }
       end
 
       # GET /api/v1/statuses/:id/favourited_by
       def favourited_by
-        limit = [params.fetch(:limit, 40).to_i, 80].min
-        favourites = @status.favourites.includes(:actor).limit(limit)
+        favourites = @status.favourites.includes(:actor).limit(limit_param)
         accounts = favourites.map(&:actor)
+        @paginated_items = accounts
         render json: accounts.map { |account| serialized_account(account) }
       end
 

@@ -6,19 +6,24 @@ module Api
       include StatusSerializationHelper
       include AccountSerializer
       include TextLinkingHelper
+      include ApiPagination
+      
       before_action :doorkeeper_authorize!, only: [:home]
+      after_action :insert_pagination_headers
 
       # GET /api/v1/timelines/home
       def home
         return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
 
         timeline_items = build_home_timeline_query
+        @paginated_items = timeline_items
         render json: timeline_items.map { |item| serialize_timeline_item(item) }
       end
 
       # GET /api/v1/timelines/public
       def public
         statuses = build_public_timeline_query
+        @paginated_items = statuses
         render json: statuses.map { |status| serialized_status(status) }
       end
 
@@ -26,6 +31,7 @@ module Api
       def tag
         hashtag_name = params[:hashtag]
         statuses = build_hashtag_timeline_query(hashtag_name)
+        @paginated_items = statuses
         render json: statuses.map { |status| serialized_status(status) }
       end
 
@@ -34,28 +40,22 @@ module Api
       def build_home_timeline_query
         followed_ids = current_user.followed_actors.pluck(:id) + [current_user.id]
         
-        # 通常の投稿を取得
         statuses = base_timeline_query.where(actors: { id: followed_ids })
-        statuses = apply_pagination_filters(statuses)
+        statuses = apply_pagination_filters(statuses).limit(limit_param * 2)
         
-        # リブログを取得
         reblogs = Reblog.joins(:actor, :object)
-                        .where(actor_id: followed_ids)
-                        .where(objects: { visibility: %w[public unlisted] })
-                        .includes(:actor, object: [:actor, :media_attachments])
-                        .order(created_at: :desc)
-                        .limit(params[:limit]&.to_i || 20)
-                        
-        reblogs = apply_reblog_pagination_filters(reblogs)
+                       .where(actor_id: followed_ids)
+                       .where(objects: { visibility: %w[public unlisted] })
+                       .includes(:object, :actor)
+        reblogs = apply_reblog_pagination_filters(reblogs).limit(limit_param * 2)
         
-        # 両方を時系列で結合
-        combine_statuses_and_reblogs(statuses, reblogs)
+        merge_timeline_items(statuses, reblogs)
       end
 
       def build_public_timeline_query
         statuses = base_timeline_query.where(visibility: 'public')
         statuses = statuses.where(actors: { local: true }) if local_only?
-        apply_pagination_filters(statuses)
+        apply_pagination_filters(statuses).limit(limit_param)
       end
 
       def build_hashtag_timeline_query(hashtag_name)
@@ -67,7 +67,7 @@ module Api
                    .joins(:tags)
                    .where(tags: { id: tag.id })
                    .where(visibility: 'public')
-        apply_pagination_filters(statuses)
+        apply_pagination_filters(statuses).limit(limit_param)
       end
 
       def base_timeline_query
@@ -75,7 +75,6 @@ module Api
                                  .includes(:poll)
                                  .where(object_type: ['Note', 'Question'])
                                  .order('objects.id DESC')
-                                 .limit(params[:limit]&.to_i || 20)
 
         # Apply user-specific filters if authenticated
         query = apply_user_filters(query) if current_user
@@ -111,21 +110,12 @@ module Api
       end
 
       def apply_pagination_filters(query)
-        if params[:max_id].present?
-          return ActivityPubObject.none unless ActivityPubObject.exists?(id: params[:max_id])
-          query = query.where('objects.id < ?', params[:max_id])
-        end
-        
-        if params[:since_id].present? && params[:min_id].blank?
-          query = query.where('objects.id > ?', params[:since_id])
-        end
-        
-        if params[:min_id].present?
-          query = query.where('objects.id > ?', params[:min_id])
-        end
-        
+        query = query.where(objects: { id: ...(params[:max_id]) }) if params[:max_id].present?
+        query = query.where('objects.id > ?', params[:since_id]) if params[:since_id].present? && params[:min_id].blank?
+        query = query.where('objects.id > ?', params[:min_id]) if params[:min_id].present?
         query
       end
+      
 
       def local_only?
         params[:local].present? && params[:local] != 'false'
@@ -133,9 +123,12 @@ module Api
 
       def apply_reblog_pagination_filters(query)
         if params[:max_id].present?
-          return Reblog.none unless ActivityPubObject.exists?(id: params[:max_id])
           max_object = ActivityPubObject.find_by(id: params[:max_id])
-          query = query.where('reblogs.created_at < ?', max_object.published_at) if max_object
+          if max_object
+            query = query.where('reblogs.created_at < ?', max_object.published_at)
+          else
+            return Reblog.none
+          end
         end
         
         if params[:since_id].present? && params[:min_id].blank?
@@ -151,32 +144,47 @@ module Api
         query
       end
 
-      def combine_statuses_and_reblogs(statuses, reblogs)
-        # StatusとReblogを時系列で結合
-        combined = []
+      def merge_timeline_items(statuses, reblogs)
+        status_array = statuses.to_a
+        reblog_array = reblogs.to_a
         
-        # Statusesを配列に変換してタイムスタンプ付きで追加
-        statuses.each do |status|
-          combined << {
-            type: :status,
-            object: status,
-            timestamp: status.published_at
+        return [] if status_array.empty? && reblog_array.empty?
+        
+        seen_status_ids = Set.new
+        merged_items = []
+        all_items = []
+        
+        status_array.each do |status|
+          all_items << {
+            item: status,
+            timestamp: status.published_at,
+            is_reblog: false,
+            status_id: status.id
           }
         end
         
-        # Reblogsを配列に変換してタイムスタンプ付きで追加
-        reblogs.each do |reblog|
-          combined << {
-            type: :reblog,
-            object: reblog,
-            timestamp: reblog.created_at
+        reblog_array.each do |reblog|
+          all_items << {
+            item: reblog,
+            timestamp: reblog.created_at,
+            is_reblog: true,
+            status_id: reblog.object_id
           }
         end
         
-        # タイムスタンプでソートして最新から表示
-        combined.sort_by { |item| item[:timestamp] }.reverse
-                .first(params[:limit]&.to_i || 20)
-                .map { |item| item[:object] }
+        all_items.sort_by! { |item| -item[:timestamp].to_f }
+        
+        all_items.each do |item_data|
+          status_id = item_data[:status_id]
+          
+          unless seen_status_ids.include?(status_id)
+            seen_status_ids.add(status_id)
+            merged_items << item_data[:item]
+            break if merged_items.length >= limit_param
+          end
+        end
+        
+        merged_items
       end
 
       def serialize_timeline_item(item)

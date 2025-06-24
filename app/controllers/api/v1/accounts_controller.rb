@@ -4,7 +4,10 @@ module Api
   module V1
     class AccountsController < Api::BaseController
       include StatusSerializationHelper
+      include ApiPagination
+      
       before_action :doorkeeper_authorize!, except: [:show]
+      after_action :insert_pagination_headers, only: [:statuses, :followers, :following]
       before_action :doorkeeper_authorize!, only: [:show], if: -> { request.authorization.present? }
       before_action :set_account, only: %i[show statuses followers following follow unfollow block unblock mute unmute note]
       before_action :set_account_for_featured_tags, only: [:featured_tags]
@@ -36,7 +39,7 @@ module Api
         exclude_replies = params[:exclude_replies] == 'true'
         exclude_reblogs = params[:exclude_reblogs] == 'true'
         only_media = params[:only_media] == 'true'
-        limit = [params.fetch(:limit, 20).to_i, 40].min
+        limit = limit_param
 
         if pinned_only
           # Pinned statusesのみを返す
@@ -87,13 +90,15 @@ module Api
           end
         end
 
+        @paginated_items = statuses
         render json: statuses.map { |status| serialized_status(status) }
       end
 
       # GET /api/v1/accounts/:id/followers
       def followers
         if @account.local?
-          followers = @account.followers.limit(40)
+          followers = @account.followers.limit(limit_param)
+          @paginated_items = followers
           render json: followers.map { |follower| serialized_account(follower) }
         else
           # 外部アカウントの場合は空配列を返す（クライアントが外部サーバから直接取得するため）
@@ -104,7 +109,8 @@ module Api
       # GET /api/v1/accounts/:id/following
       def following
         if @account.local?
-          following = @account.followed_actors.limit(40)
+          following = @account.followed_actors.limit(limit_param)
+          @paginated_items = following
           render json: following.map { |followed| serialized_account(followed) }
         else
           # 外部アカウントの場合は空配列を返す（クライアントが外部サーバから直接取得するため）
