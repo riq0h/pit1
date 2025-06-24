@@ -26,7 +26,7 @@ module TextLinkingHelper
   def apply_url_links(text)
     link_pattern = /(https?:\/\/[^\s]+)/
     link_template = '<a href="\1" target="_blank" rel="noopener noreferrer" ' \
-                    'class="text-blue-600 hover:text-blue-800 underline">' \
+                    'style="color: #1f2937;" class="underline">' \
                     '\1</a>'
     text.gsub(link_pattern, link_template)
   end
@@ -38,7 +38,7 @@ module TextLinkingHelper
       domain = ::Regexp.last_match(2)
       mention_url = build_mention_url(username, domain)
       "<a href=\"#{mention_url}\" target=\"_blank\" rel=\"noopener noreferrer\" " \
-        'class="text-purple-600 hover:text-purple-800 underline font-medium">' \
+        'style="color: #1f2937;" class="underline font-medium">' \
         "@#{username}@#{domain}</a>"
     end
   end
@@ -68,7 +68,7 @@ module TextLinkingHelper
       unless inside_tag
         # リンク化
         linked_url = "<a href=\"#{url[0]}\" target=\"_blank\" rel=\"noopener noreferrer\" " \
-                     "class=\"text-blue-600 hover:text-blue-800 underline\">#{url[0]}</a>"
+                     "style=\"color: #1f2937;\" class=\"underline\">#{url[0]}</a>"
 
         # オフセットを考慮して置換
         actual_start = url_start + offset
@@ -88,7 +88,7 @@ module TextLinkingHelper
       domain = ::Regexp.last_match(2)
       mention_url = build_mention_url(username, domain)
       "<a href=\"#{mention_url}\" target=\"_blank\" rel=\"noopener noreferrer\" " \
-        'class="text-purple-600 hover:text-purple-800 underline font-medium">' \
+        'style="color: #1f2937;" class="underline font-medium">' \
         "@#{username}@#{domain}</a>"
     end
   end
