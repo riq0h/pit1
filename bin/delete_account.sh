@@ -71,50 +71,31 @@ delete_actor() {
       
       # Delete all dependent records in the correct order
       puts 'OAuthトークンを削除中...'
-      Doorkeeper::AccessToken.where(resource_owner_id: actor.id).delete_all
-      Doorkeeper::AccessGrant.where(resource_owner_id: actor.id).delete_all
+      begin
+        Doorkeeper::AccessToken.where(resource_owner_id: actor.id).delete_all
+        Doorkeeper::AccessGrant.where(resource_owner_id: actor.id).delete_all
+      rescue => oauth_error
+        puts \"OAuth削除エラー: #{oauth_error.message}\"
+      end
       
-      puts '会話参加情報を削除中...'
-      actor.conversation_participants.delete_all
+      puts '関連レコードを削除中...'
+      # Direct SQL deletion to avoid association issues
+      actor_id = actor.id
       
-      puts 'ドメインブロックを削除中...'
-      actor.domain_blocks.delete_all
-      
-      puts 'ブロック・ミュート関係を削除中...'
-      actor.blocks.delete_all
-      actor.mutes.delete_all
-      actor.blocked_by.delete_all
-      actor.muted_by.delete_all
-      
-      puts 'メンション情報を削除中...'
-      actor.mentions.delete_all
-      
-      puts 'オブジェクトタグを削除中...'
-      ObjectTag.joins(:object).where(objects: { actor_id: actor.id }).delete_all
-      
-      puts 'お気に入り・リブログを削除中...'
-      actor.favourites.delete_all
-      actor.reblogs.delete_all
-      Favourite.joins(:object).where(objects: { actor_id: actor.id }).delete_all
-      Reblog.joins(:object).where(objects: { actor_id: actor.id }).delete_all
-      
-      puts 'メディア添付ファイルを削除中...'
-      actor.media_attachments.delete_all
-      
-      puts 'フォロー関係を削除中...'
-      actor.following_relationships.delete_all
-      actor.follower_relationships.delete_all
-      actor.follows.delete_all
-      actor.reverse_follows.delete_all
-      
-      puts '投稿を削除中...'
-      actor.objects.delete_all
-      
-      puts 'アクティビティを削除中...'
-      actor.activities.delete_all
-      
-      puts 'アカウントレコードを削除中...'
-      actor.delete
+      # Delete using direct SQL to avoid ActiveRecord association problems
+      ActiveRecord::Base.connection.execute(\"DELETE FROM web_push_subscriptions WHERE actor_id = #{actor_id}\")
+      ActiveRecord::Base.connection.execute(\"DELETE FROM notifications WHERE account_id = #{actor_id}\")
+      ActiveRecord::Base.connection.execute(\"DELETE FROM notifications WHERE from_account_id = #{actor_id}\")
+      ActiveRecord::Base.connection.execute(\"DELETE FROM bookmarks WHERE actor_id = #{actor_id}\")
+      ActiveRecord::Base.connection.execute(\"DELETE FROM favourites WHERE actor_id = #{actor_id}\")
+      ActiveRecord::Base.connection.execute(\"DELETE FROM reblogs WHERE actor_id = #{actor_id}\")
+      ActiveRecord::Base.connection.execute(\"DELETE FROM mentions WHERE actor_id = #{actor_id}\")
+      ActiveRecord::Base.connection.execute(\"DELETE FROM media_attachments WHERE actor_id = #{actor_id}\")
+      ActiveRecord::Base.connection.execute(\"DELETE FROM follows WHERE actor_id = #{actor_id}\")
+      ActiveRecord::Base.connection.execute(\"DELETE FROM follows WHERE target_actor_id = #{actor_id}\")
+      ActiveRecord::Base.connection.execute(\"DELETE FROM objects WHERE actor_id = #{actor_id}\")
+      ActiveRecord::Base.connection.execute(\"DELETE FROM activities WHERE actor_id = #{actor_id}\")
+      ActiveRecord::Base.connection.execute(\"DELETE FROM actors WHERE id = #{actor_id}\")
       
       puts 'success'
       puts 'アカウントとすべての関連レコードが正常に削除されました'

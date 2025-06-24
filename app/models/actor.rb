@@ -27,6 +27,7 @@ class Actor < ApplicationRecord
   has_many :notifications, dependent: :destroy, foreign_key: :account_id, inverse_of: :account
   has_many :sent_notifications, dependent: :destroy, foreign_key: :from_account_id, class_name: 'Notification', inverse_of: :from_account
 
+
   # Active Storage統合
   has_one_attached :avatar
   has_one_attached :header
