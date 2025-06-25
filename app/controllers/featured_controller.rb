@@ -16,7 +16,10 @@ class FeaturedController < ApplicationController
                             .ordered
                             .map(&:object)
 
-    ordered_items = pinned_statuses.map { |status| status.to_activitypub }
+    ordered_items = pinned_statuses.map do |status|
+      activitypub_data = status.to_activitypub
+      activitypub_data.except('@context')
+    end
 
     featured_collection = {
       '@context' => 'https://www.w3.org/ns/activitystreams',

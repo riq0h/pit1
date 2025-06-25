@@ -4,7 +4,7 @@ class PostsController < ApplicationController
   before_action :set_post, only: [:show_html]
 
   # GET /users/{username}/posts/{id}
-  # API形式URLからフロントエンド形式URLへのリダイレクト
+  # ActivityPubリクエストかフロントエンドリダイレクトかを判定
   def redirect_to_frontend
     username = params[:username]
     id = params[:id]

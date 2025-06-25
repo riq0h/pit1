@@ -37,8 +37,7 @@ Rails.application.routes.draw do
   get '/users/:username/collections/featured', to: 'featured#show'
 
   # ActivityPubオブジェクトエンドポイント
-  # ap_idの末尾部分を使用
-  get '/objects/:id', to: 'objects#show'
+  get '/users/:username/posts/:id', to: 'objects#show'
   get '/activities/:id', to: 'activities#show'
 
   # Shared inbox

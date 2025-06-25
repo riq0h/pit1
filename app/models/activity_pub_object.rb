@@ -71,10 +71,9 @@ class ActivityPubObject < ApplicationRecord
     return ap_id if ap_id.present? && !local?
     return nil unless actor&.username
 
-    # Snowflake IDを使用してHTML URL生成
-    scheme = Rails.application.config.activitypub.scheme || (Rails.env.production? ? 'https' : 'http')
-    domain = Rails.application.config.activitypub.domain
-    "#{scheme}://#{domain}/@#{actor.username}/#{id}"
+    # base_urlから適切なURLを生成
+    base_url = Rails.application.config.activitypub.base_url
+    "#{base_url}/@#{actor.username}/#{id}"
   rescue StandardError => e
     Rails.logger.warn "Failed to generate public_url for object #{id}: #{e.message}"
     ap_id.presence || ''
@@ -167,9 +166,13 @@ class ActivityPubObject < ApplicationRecord
   def to_activitypub
     data = base_activitypub_data.merge(
       extended_activitypub_data
-    ).compact
+    )
+    
+    data['inReplyTo'] = data['inReplyTo'] || nil
+    data['summary'] = data['summary'] || nil
+    
+    data = data.reject { |k, v| v.nil? && !%w[inReplyTo summary].include?(k) }
 
-    # Poll(投票)がある場合はQuestionタイプに変更
     if poll.present?
       data['type'] = 'Question'
       data['endTime'] = poll.expires_at.iso8601 if poll.expires_at
@@ -212,6 +215,10 @@ class ActivityPubObject < ApplicationRecord
       'tag' => build_tag_list,
       'summary' => summary,
       'sensitive' => sensitive?,
+      'atomUri' => ap_id,
+      'conversation' => conversation_uri,
+      'likes' => likes_collection_data,
+      'shares' => shares_collection_data,
       'source' => source_data,
       'replies' => replies_collection_data
     }.tap do |data|
@@ -236,6 +243,27 @@ class ActivityPubObject < ApplicationRecord
     {
       'type' => 'Collection',
       'totalItems' => replies_count || 0
+    }
+  end
+
+  def conversation_uri
+    return conversation_ap_id if conversation_ap_id.present?
+    "tag:#{Rails.application.config.activitypub.domain},#{published_at.strftime('%Y-%m-%d')}:objectId=#{id}:objectType=Conversation"
+  end
+
+  def likes_collection_data
+    {
+      'id' => "#{ap_id}/likes",
+      'type' => 'Collection',
+      'totalItems' => favourites_count
+    }
+  end
+
+  def shares_collection_data
+    {
+      'id' => "#{ap_id}/shares", 
+      'type' => 'Collection',
+      'totalItems' => reblogs_count
     }
   end
 

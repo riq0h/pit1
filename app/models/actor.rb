@@ -98,6 +98,7 @@ class Actor < ApplicationRecord
   before_validation :set_ap_urls, if: :local?, on: :create
   before_validation :generate_key_pair, if: :local?, on: :create
   before_create :set_admin_for_local_users, if: :local?
+  after_update :distribute_profile_update, if: :local_profile_updated?
 
   def setting(key)
     settings[key.to_s]
@@ -626,5 +627,21 @@ class Actor < ApplicationRecord
   def unfollow!(target_actor_or_uri)
     follow_service = FollowService.new(self)
     follow_service.unfollow!(target_actor_or_uri)
+  end
+
+  private
+
+  # プロフィール更新を検知
+  def local_profile_updated?
+    return false unless local?
+
+    # プロフィールに関連する属性が変更されたかチェック
+    profile_attributes = %w[display_name note fields avatar header]
+    saved_changes.keys.any? { |attr| profile_attributes.include?(attr) }
+  end
+
+  # プロフィール更新を配信
+  def distribute_profile_update
+    SendProfileUpdateJob.perform_later(id)
   end
 end

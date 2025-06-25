@@ -116,9 +116,9 @@ class OutboxManager
   end
 
   def generate_object_id
-    timestamp = Time.current.to_i
-    random_id = SecureRandom.hex(8)
-    "#{actor.ap_id}/objects/#{timestamp}-#{random_id}"
+    # ActivityPubObjectと同じSnowflake ID生成方式を使用
+    object_id = Letter::Snowflake.generate
+    "#{actor.ap_id}/posts/#{object_id}"
   end
 
   def should_deliver_to_followers?(activity_type)

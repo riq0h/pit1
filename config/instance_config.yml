@@ -4,4 +4,4 @@ instance_description: General Letter Publication System based on ActivityPub
 instance_contact_email: admin@localhost
 instance_maintainer: letter Administrator
 blog_footer: General Letter Publication System based on ActivityPub
-background_color: "#fdfbfb"
+background_color: "#ffffff"

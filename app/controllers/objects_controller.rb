@@ -24,8 +24,7 @@ class ObjectsController < ApplicationController
     @object = ActivityPubObject.find_by(id: id_param) if id_param.match?(/^\d+$/)
 
     # 見つからない場合は ap_id のパターンで検索
-    @object ||= ActivityPubObject.find_by('ap_id LIKE ?', "%/posts/#{id_param}") ||
-                ActivityPubObject.find_by('ap_id LIKE ?', "%/objects/#{id_param}")
+    @object ||= ActivityPubObject.find_by('ap_id LIKE ?', "%/posts/#{id_param}")
 
     return if @object
 
@@ -37,20 +36,11 @@ class ObjectsController < ApplicationController
     return if activitypub_request?
 
     # HTML表示にリダイレクト
-    redirect_to post_html_path(@object.actor.username, params[:id])
+    username = params[:username] || @object&.actor&.username
+    id = params[:id]
+    redirect_to post_html_path(username: username, id: id), status: :moved_permanently
   end
 
-  def activitypub_request?
-    return true if request.content_type&.include?('application/activity+json')
-    return true if request.content_type&.include?('application/ld+json')
-
-    accept_header = request.headers['Accept'] || ''
-    return true if accept_header.include?('application/activity+json')
-    return true if accept_header.include?('application/ld+json')
-
-    # デフォルトではActivityPubとして扱う
-    true
-  end
 
   def build_object_data(object)
     base_data = build_base_object_data(object)
