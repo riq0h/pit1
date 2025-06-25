@@ -192,7 +192,7 @@ module AccountSerializer
   def apply_url_links(text)
     link_pattern = /(https?:\/\/[^\s]+)/
     link_template = '<a href="\1" target="_blank" rel="noopener noreferrer" ' \
-                    'class="text-blue-600 hover:text-blue-800 underline">' \
+                    'class="text-blue-600 hover:text-blue-800">' \
                     '\1</a>'
     text.gsub(link_pattern, link_template)
   end

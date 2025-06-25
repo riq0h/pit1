@@ -358,97 +358,18 @@ class ActivityPubObject < ApplicationRecord
   # === ActivityPub ヘルパーメソッド ===
 
   def build_audience_list(type)
-    case visibility
-    when 'public'
-      build_public_audience_list(type)
-    when 'unlisted'
-      build_unlisted_audience_list(type)
-    when 'private'
-      build_followers_audience_list(type)
-    when 'direct'
-      build_direct_audience_list(type)
-    else
-      []
-    end
+    ActivityBuilders::AudienceBuilder.new(self).build(type)
   end
 
-  def build_public_audience_list(type)
-    case type
-    when :to
-      [Rails.application.config.activitypub.public_collection_url]
-    when :cc
-      [actor.followers_url]
-    end
-  end
-
-  def build_unlisted_audience_list(type)
-    case type
-    when :to
-      [actor.followers_url]
-    when :cc
-      [Rails.application.config.activitypub.public_collection_url]
-    end
-  end
-
-  def build_followers_audience_list(type)
-    case type
-    when :to
-      [actor.followers_url]
-    when :cc
-      []
-    end
-  end
-
-  def build_direct_audience_list(type)
-    case type
-    when :to
-      # DMの場合はメンションされたアクターのAP IDを返す
-      mentioned_actors.map(&:ap_id)
-    when :cc
-      []
-    end
-  end
 
   def build_attachment_list
-    media_attachments.map do |attachment|
-      {
-        'type' => 'Document',
-        'mediaType' => attachment.content_type,
-        'url' => attachment.url,
-        'name' => attachment.description || attachment.file_name,
-        'width' => attachment.width,
-        'height' => attachment.height,
-        'blurhash' => attachment.blurhash
-      }.compact
-    end
+    ActivityBuilders::AttachmentBuilder.new(self).build
   end
 
   def build_tag_list
-    hashtag_tags = build_hashtag_tags
-    mention_tags = build_mention_tags
-
-    hashtag_tags + mention_tags
+    ActivityBuilders::TagBuilder.new(self).build
   end
 
-  def build_hashtag_tags
-    tags.map do |tag|
-      {
-        'type' => 'Hashtag',
-        'name' => "##{tag.name}",
-        'href' => "#{Rails.application.config.activitypub.base_url}/tags/#{tag.name}"
-      }
-    end
-  end
-
-  def build_mention_tags
-    mentions.includes(:actor).map do |mention|
-      {
-        'type' => 'Mention',
-        'name' => "@#{mention.actor.username}@#{mention.actor.domain}",
-        'href' => mention.actor.ap_id
-      }
-    end
-  end
 
   # === バリデーション・コールバックヘルパー ===
 

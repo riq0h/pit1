@@ -174,78 +174,14 @@ class ActivitiesController < ApplicationController
   end
 
   def build_object_attachments(object)
-    object.media_attachments.map do |attachment|
-      {
-        'type' => 'Document',
-        'mediaType' => attachment.content_type,
-        'url' => attachment.url,
-        'name' => attachment.description || attachment.file_name,
-        'width' => attachment.width,
-        'height' => attachment.height,
-        'blurhash' => attachment.blurhash
-      }.compact
-    end
+    ActivityBuilders::AttachmentBuilder.new(object).build
   end
 
   def build_object_tags(object)
-    hashtag_tags = object.tags.map do |tag|
-      {
-        'type' => 'Hashtag',
-        'href' => "#{Rails.application.config.activitypub.base_url}/tags/#{tag.name}",
-        'name' => "##{tag.name}"
-      }
-    end
-
-    mention_tags = object.mentions.map do |mention|
-      {
-        'type' => 'Mention',
-        'href' => mention.actor.ap_id,
-        'name' => "@#{mention.actor.full_username}"
-      }
-    end
-
-    hashtag_tags + mention_tags
+    ActivityBuilders::TagBuilder.new(object).build
   end
 
   def build_activity_audience(object, type)
-    case object.visibility
-    when 'public'
-      build_public_audience(type, object)
-    when 'unlisted'
-      build_unlisted_audience(type, object)
-    when 'private'
-      build_followers_audience(type, object)
-    when 'direct'
-      build_direct_audience(type)
-    else
-      []
-    end
-  end
-
-  def build_public_audience(type, object)
-    case type
-    when :to
-      ['https://www.w3.org/ns/activitystreams#Public']
-    when :cc
-      [object.actor.followers_url]
-    end
-  end
-
-  def build_unlisted_audience(type, object)
-    case type
-    when :to
-      [object.actor.followers_url]
-    when :cc
-      ['https://www.w3.org/ns/activitystreams#Public']
-    end
-  end
-
-  def build_followers_audience(type, object)
-    case type
-    when :to
-      [object.actor.followers_url]
-    when :cc
-      []
-    end
+    ActivityBuilders::AudienceBuilder.new(object).build(type)
   end
 end

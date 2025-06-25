@@ -93,45 +93,7 @@ class ObjectsController < ApplicationController
   end
 
   def build_audience(object, type)
-    case object.visibility
-    when 'public'
-      build_public_audience(type)
-    when 'unlisted'
-      build_unlisted_audience(object, type)
-    when 'private'
-      build_followers_audience(object, type)
-    when 'direct'
-      build_direct_audience(type)
-    else
-      []
-    end
-  end
-
-  def build_public_audience(type)
-    case type
-    when :to
-      ['https://www.w3.org/ns/activitystreams#Public']
-    when :cc
-      [@object.actor.followers_url]
-    end
-  end
-
-  def build_unlisted_audience(object, type)
-    case type
-    when :to
-      [object.actor.followers_url]
-    when :cc
-      ['https://www.w3.org/ns/activitystreams#Public']
-    end
-  end
-
-  def build_followers_audience(object, type)
-    case type
-    when :to
-      [object.actor.followers_url]
-    when :cc
-      []
-    end
+    ActivityBuilders::AudienceBuilder.new(object).build(type)
   end
 
   def build_attachments(object)

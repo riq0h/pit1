@@ -123,6 +123,11 @@ a:not(.no-hover):not(.btn-secondary):active {
   transition: filter 0.1s ease;
 }
 
+/* すべてのリンクから下線を除去 */
+a {
+  text-decoration: none !important;
+}
+
 /* 投稿カード共通スタイル - 最高優先度 */
 .post-card-avatar-container {
   height: 2.5rem !important;

@@ -68,7 +68,7 @@ class QuotePost < ApplicationRecord
   def build_public_audience_list(type)
     case type
     when :to
-      ['https://www.w3.org/ns/activitystreams#Public']
+      [Rails.application.config.activitypub.public_collection_url]
     when :cc
       [actor.followers_url]
     end
@@ -79,7 +79,7 @@ class QuotePost < ApplicationRecord
     when :to
       [actor.followers_url]
     when :cc
-      ['https://www.w3.org/ns/activitystreams#Public']
+      [Rails.application.config.activitypub.public_collection_url]
     end
   end
 
