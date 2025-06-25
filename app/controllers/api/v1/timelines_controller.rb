@@ -74,6 +74,7 @@ module Api
         query = ActivityPubObject.joins(:actor)
                                  .includes(:poll)
                                  .where(object_type: %w[Note Question])
+                                 .where(is_pinned_only: false)
                                  .order('objects.id DESC')
 
         # Apply user-specific filters if authenticated

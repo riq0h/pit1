@@ -40,6 +40,26 @@ module Search
       end
     end
 
+    def resolve_remote_status_for_pinned(url)
+      return nil unless url_query?(url)
+
+      begin
+        response = fetch_activitypub_object(url)
+        return nil unless response
+
+        activitypub_id = response['id']
+        return nil unless activitypub_id
+
+        existing_object = ActivityPubObject.find_by(ap_id: activitypub_id)
+        return existing_object if existing_object
+
+        create_remote_object(response, is_pinned_only: true)
+      rescue StandardError => e
+        Rails.logger.warn "ピン留め投稿解決エラー: #{e.message}"
+        nil
+      end
+    end
+
     private
 
     def create_actor_from_data(data)
@@ -94,14 +114,14 @@ module Search
       JSON.parse(response.body)
     end
 
-    def create_remote_object(data)
+    def create_remote_object(data, is_pinned_only: false)
       return nil unless data['type'] == 'Note'
 
       actor = resolve_actor_for_object(data)
       return nil unless actor
 
       remote_id = Letter::Snowflake.generate
-      create_activity_pub_object(data, actor, remote_id)
+      create_activity_pub_object(data, actor, remote_id, is_pinned_only: is_pinned_only)
     rescue StandardError => e
       Rails.logger.error "リモートオブジェクト作成エラー: #{e.message}"
       Rails.logger.error e.backtrace.first(5).join("\n")
@@ -120,7 +140,7 @@ module Search
       actor
     end
 
-    def create_activity_pub_object(data, actor, remote_id)
+    def create_activity_pub_object(data, actor, remote_id, is_pinned_only: false)
       object = ActivityPubObject.create!(
         id: remote_id,
         ap_id: data['id'],
@@ -132,7 +152,8 @@ module Search
         published_at: Time.zone.parse(data['published']),
         visibility: determine_visibility(data),
         raw_data: data.to_json,
-        local: false
+        local: false,
+        is_pinned_only: is_pinned_only
       )
 
       handle_media_attachments(object, data)

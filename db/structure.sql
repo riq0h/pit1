@@ -221,7 +221,7 @@ FOREIGN KEY ("actor_id")
 CREATE INDEX "index_conversation_participants_on_conversation_id" ON "conversation_participants" ("conversation_id") /*application='Letter'*/;
 CREATE INDEX "index_conversation_participants_on_actor_id" ON "conversation_participants" ("actor_id") /*application='Letter'*/;
 CREATE UNIQUE INDEX "idx_on_conversation_id_actor_id_a90cdc69d4" ON "conversation_participants" ("conversation_id", "actor_id") /*application='Letter'*/;
-CREATE TABLE IF NOT EXISTS "objects" ("id" varchar NOT NULL PRIMARY KEY, "ap_id" varchar NOT NULL, "object_type" varchar NOT NULL, "actor_id" integer NOT NULL, "content" text, "content_plaintext" text, "summary" text, "url" varchar, "language" varchar, "sensitive" boolean DEFAULT 0, "visibility" varchar DEFAULT 'public', "raw_data" text, "published_at" datetime(6), "local" boolean DEFAULT 0, "relay_id" integer, "replies_count" integer DEFAULT 0, "reblogs_count" integer DEFAULT 0, "favourites_count" integer DEFAULT 0, "edited_at" datetime(6), "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, "in_reply_to_ap_id" varchar, "conversation_ap_id" varchar, "conversation_id" integer, CONSTRAINT "fk_rails_73fd572a5f"
+CREATE TABLE IF NOT EXISTS "objects" ("id" varchar NOT NULL PRIMARY KEY, "ap_id" varchar NOT NULL, "object_type" varchar NOT NULL, "actor_id" integer NOT NULL, "content" text, "content_plaintext" text, "summary" text, "url" varchar, "language" varchar, "sensitive" boolean DEFAULT 0, "visibility" varchar DEFAULT 'public', "raw_data" text, "published_at" datetime(6), "local" boolean DEFAULT 0, "is_pinned_only" boolean DEFAULT 0, "relay_id" integer, "replies_count" integer DEFAULT 0, "reblogs_count" integer DEFAULT 0, "favourites_count" integer DEFAULT 0, "edited_at" datetime(6), "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, "in_reply_to_ap_id" varchar, "conversation_ap_id" varchar, "conversation_id" integer, CONSTRAINT "fk_rails_73fd572a5f"
 FOREIGN KEY ("relay_id")
   REFERENCES "relays" ("id")
 , CONSTRAINT "fk_rails_1377a551fa"
@@ -237,6 +237,7 @@ CREATE INDEX "index_objects_on_actor_id" ON "objects" ("actor_id") /*application
 CREATE INDEX "index_objects_on_visibility" ON "objects" ("visibility") /*application='Letter'*/;
 CREATE INDEX "index_objects_on_published_at" ON "objects" ("published_at") /*application='Letter'*/;
 CREATE INDEX "index_objects_on_local" ON "objects" ("local") /*application='Letter'*/;
+CREATE INDEX "index_objects_on_is_pinned_only" ON "objects" ("is_pinned_only") /*application='Letter'*/;
 CREATE INDEX "index_objects_on_relay_id" ON "objects" ("relay_id") /*application='Letter'*/;
 CREATE INDEX "index_objects_on_edited_at" ON "objects" ("edited_at") /*application='Letter'*/;
 CREATE INDEX "index_objects_on_in_reply_to_ap_id" ON "objects" ("in_reply_to_ap_id") /*application='Letter'*/;

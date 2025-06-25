@@ -226,7 +226,6 @@ if [ "$SERVER_RUNNING" = true ]; then
     
 else
     print_warning "サーバ状態: 停止中"
-    echo "  次のコマンドで戻ってください: ./bin/start_server.sh"
 fi
 
 # プロセス情報を表示
@@ -294,34 +293,3 @@ if [ -f .env ]; then
 else
     echo "  履歴は利用できません"
 fi
-
-# 利用可能な管理スクリプトを表示
-echo ""
-print_info "利用可能な管理スクリプト:"
-echo ""
-echo "🚀 サーバ管理:"
-echo "  ./bin/start_server.sh - サーバの起動"
-echo "  ./bin/cleanup_and_start.sh - 強制クリーンアップと再起動"
-echo ""
-echo "🔧 設定管理:"
-echo "  ./bin/switch_domain.sh <ドメイン> - 新しいドメインに切り替え"
-echo "  ./bin/check_domain.sh - 現在の設定確認・診断"
-echo ""
-echo "👤 ユーザ管理:"
-echo "  ./bin/manage_accounts.sh - アカウント管理（2個制限対応）"
-echo "  ./bin/create_oauth_token.sh - OAuthトークンの生成"
-echo "  ./bin/delete_account.sh <ユーザ名またはID> - アカウント削除"
-echo ""
-echo "📝 テストデータ生成:"
-echo "  ./bin/create_test_posts.sh - テスト投稿の作成（60件の多言語投稿）"
-echo ""
-echo "🔧 メンテナンス:"
-echo "  ./bin/fix_follow_counts.sh - フォローカウント修正"
-echo "  ./bin/test_follow.sh - フォローシステムテスト"
-
-echo ""
-print_info "使用方法:"
-echo "  通常実行: ./bin/check_domain.sh"
-echo "  デバッグモード: ./bin/check_domain.sh --debug"
-echo ""
-print_header "確認完了"

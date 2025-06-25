@@ -148,7 +148,7 @@ EOF
     print_info "ステップ 4/5: サーバを再起動中..."
     
     # Start server with new configuration
-    "$SCRIPT_DIR/start_server.sh"
+    "$SCRIPT_DIR/cleanup_and_start.sh"
     
     print_success "新しいドメインでサーバを再起動しました"
     

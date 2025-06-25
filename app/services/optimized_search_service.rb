@@ -85,7 +85,12 @@ class OptimizedSearchService
   end
 
   def search_full_text_only
-    execute_fts5_search(build_fts5_query)
+    # 特殊文字が含まれている場合はFTS5をスキップしてLIKE検索を使用
+    if contains_special_characters?
+      try_like_search
+    else
+      execute_fts5_search(build_fts5_query)
+    end
   end
 
   def build_fts5_query
@@ -177,6 +182,12 @@ class OptimizedSearchService
 
   def contains_japanese_characters?
     query.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+  end
+
+  def contains_special_characters?
+    # FTS5で問題を起こす可能性のある特殊文字をチェック
+    special_chars = ['@', '"', '^', '*', '(', ')', '[', ']', '{', '}', '\\']
+    special_chars.any? { |char| query.include?(char) }
   end
 
   def build_japanese_query

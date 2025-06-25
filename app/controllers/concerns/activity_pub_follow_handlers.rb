@@ -42,8 +42,11 @@ module ActivityPubFollowHandlers
       follow_activity_ap_id: @activity['id']
     )
 
-    # 自動承認（Follow モデルのaccept!メソッドを使用）
-    follow.accept!
+    # 外部フォローの場合は明示的にAccept activityを送信
+    if @target_actor.local? && !@sender.local?
+      Rails.logger.info "🎯 External follow received, creating Accept activity"
+      follow.create_accept_activity
+    end
 
     # フォロー通知を作成
     Notification.create_follow_notification(follow)

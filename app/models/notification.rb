@@ -27,6 +27,8 @@ class Notification < ApplicationRecord
     favourite
     poll
     update
+    admin.sign_up
+    admin.report
   ].freeze
 
   # バリデーション

@@ -79,6 +79,9 @@ class CreateCoreActivitypubTables < ActiveRecord::Migration[8.0]
       # Local/remote flag
       t.boolean :local, default: false, index: true
       
+      # Pin-only flag (for content fetched only for pinning, excluded from timelines)
+      t.boolean :is_pinned_only, default: false, index: true
+      
       # Relay tracking (for posts received via relay)
       t.references :relay, foreign_key: true, type: :integer, null: true, index: true
       

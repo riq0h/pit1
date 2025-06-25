@@ -152,7 +152,7 @@ module Api
       end
 
       def status_notification?(notification)
-        %w[mention reblog favourite].include?(notification.notification_type)
+        %w[mention reblog favourite status update poll].include?(notification.notification_type)
       end
 
       def build_status_json(status)
@@ -201,7 +201,7 @@ module Api
       end
 
       def apply_pagination(notifications)
-        notifications = notifications.where(notifications: { id: ...(params[:max_id]) }) if params[:max_id].present?
+        notifications = notifications.where('notifications.id < ?', params[:max_id]) if params[:max_id].present?
 
         notifications = notifications.where('notifications.id > ?', params[:since_id]) if params[:since_id].present?
 

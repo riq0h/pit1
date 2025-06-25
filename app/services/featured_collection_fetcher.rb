@@ -27,8 +27,8 @@ class FeaturedCollectionFetcher
 
     # 各アイテムを取得してActivityPubObjectとして保存
     pinned_objects = []
-    featured_items.take(5).each do |item_uri| # 最大5個まで
-      object = @resolver.resolve_remote_status(item_uri)
+    featured_items.take(5).each do |item_uri|
+      object = resolve_pinned_status(item_uri)
       next unless object
 
       pinned_objects << object
@@ -69,6 +69,15 @@ class FeaturedCollectionFetcher
         nil
       end
     end
+  end
+
+  def resolve_pinned_status(item_uri)
+    # まず既存のオブジェクトがあるかチェック
+    existing_object = ActivityPubObject.find_by(ap_id: item_uri)
+    return existing_object if existing_object
+
+    # リモートから取得する場合は、ピン留めフラグを付けて取得
+    @resolver.resolve_remote_status_for_pinned(item_uri)
   end
 
   def create_pinned_status_record(actor, object)

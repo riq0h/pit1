@@ -248,4 +248,5 @@ class Follow < ApplicationRecord
 
     SendFollowJob.perform_later(self)
   end
+
 end

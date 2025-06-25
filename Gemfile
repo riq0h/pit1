@@ -14,7 +14,6 @@ gem 'jbuilder'
 gem 'ostruct'
 gem 'puma', '>= 5.0'
 gem 'rails', '~> 8.0.0'
-gem 'redis', '>= 4.0.1'
 gem 'sassc-rails'
 gem 'sprockets-rails'
 gem 'sqlite3', '>= 2.1'
@@ -35,7 +34,8 @@ gem 'doorkeeper', '~> 5.7'       # OAuth 2.0 server
 gem 'jwt'                        # JWT tokens for OAuth
 gem 'rack-cors'                  # CORS handling
 
-# Background Jobs
+# Background Jobs & Cable
+gem 'solid_cable' # Rails 8 solid cable for Action Cable
 gem 'solid_queue' # Rails 8 solid queue for background jobs
 
 # Push Notifications

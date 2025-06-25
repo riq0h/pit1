@@ -316,10 +316,6 @@ GEM
     rdoc (6.14.0)
       erb
       psych (>= 4.0.0)
-    redis (5.4.0)
-      redis-client (>= 0.22.0)
-    redis-client (0.24.0)
-      connection_pool
     regexp_parser (2.10.0)
     reline (0.6.1)
       io-console (~> 0.5)
@@ -382,6 +378,11 @@ GEM
       sprockets-rails
       tilt
     securerandom (0.4.1)
+    solid_cable (3.0.11)
+      actioncable (>= 7.2)
+      activejob (>= 7.2)
+      activerecord (>= 7.2)
+      railties (>= 7.2)
     solid_queue (1.1.5)
       activejob (>= 7.1)
       activerecord (>= 7.1)
@@ -488,7 +489,6 @@ DEPENDENCIES
   puma (>= 5.0)
   rack-cors
   rails (~> 8.0.0)
-  redis (>= 4.0.1)
   rsa
   rspec-rails
   rubocop
@@ -496,6 +496,7 @@ DEPENDENCIES
   rubocop-rails
   rubocop-rspec
   sassc-rails
+  solid_cable
   solid_queue
   spring
   sprockets-rails

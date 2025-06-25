@@ -157,6 +157,33 @@ else
     print_info "  bin/jobs &"
 fi
 
+# Solid Cableの動作確認
+print_info "Solid Cableの動作確認中..."
+timeout 5 rails runner "
+adapter = ActionCable.server.config.cable&.[](:adapter) || 'unknown'
+puts '   Cable adapter: ' + adapter.to_s
+
+if adapter.to_s == 'solid_cable'
+  begin
+    # cable データベースに接続して確認
+    ActiveRecord::Base.establish_connection(:cable)
+    if ActiveRecord::Base.connection.table_exists?('solid_cable_messages')
+      message_count = ActiveRecord::Base.connection.execute('SELECT COUNT(*) FROM solid_cable_messages').first[0]
+      puts '   Solid Cable messages: ' + message_count.to_s
+      puts '   Solid Cable status: ✓ 正常動作'
+    else
+      puts '   Solid Cable status: ❌ テーブルが見つかりません'
+    end
+  rescue => e
+    puts '   Solid Cable status: ❌ 接続エラー: ' + e.message
+  ensure
+    ActiveRecord::Base.establish_connection(:primary)
+  end
+else
+  puts '   Solid Cable status: ⚠️  未使用 (adapter: ' + adapter.to_s + ')'
+end
+" 2>/dev/null || print_warning "Solid Cable確認がタイムアウトしました"
+
 # 8. 最終設定確認
 print_info "8. 最終設定確認..."
 timeout 10 rails runner "

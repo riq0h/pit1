@@ -14,10 +14,16 @@ class ActivitySender
     headers = build_headers(target_inbox, body, signing_actor)
     response = perform_request(target_inbox, body, headers)
 
-    handle_response(response)
+    handle_response(response, activity['type'])
+  rescue Net::TimeoutError => e
+    Rails.logger.error "⏰ Activity sending timeout: #{e.message}"
+    { success: false, error: "Timeout: #{e.message}" }
+  rescue Net::ProtocolError => e
+    Rails.logger.error "🔌 Activity sending protocol error: #{e.message}"
+    { success: false, error: "Protocol error: #{e.message}" }
   rescue StandardError => e
     Rails.logger.error "💥 Activity sending error: #{e.message}"
-    false
+    { success: false, error: e.message }
   end
 
   private
@@ -48,13 +54,14 @@ class ActivitySender
     )
   end
 
-  def handle_response(response)
+  def handle_response(response, activity_type)
     if response.success?
-      Rails.logger.info "✅ Activity sent successfully (#{response.code})"
-      true
+      Rails.logger.info "✅ #{activity_type} sent successfully (#{response.code})"
+      { success: true, code: response.code }
     else
-      Rails.logger.error "❌ Activity sending failed: #{response.code} - #{response.body}"
-      false
+      error_msg = "#{response.code} - #{response.body.to_s[0..200]}"
+      Rails.logger.error "❌ #{activity_type} sending failed: #{error_msg}"
+      { success: false, error: error_msg, code: response.code }
     end
   end
 

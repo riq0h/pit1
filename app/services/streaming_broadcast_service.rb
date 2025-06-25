@@ -149,9 +149,9 @@ class StreamingBroadcastService
       bot: actor.bot?,
       discoverable: actor.discoverable?,
       note: sanitize_content(actor.note),
-      url: actor.url,
+      url: actor.public_url || actor.ap_id,
       avatar: actor.avatar_url,
-      header: actor.header_url,
+      header: actor.header_image_url,
       followers_count: actor.followers_count,
       following_count: actor.following_count,
       statuses_count: actor.posts_count,
@@ -180,7 +180,7 @@ class StreamingBroadcastService
         id: mention.actor.id.to_s,
         username: mention.actor.username,
         acct: mention.actor.acct,
-        url: mention.actor.url
+        url: mention.actor.public_url || mention.actor.ap_id
       }
     end
   end
@@ -199,7 +199,7 @@ class StreamingBroadcastService
       id: notification.id.to_s,
       type: notification.notification_type,
       created_at: notification.created_at.iso8601,
-      account: serialize_account(notification.from_actor)
+      account: serialize_account(notification.from_account)
     }
   end
 

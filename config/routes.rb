@@ -161,9 +161,17 @@ Rails.application.routes.draw do
 
       # Notifications
       get '/notifications', to: 'notifications#index'
+      get '/notifications/:id', to: 'notifications#show'
+      post '/notifications/clear', to: 'notifications#clear'
+      post '/notifications/:id/dismiss', to: 'notifications#dismiss'
 
       # Streaming (WebSocket)
       get '/streaming', to: 'streaming#index'
+      
+      # Server-Sent Events
+      namespace :streaming do
+        get '/stream', to: 'sse#stream'
+      end
 
       # Domain blocks
       get '/domain_blocks', to: 'domain_blocks#index'
