@@ -28,6 +28,7 @@ class HomeController < ApplicationController
                      .where(visibility: %w[public unlisted])
                      .where(local: true)
                      .includes(:actor, :media_attachments)
+                     .order(published_at: :desc, id: :desc)
   end
 
   def load_public_reblogs
@@ -35,16 +36,17 @@ class HomeController < ApplicationController
           .where(actors: { local: true })
           .where(objects: { visibility: %w[public unlisted] })
           .includes(:actor, object: %i[actor media_attachments])
+          .order(created_at: :desc, id: :desc)
   end
 
   def build_timeline_items(posts, reblogs)
     timeline_items = []
 
-    posts.find_each do |post|
+    posts.each do |post|
       timeline_items << build_post_timeline_item(post)
     end
 
-    reblogs.find_each do |reblog|
+    reblogs.each do |reblog|
       timeline_items << build_reblog_timeline_item(reblog)
     end
 
