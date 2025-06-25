@@ -9,7 +9,7 @@ class ActorsController < ApplicationController
   before_action :check_if_blocked_by_target, if: -> { activitypub_request? }
 
   # GET /users/:username
-  # ActivityPub Actor endpoint
+  # ActivityPubアクターエンドポイント
   def show
     render json: @actor.to_activitypub(request),
            content_type: 'application/activity+json; charset=utf-8'

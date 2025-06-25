@@ -64,10 +64,10 @@ class TextParser
 
   def find_actor_by_mention(mention_data)
     if mention_data[:domain]
-      # Remote actor
+      # リモートアクター
       Actor.find_by(username: mention_data[:username], domain: mention_data[:domain])
     else
-      # Local actor
+      # ローカルアクター
       Actor.find_by(username: mention_data[:username], local: true)
     end
   end

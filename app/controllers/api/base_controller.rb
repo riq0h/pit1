@@ -44,11 +44,11 @@ module Api
       end
     end
 
-    # Check if current request has required OAuth scopes
+    # 現在のリクエストが必要なOAuthスコープを持っているかチェック
     def doorkeeper_authorize!(*scopes)
       return false unless doorkeeper_token
 
-      # Check if token has required scopes
+      # トークンが必要なスコープを持っているかチェック
       if scopes.any?
         required_scopes = Doorkeeper::OAuth::Scopes.from_array(scopes)
         token_scopes = if doorkeeper_token.scopes.is_a?(Doorkeeper::OAuth::Scopes)
@@ -69,7 +69,7 @@ module Api
       true
     end
 
-    # Override Doorkeeper's token method to handle different token formats
+    # 異なるトークン形式を処理するためDoorkeeperのトークンメソッドをオーバーライド
     def doorkeeper_token
       return @doorkeeper_token if defined?(@doorkeeper_token)
 
@@ -79,10 +79,10 @@ module Api
     private
 
     def find_access_token
-      # Try Authorization header first
+      # まずAuthorizationヘッダーを試行
       if request.authorization.present?
         token_from_authorization_header
-      # Then try access_token parameter
+      # 次にaccess_tokenパラメータを試行
       elsif params[:access_token].present?
         token_from_params
       end

@@ -3,7 +3,7 @@
 class ApplicationRecord < ActiveRecord::Base
   primary_abstract_class
 
-  # SQLite JSON field support for ActivityPub data
+  # ActivityPubデータ用のSQLite JSONフィールドサポート
   include ActiveSupport::Configurable
 
   class << self

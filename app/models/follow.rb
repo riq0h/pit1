@@ -235,7 +235,7 @@ class Follow < ApplicationRecord
   def send_follow_activity
     Rails.logger.info "📤 Creating and queuing Follow activity for follow #{id}"
 
-    # Create Activity record
+    # Activityレコードを作成
     Activity.create!(
       ap_id: follow_activity_ap_id,
       activity_type: 'Follow',

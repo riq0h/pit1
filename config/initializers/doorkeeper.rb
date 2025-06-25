@@ -163,9 +163,9 @@ Doorkeeper.configure do
   #
   # token_reuse_limit 100
 
-  # Only allow one valid access token obtained via client credentials
-  # per client. If a new access token is obtained before the old one
-  # expired, the old one gets revoked (disabled by default)
+  # クライアント認証経由で取得されたアクセストークンは1つのみ許可
+  # クライアントごと。古いトークンが有効期限切れ前に新しいトークンが取得された場合、
+  # 古いトークンは無効化される（デフォルトでは無効）
   #
   # When enabling this option, make sure that you do not expect multiple processes
   # using the same credentials at the same time (e.g. web servers spanning
@@ -173,9 +173,9 @@ Doorkeeper.configure do
   #
   # revoke_previous_client_credentials_token
 
-  # Only allow one valid access token obtained via authorization code
-  # per client. If a new access token is obtained before the old one
-  # expired, the old one gets revoked (disabled by default)
+  # 認証コード経由で取得されたアクセストークンは1つのみ許可
+  # クライアントごと。古いトークンが有効期限切れ前に新しいトークンが取得された場合、
+  # 古いトークンは無効化される（デフォルトでは無効）
   #
   # revoke_previous_authorization_code_token
 
@@ -201,8 +201,7 @@ Doorkeeper.configure do
   #
   # hash_token_secrets using: '::Doorkeeper::Hashing::MyCustomHashImpl'
   #
-  # Keep in mind that changing the hashing function will invalidate all existing
-  # secrets, if there are any.
+  # ハッシュ関数を変更すると既存のトークンが無効になることに注意
 
   # Hash application secrets before persisting them.
   #
@@ -221,8 +220,8 @@ Doorkeeper.configure do
   # doorkeeper and wishing to enable hashing, you will probably want to enable
   # the fallback to plain tokens.
   #
-  # This will ensure that old access tokens and secrets
-  # will remain valid even if the hashing above is enabled.
+  # これにより古いアクセストークンとシークレットが
+  # 上記のハッシュが有効であっても有効なまま保たれる
   #
   # This can be done by adding 'fallback: plain', e.g. :
   #
@@ -247,11 +246,11 @@ Doorkeeper.configure do
   #
   # enable_application_owner confirmation: false
 
-  # Define access token scopes for your provider
-  # For more information go to
+  # プロバイダーのアクセストークンスコープを定義
+  # 詳細については以下を参照
   # https://doorkeeper.gitbook.io/guides/ruby-on-rails/scopes
   #
-  # Mastodon API compatible scopes
+  # Mastodon API互換スコープ
   default_scopes :read
   optional_scopes :read, :write, :follow, :push, :admin,
                  'read:accounts', 'read:blocks', 'read:bookmarks', 'read:favourites', 'read:filters',

@@ -1,4 +1,4 @@
-// Import and register all your controllers from the importmap via controllers/**/*_controller
+// importmapからcontrollers/**/*_controller経由でコントローラーをインポートし登録
 import { application } from 'controllers/application';
 import { eagerLoadControllersFrom } from '@hotwired/stimulus-loading';
 eagerLoadControllersFrom('controllers', application);

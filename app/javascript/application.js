@@ -1,8 +1,8 @@
-// Configure your import map in config/importmap.rb. Read more: https://github.com/rails/importmap-rails
+// config/importmap.rbでインポートマップを設定してください。詳細: https://github.com/rails/importmap-rails
 import '@hotwired/turbo-rails';
 import 'controllers';
 
-// ActivityPub client initialization
+// ActivityPubクライアント初期化
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof ActivityPubClient !== 'undefined') {
     window.apClient = new ActivityPubClient(window.location.origin);

@@ -1,11 +1,10 @@
-# Letter ActivityPub Instance
-# Unified configuration for both development and production
-# Uses SQLite and Solid Queue for simplicity
+# 開発環境と本番環境の統合設定
+# シンプルさのためSQLiteとSolid Queueを使用
 
 ARG RUBY_VERSION=3.4.1
 FROM ruby:$RUBY_VERSION-slim
 
-# Install system dependencies
+# システム依存関係をインストール
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
     build-essential \
@@ -18,21 +17,21 @@ RUN apt-get update -qq && \
     procps \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# ワーキングディレクトリを設定
 WORKDIR /app
 
-# Copy dependency files
+# 依存関係ファイルをコピー
 COPY Gemfile Gemfile.lock ./
 COPY package*.json ./
 
-# Install dependencies
+# 依存関係をインストール
 RUN bundle install
 RUN npm install
 
-# Copy application code
+# アプリケーションコードをコピー
 COPY . .
 
-# Create necessary directories with proper permissions
+# 必要なディレクトリを適切な権限で作成
 RUN mkdir -p \
     tmp/pids \
     tmp/cache \
@@ -43,22 +42,22 @@ RUN mkdir -p \
     public/system/media_attachments \
     && chmod -R 755 public/system
 
-# Copy entrypoint script
+# エントリーポイントスクリプトをコピー
 COPY docker/entrypoint.sh /usr/bin/entrypoint.sh
 RUN chmod +x /usr/bin/entrypoint.sh
 
-# Create non-root user for security
+# セキュリティのため非rootユーザを作成
 RUN groupadd --system --gid 1000 letter && \
     useradd letter --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
     chown -R letter:letter /app
 
 USER letter
 
-# Expose port
+# ポートを公開
 EXPOSE 3000
 
-# Set entrypoint
+# エントリーポイントを設定
 ENTRYPOINT ["entrypoint.sh"]
 
-# Default command
+# デフォルトコマンド
 CMD ["rails", "server", "-b", "0.0.0.0"]

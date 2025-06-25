@@ -32,13 +32,13 @@ class Actor < ApplicationRecord
   has_one_attached :avatar
   has_one_attached :header
 
-  # Follow relationships
+  # フォロー関係
   has_many :following_relationships, class_name: 'Follow', dependent: :destroy, inverse_of: :actor
   has_many :following, through: :following_relationships, source: :target_actor
   has_many :follower_relationships, class_name: 'Follow', foreign_key: :target_actor_id, dependent: :destroy, inverse_of: :target_actor
   has_many :followers, through: :follower_relationships, source: :actor
 
-  # Block/Mute relationships
+  # ブロック・ミュート関係
   has_many :blocks, dependent: :destroy
   has_many :blocked_actors, through: :blocks, source: :target_actor
   has_many :blocked_by, class_name: 'Block', foreign_key: :target_actor_id, dependent: :destroy, inverse_of: :target_actor
@@ -49,14 +49,14 @@ class Actor < ApplicationRecord
   has_many :muted_by, class_name: 'Mute', foreign_key: :target_actor_id, dependent: :destroy, inverse_of: :target_actor
   has_many :muting_actors, through: :muted_by, source: :actor
 
-  # Domain blocks
+  # ドメインブロック
   has_many :domain_blocks, dependent: :destroy
 
-  # Account notes
+  # アカウントメモ
   has_many :account_notes, dependent: :destroy
   has_many :account_notes_received, class_name: 'AccountNote', foreign_key: :target_actor_id, dependent: :destroy
 
-  # Conversations
+  # 会話
   has_many :conversation_participants, dependent: :destroy
   has_many :conversations, through: :conversation_participants
 
@@ -134,7 +134,7 @@ class Actor < ApplicationRecord
     default_settings.merge(settings || {})
   end
 
-  # ActivityPub URLs
+  # ActivityPub URL
   def followers_url
     return super if super.present?
 
@@ -153,13 +153,13 @@ class Actor < ApplicationRecord
     "#{ap_id}/collections/featured" if local? && ap_id.present?
   end
 
-  # WebFinger identifier
+  # WebFinger識別子
   def webfinger_subject
     local_domain = Rails.application.config.activitypub.domain
     "acct:#{username}@#{domain || local_domain}"
   end
 
-  # Public HTML URL
+  # パブリック HTML URL
   def public_url
     return nil unless local?
 
@@ -167,7 +167,7 @@ class Actor < ApplicationRecord
     "#{base_url}/@#{username}"
   end
 
-  # Display methods
+  # 表示メソッド
   def display_name_or_username
     display_name.presence || username
   end
@@ -176,7 +176,7 @@ class Actor < ApplicationRecord
     local? ? username : "#{username}@#{domain}"
   end
 
-  # Key management
+  # キー管理
   def public_key_object
     @public_key_object ||= OpenSSL::PKey::RSA.new(public_key) if public_key.present?
   end
@@ -189,7 +189,7 @@ class Actor < ApplicationRecord
     "#{ap_id}#main-key"
   end
 
-  # Activity generation
+  # アクティビティ生成
   def generate_follow_activity(target_actor, follow_id)
     {
       '@context' => Rails.application.config.activitypub.context_url,
@@ -409,7 +409,7 @@ class Actor < ApplicationRecord
     }
   end
 
-  # ActivityPub URLs
+  # ActivityPub URL
   def activitypub_links(request = nil)
     base_url = get_base_url(request)
     actor_url = "#{base_url}/users/#{username}"
@@ -616,13 +616,13 @@ class Actor < ApplicationRecord
 
   public
 
-  # Add method to follow another actor using FollowService
+  # FollowServiceを使用して他のアクターをフォローするメソッドを追加
   def follow!(target_actor_or_uri)
     follow_service = FollowService.new(self)
     follow_service.follow!(target_actor_or_uri)
   end
 
-  # Add method to unfollow another actor using FollowService
+  # FollowServiceを使用して他のアクターをアンフォローするメソッドを追加
   def unfollow!(target_actor_or_uri)
     follow_service = FollowService.new(self)
     follow_service.unfollow!(target_actor_or_uri)

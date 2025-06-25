@@ -4,26 +4,26 @@ class WebFingerService
   include HTTParty
 
   def fetch_actor_data(acct_uri)
-    # Extract username and domain from acct: URI
+    # acct: URIからユーザ名とドメインを抽出
     username, domain = parse_acct_uri(acct_uri)
     return nil unless username && domain
 
-    # Fetch WebFinger data
+    # WebFingerデータを取得
     webfinger_data = fetch_webfinger(username, domain)
     return nil unless webfinger_data
 
-    # Extract ActivityPub actor URI
+    # ActivityPubアクターURIを抽出
     actor_uri = extract_actor_uri(webfinger_data)
     return nil unless actor_uri
 
-    # Fetch ActivityPub actor data
+    # ActivityPubアクターデータを取得
     fetch_activitypub_object(actor_uri)
   end
 
   private
 
   def parse_acct_uri(acct_uri)
-    # Handle formats: acct:username@domain, @username@domain, username@domain
+    # acct:username@domain、@username@domain、username@domain形式を処理
     clean_uri = acct_uri.gsub(/^(acct:|@)/, '')
     parts = clean_uri.split('@')
 

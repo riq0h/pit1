@@ -80,8 +80,8 @@ class Poll < ApplicationRecord
       voters_count: multiple ? voters_count : votes_count,
       options: serialize_options,
       emojis: [],
-      voted: false, # Will be set by controller based on current user
-      own_votes: [] # Will be set by controller based on current user
+      voted: false, # 現在のユーザに基づいてコントローラーで設定される
+      own_votes: [] # 現在のユーザに基づいてコントローラーで設定される
     }
   end
 

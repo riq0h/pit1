@@ -1,6 +1,6 @@
 require_relative 'boot'
 
-# 環境変数の明示的な読み込み（dotenv-railsより前に実行）
+# 環境変数の明示的な読み込み
 if File.exist?(File.expand_path('../.env', __dir__))
   require 'dotenv'
   Dotenv.load(File.expand_path('../.env', __dir__))

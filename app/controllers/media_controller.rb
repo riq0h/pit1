@@ -25,7 +25,7 @@ class MediaController < ApplicationController
     return head :not_found unless File.exist?(file_path)
     return head :not_found unless valid_storage_path?(@media_attachment.storage_path)
 
-    # For now, return the original file (in production, use actual thumbnails)
+    # 現在は元のファイルを返す（本番環境では実際のサムネイルを使用）
     send_file file_path,
               type: @media_attachment.content_type,
               disposition: 'inline',

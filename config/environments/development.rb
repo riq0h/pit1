@@ -28,10 +28,10 @@ Rails.application.configure do
   # Change to :null_store to avoid any caching.
   config.cache_store = :memory_store
 
-  # Use Solid Queue for background jobs in development
+  # 開発環境でバックグラウンドジョブにSolid Queueを使用
   config.active_job.queue_adapter = :solid_queue
 
-  # Store uploaded files - use Cloudflare R2 if S3_ENABLED=true, otherwise local storage
+  # アップロードファイルを保存 - S3_ENABLED=trueの場合はCloudflare R2、そうでなければローカルストレージ
   config.active_storage.service = ENV['S3_ENABLED'] == 'true' ? :cloudflare_r2 : :local
 
   # Don't care if the mailer can't send.
@@ -40,13 +40,13 @@ Rails.application.configure do
   # Make template changes take effect immediately.
   config.action_mailer.perform_caching = false
 
-  # Set domain to be used by links generated in mailer templates.
-  # Note: ActivityPub config is set in initializers, use ENV fallback
+  # メーラーテンプレートで生成されるリンクで使用するドメインを設定
+  # 注意: ActivityPub設定はinitializersで設定されるため、ENVフォールバックを使用
   domain = ENV.fetch('ACTIVITYPUB_DOMAIN', 'localhost:3000')
   protocol = ENV.fetch('ACTIVITYPUB_PROTOCOL', 'https')
   host, port = domain.split(':')
   
-  # Configure URL options for both Action Mailer and Active Storage
+  # Action MailerとActive Storageの両方のURLオプションを設定
   url_options = if port && port != '80' && port != '443'
     { host: host, port: port.to_i }
   else
@@ -55,10 +55,10 @@ Rails.application.configure do
   
   config.action_mailer.default_url_options = url_options
   
-  # Configure Active Storage host for URL generation
+  # URL生成用のActive Storageホストを設定
   Rails.application.routes.default_url_options = url_options.merge(protocol: protocol)
   
-  # Local domain setting for letter instance
+  # インスタンスのローカルドメイン設定
   config.x.local_domain = domain
 
   # Print deprecation notices to the Rails logger.

@@ -1,4 +1,4 @@
-/* ActivityPub specific styles */
+/* ActivityPub固有のスタイル */
 .activity-stream {
   @apply space-y-4;
 }
@@ -11,7 +11,7 @@
   @apply prose prose-sm max-w-none;
 }
 
-/* Custom emoji styles */
+/* カスタム絵文字スタイル */
 .custom-emoji {
   display: inline-block !important;
   width: 1.2em !important;
@@ -28,7 +28,7 @@
   flex-shrink: 0 !important;
 }
 
-/* Alternative emoji size classes for different contexts */
+/* 異なるコンテキスト用の絵文字サイズクラス */
 .emoji-small {
   width: 1em !important;
   height: 1em !important;

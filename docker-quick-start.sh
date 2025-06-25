@@ -1,40 +1,40 @@
 #!/bin/bash
 
-# Letter ActivityPub Instance - Docker Quick Start
-# This script helps you quickly set up and run Letter with Docker
+# Dockerクイックスタート
+# このスクリプトはDockerで素早くセットアップして実行するのに役立ちます
 
 set -e
 
-echo "🚀 Letter ActivityPub Instance - Docker Quick Start"
+echo "🚀 Dockerクイックスタート"
 echo "=================================================="
 echo ""
 
-# Check if Docker is installed
+# Dockerがインストールされているかチェック
 if ! command -v docker &> /dev/null; then
-    echo "❌ Docker is not installed. Please install Docker first."
-    echo "Visit: https://docs.docker.com/get-docker/"
+    echo "❌ Dockerがインストールされていません。まずDockerをインストールしてください。"
+    echo "訪問先: https://docs.docker.com/get-docker/"
     exit 1
 fi
 
-# Check if Docker Compose is installed
+# Docker Composeがインストールされているかチェック
 if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Docker Compose is not installed. Please install Docker Compose first."
-    echo "Visit: https://docs.docker.com/compose/install/"
+    echo "❌ Docker Composeがインストールされていません。まずDocker Composeをインストールしてください。"
+    echo "訪問先: https://docs.docker.com/compose/install/"
     exit 1
 fi
 
-echo "✅ Docker and Docker Compose are installed"
+echo "✅ DockerとDocker Composeがインストールされています"
 echo ""
 
-# Create environment file if it doesn't exist
+# 環境ファイルが存在しない場合は作成
 if [ ! -f ".env.docker.local" ]; then
-    echo "📝 Creating environment configuration..."
+    echo "📝 環境設定を作成中..."
     cp .env.docker .env.docker.local
     
-    echo "⚙️  Please configure your settings in .env.docker.local"
-    echo "At minimum, set your ACTIVITYPUB_DOMAIN"
+    echo "⚙️  .env.docker.localで設定を構成してください"
+    echo "最低限、ACTIVITYPUB_DOMAINを設定してください"
     echo ""
-    read -p "Enter your domain (or press Enter for localhost:3000): " domain
+    read -p "ドメインを入力してください (localhost:3000の場合はEnterを押してください): " domain
     
     if [ -n "$domain" ]; then
         sed -i "s/ACTIVITYPUB_DOMAIN=localhost:3000/ACTIVITYPUB_DOMAIN=$domain/" .env.docker.local
@@ -44,29 +44,29 @@ if [ ! -f ".env.docker.local" ]; then
         fi
     fi
     
-    echo "✅ Environment file created: .env.docker.local"
+    echo "✅ 環境ファイルが作成されました: .env.docker.local"
 else
-    echo "✅ Environment file exists: .env.docker.local"
+    echo "✅ 環境ファイルが存在します: .env.docker.local"
 fi
 
 echo ""
 
-# Create necessary directories
-echo "📁 Creating necessary directories..."
+# 必要なディレクトリを作成
+echo "📁 必要なディレクトリを作成中..."
 mkdir -p db log public/system/accounts/avatars public/system/accounts/headers public/system/media_attachments
-echo "✅ Directories created"
+echo "✅ ディレクトリが作成されました"
 echo ""
 
-# Ask user what to do
-echo "What would you like to do?"
-echo "1) Build and start Letter (foreground)"
-echo "2) Start Letter in background"
-echo "3) Build only (don't start)"
-echo "4) View logs"
-echo "5) Stop Letter"
-echo "6) Clean up (remove containers and images)"
+# ユーザに何をするか尋ねる
+echo "何をしますか？"
+echo "1) ビルドしてアプリを開始（フォアグラウンド）"
+echo "2) アプリをバックグラウンドで開始"
+echo "3) ビルドのみ（開始しない）"
+echo "4) ログを表示"
+echo "5) アプリを停止"
+echo "6) クリーンアップ（コンテナとイメージを削除）"
 echo ""
-read -p "Enter your choice (1-6): " choice
+read -p "選択してください (1-6): " choice
 
 case $choice in
     1)

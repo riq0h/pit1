@@ -1,13 +1,13 @@
 Rails.application.routes.draw do
-  # Health check endpoint
+  # ヘルスチェックエンドポイント
   get 'up' => 'rails/health#show', :as => :rails_health_check
 
-  # PWA files
+  # PWAファイル
   get 'service-worker' => 'rails/pwa#service_worker', :as => :pwa_service_worker
   get 'manifest' => 'rails/pwa#manifest', :as => :pwa_manifest
 
   # ================================
-  # ActivityPub & Federation Routes
+  # ActivityPub連合ルート
   # ================================
 
   # ActivityPub Inbox
@@ -17,7 +17,7 @@ Rails.application.routes.draw do
   get '/users/:username/outbox', to: 'outbox#show', as: :user_outbox
   post '/users/:username/outbox', to: 'outbox#create'
 
-  # ActivityPub Actor Profile  
+  # ActivityPubアクタープロフィール  
   get '/users/:username', to: 'actors#show', as: :user_actor
 
   # WebFinger discovery
@@ -25,10 +25,10 @@ Rails.application.routes.draw do
   get '/.well-known/host-meta', to: 'well_known#host_meta'
   get '/.well-known/nodeinfo', to: 'well_known#nodeinfo'
 
-  # NodeInfo (https://nodeinfo.diaspora.software/)
+  # NodeInfo
   get '/nodeinfo/2.1', to: 'nodeinfo#show'
 
-  # ActivityPub Activity endpoints
+  # ActivityPubアクティビティエンドポイント
   get '/users/:username/inbox', to: 'inboxes#show'
   post '/users/:username/inbox', to: 'inboxes#create'
   get '/users/:username/outbox', to: 'outboxes#show'
@@ -36,8 +36,8 @@ Rails.application.routes.draw do
   get '/users/:username/following', to: 'following#show'
   get '/users/:username/collections/featured', to: 'featured#show'
 
-  # ActivityPub Object endpoints
-  # ap_id の末尾部分 (nanoid) を使用
+  # ActivityPubオブジェクトエンドポイント
+  # ap_idの末尾部分を使用
   get '/objects/:id', to: 'objects#show'
   get '/activities/:id', to: 'activities#show'
 
@@ -45,7 +45,7 @@ Rails.application.routes.draw do
   post '/inbox', to: 'shared_inboxes#create'
 
   # ================================
-  # Frontend Routes (HTML)
+  # フロントエンドルート
   # ================================
 
   # ホームページ
@@ -53,7 +53,7 @@ Rails.application.routes.draw do
 
   # ユーザプロフィール
   get '/@:username', to: 'profiles#show', as: :profile
-  # 個別投稿表示 (ap_id の末尾部分を使用)
+  # 個別投稿表示
   get '/@:username/:id', to: 'posts#show_html', as: :post_html
 
   # API形式URLからフロントエンド形式URLへのリダイレクト
@@ -79,7 +79,7 @@ Rails.application.routes.draw do
   post '/config/custom_emojis/copy_remote', to: 'config#copy_remote_emojis', as: :copy_remote_config_custom_emojis
   post '/config/custom_emojis/discover_remote', to: 'config#discover_remote_emojis', as: :discover_remote_config_custom_emojis
   
-  # Relay management routes
+  # リレー管理ルート
   get '/config/relays', to: 'config#relays', as: :config_relays
   post '/config/relays', to: 'config#create_relay'
   patch '/config/relays/:id', to: 'config#update_relay', as: :config_relay
@@ -91,11 +91,11 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
-      # OAuth & Apps
+      # OAuthとアプリ
       post '/apps', to: 'apps#create'
       get '/apps/verify_credentials', to: 'apps#verify_credentials'
 
-      # Accounts
+      # アカウント
       get '/accounts/verify_credentials', to: 'accounts#verify_credentials'
       patch '/accounts/update_credentials', to: 'accounts#update_credentials'
       get '/accounts/relationships', to: 'accounts#relationships'
@@ -114,7 +114,7 @@ Rails.application.routes.draw do
       post '/accounts/:id/unmute', to: 'accounts#unmute'
       post '/accounts/:id/note', to: 'accounts#note'
 
-      # Statuses
+      # ステータス
       get '/statuses/:id', to: 'statuses#show'
       get '/statuses/:id/context', to: 'statuses#context'
       get '/statuses/:id/history', to: 'statuses#history'
@@ -135,7 +135,7 @@ Rails.application.routes.draw do
       post '/statuses/:id/bookmark', to: 'statuses#bookmark'
       post '/statuses/:id/unbookmark', to: 'statuses#unbookmark'
 
-      # Tags
+      # タグ
       get '/tags/:id', to: 'tags#show'
       post '/tags/:id/follow', to: 'tags#follow'
       post '/tags/:id/unfollow', to: 'tags#unfollow'
@@ -145,10 +145,10 @@ Rails.application.routes.draw do
       get '/timelines/public', to: 'timelines#public'
       get '/timelines/tag/:hashtag', to: 'timelines#tag'
 
-      # Instance
+      # インスタンス
       get '/instance', to: 'instance#show'
 
-      # Media
+      # メディア
       post '/media', to: 'media#create'
       get '/media/:id', to: 'media#show'
       put '/media/:id', to: 'media#update'
@@ -178,25 +178,25 @@ Rails.application.routes.draw do
       post '/domain_blocks', to: 'domain_blocks#create'
       delete '/domain_blocks', to: 'domain_blocks#destroy'
 
-      # Custom emojis
+      # カスタム絵文字
       get '/custom_emojis', to: 'custom_emojis#index'
 
-      # Bookmarks
+      # ブックマーク
       get '/bookmarks', to: 'bookmarks#index'
 
-      # Favourites
+      # お気に入り
       get '/favourites', to: 'favourites#index'
 
-      # Follow requests
+      # フォローリクエスト
       get '/follow_requests', to: 'follow_requests#index'
       post '/follow_requests/:id/authorize', to: 'follow_requests#authorize'
       post '/follow_requests/:id/reject', to: 'follow_requests#reject'
       
-      # Markers
+      # マーカー
       get '/markers', to: 'markers#index'
       post '/markers', to: 'markers#create'
       
-      # Lists
+      # リスト
       get '/lists', to: 'lists#index'
       post '/lists', to: 'lists#create'
       get '/lists/:id', to: 'lists#show'
@@ -206,20 +206,20 @@ Rails.application.routes.draw do
       post '/lists/:id/accounts', to: 'lists#add_accounts'
       delete '/lists/:id/accounts', to: 'lists#remove_accounts'
       
-      # Featured tags
+      # 注目タグ
       get '/featured_tags', to: 'featured_tags#index'
       post '/featured_tags', to: 'featured_tags#create'
       delete '/featured_tags/:id', to: 'featured_tags#destroy'
       get '/featured_tags/suggestions', to: 'featured_tags#suggestions'
 
-      # Followed tags
+      # フォロー中のタグ
       get '/followed_tags', to: 'followed_tags#index'
       
-      # Polls
+      # 投票
       get '/polls/:id', to: 'polls#show'
       post '/polls/:id/votes', to: 'polls#vote'
       
-      # Scheduled statuses
+      # 予約投稿
       get '/scheduled_statuses', to: 'scheduled_statuses#index'
       get '/scheduled_statuses/:id', to: 'scheduled_statuses#show'
       put '/scheduled_statuses/:id', to: 'scheduled_statuses#update'
@@ -230,34 +230,34 @@ Rails.application.routes.draw do
       post '/accounts/:id/pin', to: 'endorsements#create'
       delete '/accounts/:id/unpin', to: 'endorsements#destroy'
       
-      # Reports (stub)
+      # レポート（スタブ）
       post '/reports', to: 'reports#create'
       
-      # Suggestions
+      # サジェスト
       get '/suggestions', to: 'suggestions#index'
       delete '/suggestions/:id', to: 'suggestions#destroy'
       
-      # Trends
+      # トレンド
       get '/trends', to: 'trends#index'
       get '/trends/tags', to: 'trends#tags'
       get '/trends/statuses', to: 'trends#statuses'
       get '/trends/links', to: 'trends#links'
       
-      # Filters
+      # フィルター
       get '/filters', to: 'filters#index'
       post '/filters', to: 'filters#create'
       get '/filters/:id', to: 'filters#show'
       put '/filters/:id', to: 'filters#update'
       delete '/filters/:id', to: 'filters#destroy'
       
-      # Preferences
+      # 設定
       get '/preferences', to: 'preferences#show'
       
-      # Announcements
+      # お知らせ
       get '/announcements', to: 'announcements#index'
       post '/announcements/:id/dismiss', to: 'announcements#dismiss'
       
-      # Push subscriptions
+      # プッシュ通知登録
       namespace :push do
         get '/subscription', to: 'subscription#show'
         post '/subscription', to: 'subscription#create'
@@ -332,16 +332,16 @@ Rails.application.routes.draw do
   namespace :admin do
     get '/', to: 'dashboard#index'
 
-    # Users (2ユーザ制限管理)
+    # ユーザ管理
     get '/users', to: 'users#index'
     get '/users/:id', to: 'users#show'
 
-    # Federation
+    # 連合
     get '/instances', to: 'instances#index'
     post '/instances/:domain/block', to: 'instances#block'
     delete '/instances/:domain/block', to: 'instances#unblock'
 
-    # Reports
+    # レポート
     get '/reports', to: 'reports#index'
     get '/reports/:id', to: 'reports#show'
   end
@@ -355,26 +355,26 @@ Rails.application.routes.draw do
   get '/media/:id/thumb', to: 'media#thumbnail', as: :media_thumbnail
 
   # ================================
-  # Additional Routes
+  # 追加ルート
   # ================================
 
   # RSS/Atom feeds
   get '/@:username.rss', to: 'feeds#user', format: :rss
   get '/local.atom', to: 'feeds#local', format: :atom
 
-  # Static pages
+  # 静的ページ
   get '/about', to: 'pages#about'
   get '/terms', to: 'pages#terms'
   get '/privacy', to: 'pages#privacy'
 
-  # Search
+  # 検索
   get '/search/index', to: 'search#index', as: :search_index
 
-  # Error pages
+  # エラーページ
   get '/404', to: 'errors#not_found'
   get '/500', to: 'errors#internal_server_error'
   
-  # Catch-all route for 404 errors (must be last, but exclude Active Storage paths)
+  # 404エラー用のキャッチオールルート（最後に置く、Active Storageパスは除外）
   match '*path', to: 'errors#not_found', via: :all, constraints: ->(req) { 
     !req.path.start_with?('/rails/active_storage') 
   }

@@ -27,13 +27,13 @@ class DomainBlock < ApplicationRecord
   end
 
   def remove_followers_from_domain
-    # Remove followers from the blocked domain
+    # ブロックされたドメインからのフォロワーを削除
     follower_ids = actor.followers.where(domain: domain).pluck(:id)
     Follow.where(actor_id: follower_ids, target_actor: actor).destroy_all
   end
 
   def unfollow_accounts_from_domain
-    # Unfollow all accounts from the blocked domain
+    # ブロックされたドメインのアカウントをすべてアンフォロー
     following_ids = actor.following.where(domain: domain).pluck(:id)
     Follow.where(actor: actor, target_actor_id: following_ids).destroy_all
   end

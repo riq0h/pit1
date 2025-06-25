@@ -6,20 +6,20 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # ActivityPub Configuration
+      # ActivityPub設定
       ACTIVITYPUB_DOMAIN: ${ACTIVITYPUB_DOMAIN:-localhost:3000}
       ACTIVITYPUB_PROTOCOL: ${ACTIVITYPUB_PROTOCOL:-http}
       
-      # Instance Configuration
+      # インスタンス設定
       INSTANCE_NAME: ${INSTANCE_NAME:-letter}
       INSTANCE_DESCRIPTION: ${INSTANCE_DESCRIPTION:-General Letter Publication System based on ActivityPub}
       CONTACT_EMAIL: ${CONTACT_EMAIL:-admin@localhost}
       MAINTAINER_NAME: ${MAINTAINER_NAME:-letter Administrator}
       
-      # Feature flags
+      # 機能フラグ
       FEDERATION_ENABLED: ${FEDERATION_ENABLED:-true}
       
-      # Object Storage Configuration (Cloudflare R2)
+      # オブジェクトストレージ設定（Cloudflare R2）
       S3_ENABLED: ${S3_ENABLED:-false}
       S3_ENDPOINT: ${S3_ENDPOINT:-}
       S3_BUCKET: ${S3_BUCKET:-}
@@ -31,21 +31,21 @@ services:
       S3_FORCE_SINGLE_REQUEST: ${S3_FORCE_SINGLE_REQUEST:-true}
       S3_ALIAS_HOST: ${S3_ALIAS_HOST:-}
       
-      # Rails Configuration
+      # Rails設定
       RAILS_ENV: ${RAILS_ENV:-development}
       RAILS_LOG_LEVEL: ${RAILS_LOG_LEVEL:-info}
       
     volumes:
-      # Database persistence
+      # データベース永続化
       - ./db:/app/db
       
-      # Logs persistence
+      # ログ永続化
       - ./log:/app/log
       
-      # Media files persistence
+      # メディアファイル永続化
       - ./public/system:/app/public/system
       
-      # Optional: Mount .env file if it exists
+      # オプション: .envファイルが存在する場合はマウント
       - ./.env:/app/.env:ro
       
     restart: unless-stopped

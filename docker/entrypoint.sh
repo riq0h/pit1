@@ -1,116 +1,116 @@
 #!/bin/bash
 set -e
 
-# Letter ActivityPub Instance - Docker Entrypoint
-# Handles database setup, environment validation, and process management
+# Dockerエントリーポイント
+# データベースセットアップ、環境検証、プロセス管理を処理
 
-echo "=== Letter ActivityPub Instance Starting ==="
+echo "=== アプリケーション開始 ==="
 
-# Function to wait for dependencies (if needed in future)
+# 依存関係の待機関数（将来必要に応じて使用）
 wait_for_dependencies() {
-    echo "Checking dependencies..."
-    # Future: Add database connection checks if needed
-    echo "✓ Dependencies ready"
+    echo "依存関係をチェック中..."
+    # 将来: 必要に応じてデータベース接続チェックを追加
+    echo "✓ 依存関係準備完了"
 }
 
-# Validate required environment variables
+# 必要な環境変数を検証
 validate_environment() {
-    echo "Validating environment variables..."
+    echo "環境変数を検証中..."
     
     if [ -z "$ACTIVITYPUB_DOMAIN" ]; then
-        echo "❌ ERROR: ACTIVITYPUB_DOMAIN is required"
-        echo "Please set ACTIVITYPUB_DOMAIN in your docker-compose.yml or .env file"
+        echo "❌ エラー: ACTIVITYPUB_DOMAINが必要です"
+        echo "docker-compose.ymlまたは.envファイルでACTIVITYPUB_DOMAINを設定してください"
         exit 1
     fi
     
     if [ -z "$ACTIVITYPUB_PROTOCOL" ]; then
-        echo "⚠️  WARNING: ACTIVITYPUB_PROTOCOL not set, defaulting to https"
+        echo "⚠️  警告: ACTIVITYPUB_PROTOCOLが設定されていません、httpsをデフォルトとします"
         export ACTIVITYPUB_PROTOCOL=https
     fi
     
-    echo "✓ Environment variables validated"
-    echo "  Domain: $ACTIVITYPUB_DOMAIN"
-    echo "  Protocol: $ACTIVITYPUB_PROTOCOL"
+    echo "✓ 環境変数検証完了"
+    echo "  ドメイン: $ACTIVITYPUB_DOMAIN"
+    echo "  プロトコル: $ACTIVITYPUB_PROTOCOL"
 }
 
-# Setup database
+# データベースセットアップ
 setup_database() {
-    echo "Setting up database..."
+    echo "データベースをセットアップ中..."
     
-    # Check if database exists
+    # データベースが存在するかチェック
     if [ ! -f "db/development.sqlite3" ]; then
-        echo "Creating database..."
+        echo "データベースを作成中..."
         bundle exec rails db:create
         bundle exec rails db:migrate
-        echo "✓ Database created and migrated"
+        echo "✓ データベース作成とマイグレーション完了"
     else
-        echo "Database exists, running migrations..."
+        echo "データベースが存在します、マイグレーションを実行中..."
         bundle exec rails db:migrate
-        echo "✓ Database migrations completed"
+        echo "✓ データベースマイグレーション完了"
     fi
 }
 
-# Precompile assets if needed
+# 必要に応じてアセットをプリコンパイル
 prepare_assets() {
-    echo "Preparing assets..."
+    echo "アセットを準備中..."
     
-    # Only precompile if in production or assets don't exist
+    # 本番環境またはアセットが存在しない場合のみプリコンパイル
     if [ "$RAILS_ENV" = "production" ] || [ ! -d "public/assets" ]; then
-        echo "Precompiling assets..."
+        echo "アセットをプリコンパイル中..."
         bundle exec rails assets:precompile
-        echo "✓ Assets precompiled"
+        echo "✓ アセットプリコンパイル完了"
     else
-        echo "✓ Assets already prepared"
+        echo "✓ アセットは既に準備済み"
     fi
 }
 
-# Clean up old processes
+# 古いプロセスをクリーンアップ
 cleanup_processes() {
-    echo "Cleaning up processes..."
+    echo "プロセスをクリーンアップ中..."
     
-    # Remove PID files
+    # PIDファイルを削除
     rm -f tmp/pids/server.pid
     rm -f tmp/pids/solid_queue.pid
     
-    echo "✓ Process cleanup completed"
+    echo "✓ プロセスクリーンアップ完了"
 }
 
-# Start Solid Queue in background
+# Solid Queueをバックグラウンドで開始
 start_solid_queue() {
-    echo "Starting Solid Queue worker..."
+    echo "Solid Queueワーカーを開始中..."
     
-    # Start Solid Queue as background process
+    # Solid Queueをバックグラウンドプロセスとして開始
     bundle exec bin/jobs &
     SOLID_QUEUE_PID=$!
     echo $SOLID_QUEUE_PID > tmp/pids/solid_queue.pid
     
-    echo "✓ Solid Queue started (PID: $SOLID_QUEUE_PID)"
+    echo "✓ Solid Queue開始 (PID: $SOLID_QUEUE_PID)"
 }
 
-# Graceful shutdown handler
+# グレースフルシャットダウンハンドラー
 shutdown_handler() {
     echo ""
-    echo "=== Shutting down Letter instance ==="
+    echo "=== アプリケーション終了中 ==="
     
-    # Stop Solid Queue
+    # Solid Queueを停止
     if [ -f tmp/pids/solid_queue.pid ]; then
         SOLID_QUEUE_PID=$(cat tmp/pids/solid_queue.pid)
         if kill -0 $SOLID_QUEUE_PID 2>/dev/null; then
-            echo "Stopping Solid Queue (PID: $SOLID_QUEUE_PID)..."
+            echo "Solid Queue停止中 (PID: $SOLID_QUEUE_PID)..."
             kill -TERM $SOLID_QUEUE_PID
             wait $SOLID_QUEUE_PID 2>/dev/null || true
         fi
         rm -f tmp/pids/solid_queue.pid
     fi
     
-    echo "✓ Graceful shutdown completed"
+    echo "✓ グレースフルシャットダウン完了"
     exit 0
 }
 
-# Set up signal handlers
+# シグナルハンドラーを設定
 trap shutdown_handler SIGTERM SIGINT
 
-# Main execution
+# メイン実行
 main() {
     wait_for_dependencies
     validate_environment
@@ -119,14 +119,14 @@ main() {
     prepare_assets
     start_solid_queue
     
-    echo "=== Letter ActivityPub Instance Ready ==="
-    echo "Starting Rails server..."
-    echo "Available at: $ACTIVITYPUB_PROTOCOL://$ACTIVITYPUB_DOMAIN"
+    echo "=== アプリケーション準備完了 ==="
+    echo "Railsサーバを開始中..."
+    echo "アクセス可能: $ACTIVITYPUB_PROTOCOL://$ACTIVITYPUB_DOMAIN"
     echo ""
     
-    # Execute the main command
+    # メインコマンドを実行
     exec "$@"
 }
 
-# Run main function
+# メイン関数を実行
 main "$@"

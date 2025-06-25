@@ -16,7 +16,7 @@ module StatusActivityHandlers
       processed: true
     )
 
-    # Queue for federation delivery to the status owner
+    # ステータスオーナーへの連合配信をキューに追加
     return unless status.actor != current_user && !status.actor.local?
 
     SendActivityJob.perform_later(like_activity.id, [status.actor.inbox_url])
@@ -32,7 +32,7 @@ module StatusActivityHandlers
       processed: true
     )
 
-    # Queue for federation delivery to the status owner
+    # ステータスオーナーへの連合配信をキューに追加
     return unless status.actor != current_user && !status.actor.local?
 
     SendActivityJob.perform_later(undo_activity.id, [status.actor.inbox_url])
@@ -72,10 +72,10 @@ module StatusActivityHandlers
   def collect_announce_target_inboxes(status)
     target_inboxes = []
 
-    # Add status owner's inbox
+    # ステータスオーナーのinboxを追加
     target_inboxes << status.actor.inbox_url if status.actor != current_user && !status.actor.local?
 
-    # Add follower inboxes for public announces
+    # パブリックアナウンスのフォロワー inboxを追加
     if status.visibility == 'public'
       follower_inboxes = current_user.followers.where(local: false).pluck(:inbox_url)
       target_inboxes.concat(follower_inboxes)

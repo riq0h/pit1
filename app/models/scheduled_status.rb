@@ -18,16 +18,16 @@ class ScheduledStatus < ApplicationRecord
       scheduled_status.publish!
     rescue StandardError => e
       Rails.logger.error "Failed to publish scheduled status #{scheduled_status.id}: #{e.message}"
-      # Don't destroy on error - let it be retried or manually handled
+      # エラー時は削除せず再試行または手動処理に委ねる
     end
   end
 
   def publish!
     ActiveRecord::Base.transaction do
-      # Create the status using StatusService
+      # StatusServiceを使用してステータスを作成
       status_params = prepare_status_params
 
-      # Create the status
+      # ステータスを作成
       status = actor.objects.create!(
         object_type: 'Note',
         content: status_params[:status],
@@ -40,13 +40,13 @@ class ScheduledStatus < ApplicationRecord
         ap_id: generate_ap_id
       )
 
-      # Attach media if present
+      # メディアが存在する場合は添付
       attach_media_to_status(status) if media_attachment_ids.present?
 
-      # Handle poll if present
+      # 投票が存在する場合は処理
       create_poll_for_status(status) if status_params[:poll].present?
 
-      # Destroy the scheduled status
+      # スケジュール済みステータスを削除
       destroy!
 
       status
@@ -103,7 +103,7 @@ class ScheduledStatus < ApplicationRecord
   def prepare_status_params
     base_params = params.dup
 
-    # Ensure proper defaults
+    # 適切なデフォルト値を確保
     base_params['visibility'] ||= 'public'
     base_params['sensitive'] ||= false
 

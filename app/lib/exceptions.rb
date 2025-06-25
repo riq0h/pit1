@@ -26,7 +26,7 @@ module ActivityPub
   class RateLimitError < Error; end
 end
 
-# Mastodon API compatible exceptions
+# Mastodon API互換例外
 module Mastodon
   class Error < StandardError; end
   class ValidationError < Error; end

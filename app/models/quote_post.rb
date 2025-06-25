@@ -41,8 +41,8 @@ class QuotePost < ApplicationRecord
       'published' => created_at.iso8601,
       'to' => build_audience_list(:to),
       'cc' => build_audience_list(:cc),
-      'quoteUrl' => quoted_object.ap_id, # FEP-e232 compatibility
-      '_misskey_quote' => quoted_object.ap_id # Misskey compatibility
+      'quoteUrl' => quoted_object.ap_id, # FEP-e232互換性
+      '_misskey_quote' => quoted_object.ap_id # Misskey互換性
     }.tap do |json|
       json['content'] = quote_text if deep_quote? && quote_text.present?
     end.compact

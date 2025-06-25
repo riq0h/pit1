@@ -6,7 +6,7 @@ class ActivitiesController < ApplicationController
   before_action :ensure_activitypub_request
 
   # GET /activities/:id
-  # ActivityPub Activity endpoint
+  # ActivityPubアクティビティエンドポイント
   def show
     render json: build_activity_data(@activity),
            content_type: 'application/activity+json; charset=utf-8'

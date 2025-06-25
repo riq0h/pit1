@@ -2,7 +2,7 @@
   "name": "letter",
   "version": "0.1",
   "type": "module",
-  "description": "General Letter Intercommunication System based on ActivityPub",
+  "description": "General Letter Publication System based on ActivityPub",
   "scripts": {
     "build:css": "tailwindcss -i ./app/assets/stylesheets/application.tailwind.css -o ./app/assets/stylesheets/application.css --watch",
     "build:css:prod": "tailwindcss -i ./app/assets/stylesheets/application.tailwind.css -o ./app/assets/stylesheets/application.css --minify",
