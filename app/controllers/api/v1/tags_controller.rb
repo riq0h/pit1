@@ -4,6 +4,7 @@ module Api
   module V1
     class TagsController < Api::BaseController
       include SearchHashtagSerializer
+      include HashtagHistoryBuilder
 
       # GET /api/v1/tags/:id
       def show
@@ -26,13 +27,13 @@ module Api
       # POST /api/v1/tags/:id/follow
       def follow
         doorkeeper_authorize! :write, :'write:follows'
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         tag_name = params[:id]
         tag = find_or_create_tag(tag_name)
 
         # フォロー関係を作成（重複チェック付き）
-        follow_tag = current_user.followed_tags.find_or_create_by(tag: tag)
+        current_user.followed_tags.find_or_create_by(tag: tag)
 
         render json: serialized_hashtag_with_following(tag, following: true)
       end
@@ -40,7 +41,7 @@ module Api
       # POST /api/v1/tags/:id/unfollow
       def unfollow
         doorkeeper_authorize! :write, :'write:follows'
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         tag_name = params[:id]
         tag = Tag.find_by(name: tag_name)
@@ -76,16 +77,6 @@ module Api
           history: build_hashtag_history(tag),
           following: following_status
         }
-      end
-
-      def build_hashtag_history(tag)
-        [
-          {
-            day: Time.current.beginning_of_day.to_i.to_s,
-            uses: (tag.usage_count || 0).to_s,
-            accounts: '1'
-          }
-        ]
       end
     end
   end

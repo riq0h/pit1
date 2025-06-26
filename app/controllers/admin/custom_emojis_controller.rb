@@ -2,6 +2,8 @@
 
 module Admin
   class CustomEmojisController < Admin::BaseController
+    include BulkEmojiActions
+
     before_action :set_custom_emoji, only: %i[show edit update destroy enable disable]
 
     def index
@@ -67,26 +69,6 @@ module Admin
       scope = scope.where(disabled: false) if params[:enabled] == 'true'
       scope = scope.where(disabled: true) if params[:enabled] == 'false'
       scope
-    end
-
-    def process_bulk_emoji_action(action_type, emoji_ids)
-      case action_type
-      when 'enable'
-        CustomEmoji.where(id: emoji_ids).update_all(disabled: false)
-        { notice: t('custom_emojis.bulk_enabled') }
-      when 'disable'
-        CustomEmoji.where(id: emoji_ids).update_all(disabled: true)
-        { notice: t('custom_emojis.bulk_disabled') }
-      when 'delete'
-        emojis_to_delete = CustomEmoji.where(id: emoji_ids).includes(:image_attachment)
-        emojis_to_delete.find_each do |emoji|
-          emoji.image.purge if emoji.image.attached?
-          emoji.delete
-        end
-        { notice: t('custom_emojis.bulk_deleted') }
-      else
-        { alert: t('custom_emojis.invalid_action') }
-      end
     end
 
     def set_custom_emoji

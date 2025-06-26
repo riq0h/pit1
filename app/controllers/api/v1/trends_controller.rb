@@ -4,6 +4,8 @@ module Api
   module V1
     class TrendsController < Api::BaseController
       include StatusSerializationHelper
+      include AccountSerializer
+      include TagSerializer
       before_action :doorkeeper_authorize!
 
       # GET /api/v1/trends
@@ -13,7 +15,7 @@ module Api
         limit = 10 if limit <= 0
 
         trending_tags = generate_trending_tags(limit)
-        render json: trending_tags.map { |tag| serialized_tag(tag) }
+        render json: trending_tags.map { |tag| serialized_tag(tag, include_history: true) }
       end
 
       # GET /api/v1/trends/tags
@@ -22,7 +24,7 @@ module Api
         limit = 10 if limit <= 0
 
         trending_tags = generate_trending_tags(limit)
-        render json: trending_tags.map { |tag| serialized_tag(tag) }
+        render json: trending_tags.map { |tag| serialized_tag(tag, include_history: true) }
       end
 
       # GET /api/v1/trends/statuses
@@ -67,45 +69,7 @@ module Api
                          .limit(limit)
       end
 
-      def serialized_tag(tag)
-        {
-          name: tag.name,
-          url: "#{Rails.application.config.activitypub.base_url}/tags/#{tag.name}",
-          history: [
-            {
-              day: Time.current.to_date.to_s,
-              uses: tag.usage_count.to_s,
-              accounts: '1' # 簡素化
-            }
-          ]
-        }
-      end
-
-      def serialized_account(actor)
-        {
-          id: actor.id.to_s,
-          username: actor.username,
-          acct: actor.acct,
-          display_name: actor.display_name_or_username,
-          locked: actor.manually_approves_followers,
-          bot: false,
-          discoverable: actor.discoverable,
-          group: false,
-          created_at: actor.created_at&.iso8601,
-          note: actor.note || '',
-          url: actor.public_url,
-          avatar: actor.avatar_url,
-          avatar_static: actor.avatar_url,
-          header: actor.header_image_url,
-          header_static: actor.header_image_url,
-          followers_count: actor.followers_count || 0,
-          following_count: actor.following_count || 0,
-          statuses_count: actor.posts_count || 0,
-          last_status_at: nil,
-          emojis: [],
-          fields: []
-        }
-      end
+      # AccountSerializer から継承されたメソッドを使用
     end
   end
 end

@@ -2,6 +2,7 @@
 
 class WebFingerService
   include HTTParty
+  include ActivityPubHelper
 
   def fetch_actor_data(acct_uri)
     # acct: URIからユーザ名とドメインを抽出
@@ -23,18 +24,12 @@ class WebFingerService
   private
 
   def parse_acct_uri(acct_uri)
-    # acct:username@domain、@username@domain、username@domain形式を処理
-    clean_uri = acct_uri.gsub(/^(acct:|@)/, '')
-    parts = clean_uri.split('@')
-
-    return nil unless parts.length == 2
-
-    [parts[0], parts[1]]
+    AccountIdentifierParser.parse_acct_uri(acct_uri)
   end
 
   def fetch_webfinger(username, domain)
     webfinger_url = "https://#{domain}/.well-known/webfinger"
-    resource = "acct:#{username}@#{domain}"
+    resource = AccountIdentifierParser.build_webfinger_uri(username, domain)
 
     response = HTTParty.get(webfinger_url, {
                               query: { resource: resource },
@@ -58,22 +53,5 @@ class WebFingerService
     end
 
     actor_link&.dig('href')
-  end
-
-  def fetch_activitypub_object(uri)
-    response = HTTParty.get(uri, {
-                              headers: {
-                                'Accept' => 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
-                                'User-Agent' => 'Letter/1.0 (ActivityPub Bot)'
-                              },
-                              timeout: 10
-                            })
-
-    return nil unless response.success?
-
-    JSON.parse(response.body)
-  rescue StandardError => e
-    Rails.logger.error "ActivityPub object fetch failed for #{uri}: #{e.message}"
-    nil
   end
 end

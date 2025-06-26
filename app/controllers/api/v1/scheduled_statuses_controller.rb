@@ -40,7 +40,7 @@ module Api
           }, status: :unprocessable_entity
         end
       rescue ArgumentError
-        render json: { error: 'Invalid scheduled_at format' }, status: :unprocessable_entity
+        render_validation_failed('Invalid scheduled_at format')
       end
 
       # DELETE /api/v1/scheduled_statuses/:id
@@ -54,7 +54,7 @@ module Api
       def set_scheduled_status
         @scheduled_status = current_user.scheduled_statuses.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: 'Scheduled status not found' }, status: :not_found
+        render_not_found('Scheduled status')
       end
     end
   end

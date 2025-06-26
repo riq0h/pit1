@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class RelayDistributionService
+  include RelayActorManagement
+
   def initialize
     @activity_sender = ActivitySender.new
   end
@@ -67,7 +69,7 @@ class RelayDistributionService
   end
 
   def get_local_actor
-    @get_local_actor ||= Actor.where(local: true, admin: true).first || Actor.where(local: true).first
+    @get_local_actor ||= super
   end
 
   def increment_relay_error_count(relay)

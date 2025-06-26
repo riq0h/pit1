@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class ActivityProcessor
+  include ActivityPubUtilityHelpers
   PROCESSOR_MAP = {
     'Create' => :process_create_activity,
     'Follow' => :process_follow_activity,
@@ -51,19 +52,29 @@ class ActivityProcessor
   end
 
   def process_like_activity
-    target_obj = find_target_object
+    target_obj = find_target_object(activity.target_ap_id)
     return unless target_obj
 
-    # バリデーションを含む安全な更新
-    target_obj.update!(favourites_count: target_obj.favourites_count + 1)
+    # Favouriteレコードを作成（通知とカウント更新は自動実行される）
+    favourite = Favourite.find_or_create_by!(
+      actor: activity.actor,
+      object: target_obj
+    )
+
+    Rails.logger.info "❤️ Like created: Activity #{activity.id}, Favourite #{favourite.id}, favourites_count updated to #{target_obj.reload.favourites_count}"
   end
 
   def process_announce_activity
-    target_obj = find_target_object
+    target_obj = find_target_object(activity.target_ap_id)
     return unless target_obj
 
-    # バリデーションを含む安全な更新
-    target_obj.update!(reblogs_count: target_obj.reblogs_count + 1)
+    # Reblogレコードを作成（通知とカウント更新は自動実行される）
+    reblog = Reblog.find_or_create_by!(
+      actor: activity.actor,
+      object: target_obj
+    )
+
+    Rails.logger.info "📢 Reblog created: Activity #{activity.id}, Reblog #{reblog.id}, reblogs_count updated to #{target_obj.reload.reblogs_count}"
   end
 
   def process_delete_activity
@@ -84,12 +95,6 @@ class ActivityProcessor
     return unless activity.target_ap_id
 
     Actor.find_by(ap_id: activity.target_ap_id)
-  end
-
-  def find_target_object
-    return unless activity.target_ap_id
-
-    ActivityPubObject.find_by(ap_id: activity.target_ap_id)
   end
 
   def find_target_activity

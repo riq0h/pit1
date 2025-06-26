@@ -7,14 +7,21 @@ module AccountSerializer
 
   private
 
-  def serialized_account(account, is_self: false)
+  def serialized_account(account, is_self: false, lightweight: false)
     result = basic_account_attributes(account)
              .merge(image_attributes(account))
              .merge(count_attributes(account))
              .merge(metadata_attributes)
 
-    result[:fields] = account_fields(account)
-    result[:emojis] = account_emojis(account)
+    if lightweight
+      # 軽量版：検索専用の簡素化データ
+      result[:fields] = []
+      result[:emojis] = []
+    else
+      result[:fields] = account_fields(account)
+      result[:emojis] = account_emojis(account)
+    end
+
     result.merge!(self_account_attributes(account)) if is_self
     result
   end
@@ -187,13 +194,5 @@ module AccountSerializer
     CGI.escapeHTML(value)
   end
 
-  private
-
-  def apply_url_links(text)
-    link_pattern = /(https?:\/\/[^\s]+)/
-    link_template = '<a href="\1" target="_blank" rel="noopener noreferrer" ' \
-                    'class="text-blue-600 hover:text-blue-800">' \
-                    '\1</a>'
-    text.gsub(link_pattern, link_template)
-  end
+  # apply_url_links メソッドは TextLinkingHelper から継承
 end

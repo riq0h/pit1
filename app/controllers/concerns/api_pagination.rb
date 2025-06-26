@@ -49,8 +49,6 @@ module ApiPagination
           record[:object].id
         elsif record[:object].is_a?(Reblog)
           record[:object].object_id
-        else
-          nil
         end
       else
         record.id if record.respond_to?(:id)

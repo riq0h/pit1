@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class QuotePost < ApplicationRecord
+  include RemoteLocalHelper
+
   belongs_to :actor
   belongs_to :object, class_name: 'ActivityPubObject', primary_key: :id
   belongs_to :quoted_object, class_name: 'ActivityPubObject', primary_key: :id
@@ -26,10 +28,6 @@ class QuotePost < ApplicationRecord
 
   delegate :local?, to: :actor
 
-  def remote?
-    !local?
-  end
-
   # ActivityPub JSON-LD representation
   def to_activitypub
     {
@@ -51,53 +49,6 @@ class QuotePost < ApplicationRecord
   private
 
   def build_audience_list(type)
-    case visibility
-    when 'public'
-      build_public_audience_list(type)
-    when 'unlisted'
-      build_unlisted_audience_list(type)
-    when 'private'
-      build_followers_audience_list(type)
-    when 'direct'
-      build_direct_audience_list(type)
-    else
-      []
-    end
-  end
-
-  def build_public_audience_list(type)
-    case type
-    when :to
-      [Rails.application.config.activitypub.public_collection_url]
-    when :cc
-      [actor.followers_url]
-    end
-  end
-
-  def build_unlisted_audience_list(type)
-    case type
-    when :to
-      [actor.followers_url]
-    when :cc
-      [Rails.application.config.activitypub.public_collection_url]
-    end
-  end
-
-  def build_followers_audience_list(type)
-    case type
-    when :to
-      [actor.followers_url]
-    when :cc
-      []
-    end
-  end
-
-  def build_direct_audience_list(type)
-    case type
-    when :to
-      [quoted_object.actor.ap_id] # Quote the original author in DM
-    when :cc
-      []
-    end
+    ActivityBuilders::AudienceBuilder.new(self).build(type)
   end
 end

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class StreamingBroadcastService
+  include MediaSerializer
   include ActionView::Helpers::SanitizeHelper
 
   def self.broadcast_status_update(status)
@@ -169,7 +170,7 @@ class StreamingBroadcastService
         remote_url: media.remote_url,
         description: media.description,
         blurhash: media.blurhash,
-        meta: build_media_meta(media)
+        meta: build_streaming_media_meta(media)
       }
     end
   end
@@ -203,16 +204,10 @@ class StreamingBroadcastService
     }
   end
 
-  def build_media_meta(media)
-    return {} unless media.width && media.height
-
+  def build_streaming_media_meta(media)
+    # ストリーミング用には original メタデータのみを返す（MediaSerializer の original 部分を使用）
     {
-      original: {
-        width: media.width,
-        height: media.height,
-        size: "#{media.width}x#{media.height}",
-        aspect: (media.width.to_f / media.height).round(2)
-      }
+      original: build_original_meta(media)
     }
   end
 

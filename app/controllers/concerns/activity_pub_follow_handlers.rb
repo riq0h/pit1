@@ -44,7 +44,7 @@ module ActivityPubFollowHandlers
 
     # 外部フォローの場合は明示的にAccept activityを送信
     if @target_actor.local? && !@sender.local?
-      Rails.logger.info "🎯 External follow received, creating Accept activity"
+      Rails.logger.info '🎯 External follow received, creating Accept activity'
       follow.create_accept_activity
     end
 

@@ -121,8 +121,6 @@ module ActivityPubVerification
     relay_match
   end
 
-  private
-
   def extract_key_id_from_signature(signature_header)
     match = signature_header.match(/keyId="([^"]*)"/)
     match&.[](1)

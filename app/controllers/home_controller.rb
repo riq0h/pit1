@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class HomeController < ApplicationController
+  include PaginationHelper
+  include TimelineBuilder
   def index
     @posts = load_public_timeline
     @page_title = I18n.t('pages.home.title')
@@ -40,49 +42,13 @@ class HomeController < ApplicationController
   end
 
   def build_timeline_items(posts, reblogs)
-    timeline_items = []
-
-    posts.each do |post|
-      timeline_items << build_post_timeline_item(post)
-    end
-
-    reblogs.each do |reblog|
-      timeline_items << build_reblog_timeline_item(reblog)
-    end
-
-    timeline_items
-  end
-
-  def build_post_timeline_item(post)
-    {
-      type: :post,
-      item: post,
-      published_at: post.published_at,
-      id: "post_#{post.id}"
-    }
-  end
-
-  def build_reblog_timeline_item(reblog)
-    {
-      type: :reblog,
-      item: reblog,
-      published_at: reblog.created_at,
-      id: "reblog_#{reblog.id}"
-    }
+    build_timeline_items_from_posts_and_reblogs(posts, reblogs)
   end
 
   def apply_timeline_sorting_and_pagination(timeline_items)
     timeline_items.sort_by! { |item| -item[:published_at].to_i }
     timeline_items = apply_timeline_pagination_filters(timeline_items)
     timeline_items.take(30)
-  end
-
-  def apply_pagination_filters(query)
-    if params[:max_id].present?
-      reference_post = find_post_by_id(params[:max_id])
-      query = query.where(published_at: ...reference_post.published_at) if reference_post
-    end
-    query
   end
 
   def apply_timeline_pagination_filters(timeline_items)
@@ -126,13 +92,6 @@ class HomeController < ApplicationController
 
   def get_post_display_id(timeline_item)
     timeline_item[:id]
-  end
-
-  def setup_pagination
-    return unless @posts.any?
-
-    @older_max_id = get_post_display_id(@posts.last) if @posts.last
-    @more_posts_available = check_older_posts_available
   end
 
   def check_older_posts_available

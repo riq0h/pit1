@@ -4,6 +4,8 @@ module Api
   module V1
     module Admin
       class DashboardController < Api::BaseController
+        include AdminAuthorization
+
         before_action :doorkeeper_authorize!
         before_action :require_admin!
 
@@ -40,14 +42,6 @@ module Api
               }
             }
           }
-        end
-
-        private
-
-        def require_admin!
-          return if current_user&.admin?
-
-          render json: { error: 'Admin access required' }, status: :forbidden
         end
       end
     end

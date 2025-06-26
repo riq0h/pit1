@@ -10,9 +10,7 @@ module Api
       def create
         # Letterは2ユーザ限定のため通報機能は不要
         # 互換性のために適切なレスポンスを返す
-        render json: {
-          error: 'Reporting is not available in Letter (2-user system)'
-        }, status: :unprocessable_entity
+        render_not_implemented('Reporting')
       end
     end
   end

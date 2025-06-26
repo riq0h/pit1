@@ -14,10 +14,9 @@ module ActivityPubUtilityHelpers
   end
 
   def strip_html_tags(html_content)
-    return '' unless html_content
+    return '' if html_content.blank?
 
-    # 簡易的なHTMLタグ除去
-    html_content.gsub(/<[^>]*>/, '')
+    ActionController::Base.helpers.strip_tags(html_content)
   end
 
   def parse_published_date(published_str)

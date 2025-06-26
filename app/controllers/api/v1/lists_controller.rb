@@ -3,6 +3,7 @@
 module Api
   module V1
     class ListsController < Api::BaseController
+      include AccountSerializer
       before_action :doorkeeper_authorize!
       before_action :require_user!
       before_action :set_list, only: %i[show update destroy accounts add_accounts remove_accounts]
@@ -59,7 +60,7 @@ module Api
       def add_accounts
         account_ids = Array(params[:account_ids])
 
-        return render json: { error: 'No account IDs provided' }, status: :unprocessable_entity if account_ids.blank?
+        return render_validation_failed('No account IDs provided') if account_ids.blank?
 
         accounts = Actor.where(id: account_ids)
 
@@ -74,7 +75,7 @@ module Api
       def remove_accounts
         account_ids = Array(params[:account_ids])
 
-        return render json: { error: 'No account IDs provided' }, status: :unprocessable_entity if account_ids.blank?
+        return render_validation_failed('No account IDs provided') if account_ids.blank?
 
         accounts = Actor.where(id: account_ids)
 
@@ -90,7 +91,7 @@ module Api
       def set_list
         @list = current_user.lists.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: 'List not found' }, status: :not_found
+        render_not_found('List')
       end
 
       def list_params
@@ -106,31 +107,7 @@ module Api
         }
       end
 
-      def serialized_account(actor)
-        {
-          id: actor.id.to_s,
-          username: actor.username,
-          acct: actor.acct,
-          display_name: actor.display_name_or_username,
-          locked: actor.manually_approves_followers,
-          bot: false,
-          discoverable: actor.discoverable,
-          group: false,
-          created_at: actor.created_at&.iso8601,
-          note: actor.note || '',
-          url: actor.public_url,
-          avatar: actor.avatar_url,
-          avatar_static: actor.avatar_url,
-          header: actor.header_image_url,
-          header_static: actor.header_image_url,
-          followers_count: actor.followers_count || 0,
-          following_count: actor.following_count || 0,
-          statuses_count: actor.posts_count || 0,
-          last_status_at: nil,
-          emojis: [],
-          fields: []
-        }
-      end
+      # AccountSerializer から継承されたメソッドを使用
     end
   end
 end

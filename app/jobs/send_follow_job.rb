@@ -11,7 +11,7 @@ class SendFollowJob < ApplicationJob
 
     handle_response(success, follow)
   rescue StandardError => e
-    handle_error(e, follow)
+    handle_error(e, 'Follow job error')
   end
 
   private
@@ -55,14 +55,5 @@ class SendFollowJob < ApplicationJob
       # 永続的に失敗した場合はフォロー関係を削除
       follow.destroy
     end
-  end
-
-  def handle_error(error, _follow)
-    Rails.logger.error "💥 Follow job error: #{error.message}"
-    Rails.logger.error error.backtrace.first(3).join("\n")
-
-    raise error unless executions < 3
-
-    retry_job(wait: 1.minute)
   end
 end

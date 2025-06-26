@@ -59,16 +59,6 @@
     <div class="whitespace-pre-wrap break-words"><%= final_content.html_safe %></div>
   </div>
 
-  <!-- 返信マーク -->
-  <% if post.replies_count > 0 %>
-    <div class="mt-4 flex items-center text-gray-400">
-      <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
-      </svg>
-      <span class="text-sm" style="font-weight: 300;"><%= post.replies_count %></span>
-    </div>
-  <% end %>
-
   <!-- メディア添付（ブログ記事内の画像として表示） -->
   <% if post.media_attachments.any? %>
     <div class="mt-6">
@@ -93,6 +83,16 @@
           <% end %>
         </div>
       <% end %>
+    </div>
+  <% end %>
+
+  <!-- 返信マーク -->
+  <% if post.replies_count > 0 %>
+    <div class="mt-4 flex items-center text-gray-400">
+      <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
+      </svg>
+      <span class="text-sm" style="font-weight: 300;"><%= post.replies_count %></span>
     </div>
   <% end %>
 

@@ -60,19 +60,10 @@ class RemoteMediaProcessor
   end
 
   def self.extract_filename_from_url(url)
-    File.basename(URI.parse(url).path)
+    UrlFilenameExtractor.extract(url)
   end
 
   def self.determine_media_type(content_type)
-    case content_type
-    when /^image\//
-      'image'
-    when /^video\//
-      'video'
-    when /^audio\//
-      'audio'
-    else
-      'document'
-    end
+    MediaTypeDetector.determine(content_type)
   end
 end

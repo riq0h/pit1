@@ -44,30 +44,6 @@ module ActivityBuilders
       }
     end
 
-    def object_base_fields(object)
-      {
-        'id' => object.ap_id,
-        'type' => object.object_type,
-        'attributedTo' => object.actor.ap_id,
-        'content' => object.content,
-        'published' => object.published_at.iso8601,
-        'url' => object.public_url
-      }
-    end
-
-    def object_extended_fields(object)
-      audience_builder = AudienceBuilder.new(object)
-      {
-        'to' => audience_builder.build(:to),
-        'cc' => audience_builder.build(:cc),
-        'sensitive' => object.sensitive?,
-        'summary' => object.summary,
-        'inReplyTo' => object.in_reply_to_ap_id,
-        'attachment' => AttachmentBuilder.new(object).build,
-        'tag' => TagBuilder.new(object).build
-      }
-    end
-
     def build_generic_activity_data
       {
         '@context' => Rails.application.config.activitypub.context_url,

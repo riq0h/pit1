@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class ConfigController < ApplicationController
+  include BulkEmojiActions
   before_action :authenticate_user!
 
   # GET /config
@@ -99,7 +100,7 @@ class ConfigController < ApplicationController
       return
     end
 
-    result = process_bulk_emoji_action(action_type, emoji_ids)
+    result = process_bulk_emoji_action(action_type, emoji_ids, detailed_messages: true, detailed_copy_messages: true)
     redirect_to config_custom_emojis_path(tab: params[:tab]), result
   end
 
@@ -265,44 +266,6 @@ class ConfigController < ApplicationController
                  blog_footer
                  background_color]
     )
-  end
-
-  def process_bulk_emoji_action(action_type, emoji_ids)
-    case action_type
-    when 'enable'
-      CustomEmoji.where(id: emoji_ids).update_all(disabled: false)
-      { notice: "#{emoji_ids.count}個の絵文字を有効化しました" }
-    when 'disable'
-      CustomEmoji.where(id: emoji_ids).update_all(disabled: true)
-      { notice: "#{emoji_ids.count}個の絵文字を無効化しました" }
-    when 'delete'
-      emojis_to_delete = CustomEmoji.where(id: emoji_ids).includes(:image_attachment)
-      deleted_count = emojis_to_delete.count
-      emojis_to_delete.find_each do |emoji|
-        emoji.image.purge if emoji.image.attached?
-        emoji.delete
-      end
-      { notice: "#{deleted_count}個の絵文字を削除しました" }
-    when 'copy'
-      # リモート絵文字のコピー
-      remote_emojis = CustomEmoji.remote.where(id: emoji_ids)
-
-      return { alert: '選択された絵文字にリモート絵文字が含まれていません' } if remote_emojis.empty?
-
-      copy_service = RemoteEmojiCopyService.new
-      results = copy_service.copy_multiple(remote_emojis.pluck(:id))
-
-      if results[:success_count].positive?
-        message = "#{results[:success_count]}個の絵文字をローカルにコピーしました"
-        message += "（#{results[:failed_count]}個は失敗）" if results[:failed_count].positive?
-        { notice: message }
-      else
-        error_details = results[:failed_copies].map { |f| "#{f[:emoji].shortcode}: #{f[:error]}" }.join(', ')
-        { alert: "すべての絵文字のコピーに失敗しました: #{error_details}" }
-      end
-    else
-      { alert: "無効な操作: #{action_type}" }
-    end
   end
 
   def current_instance_config

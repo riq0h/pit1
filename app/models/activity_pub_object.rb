@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class ActivityPubObject < ApplicationRecord
+  include SnowflakeIdGeneration
+  include RemoteLocalHelper
+
   self.table_name = 'objects'
 
   # === 定数 ===
@@ -89,10 +92,6 @@ class ActivityPubObject < ApplicationRecord
     local
   end
 
-  def remote?
-    !local
-  end
-
   def public?
     visibility == 'public'
   end
@@ -167,11 +166,11 @@ class ActivityPubObject < ApplicationRecord
     data = base_activitypub_data.merge(
       extended_activitypub_data
     )
-    
+
     data['inReplyTo'] = data['inReplyTo'] || nil
     data['summary'] = data['summary'] || nil
-    
-    data = data.reject { |k, v| v.nil? && !%w[inReplyTo summary].include?(k) }
+
+    data = data.reject { |k, v| v.nil? && %w[inReplyTo summary].exclude?(k) }
 
     if poll.present?
       data['type'] = 'Question'
@@ -248,6 +247,7 @@ class ActivityPubObject < ApplicationRecord
 
   def conversation_uri
     return conversation_ap_id if conversation_ap_id.present?
+
     "tag:#{Rails.application.config.activitypub.domain},#{published_at.strftime('%Y-%m-%d')}:objectId=#{id}:objectType=Conversation"
   end
 
@@ -261,7 +261,7 @@ class ActivityPubObject < ApplicationRecord
 
   def shares_collection_data
     {
-      'id' => "#{ap_id}/shares", 
+      'id' => "#{ap_id}/shares",
       'type' => 'Collection',
       'totalItems' => reblogs_count
     }
@@ -361,7 +361,6 @@ class ActivityPubObject < ApplicationRecord
     ActivityBuilders::AudienceBuilder.new(self).build(type)
   end
 
-
   def build_attachment_list
     ActivityBuilders::AttachmentBuilder.new(self).build
   end
@@ -369,7 +368,6 @@ class ActivityPubObject < ApplicationRecord
   def build_tag_list
     ActivityBuilders::TagBuilder.new(self).build
   end
-
 
   # === バリデーション・コールバックヘルパー ===
 
@@ -405,12 +403,6 @@ class ActivityPubObject < ApplicationRecord
     generate_snowflake_id if id.blank?
 
     self.ap_id = generate_ap_id
-  end
-
-  def generate_snowflake_id
-    return if id.present?
-
-    self.id = Letter::Snowflake.generate
   end
 
   def generate_ap_id
@@ -498,8 +490,6 @@ class ActivityPubObject < ApplicationRecord
   rescue StandardError => e
     Rails.logger.error "Failed to update actor posts count: #{e.message}"
   end
-
-  private
 
   # Update活動を作成してActivityPub配信
   def create_update_activity

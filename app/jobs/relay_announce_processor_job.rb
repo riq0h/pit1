@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
+require_relative '../controllers/concerns/activity_pub_visibility_helper'
+
 class RelayAnnounceProcessorJob < ApplicationJob
   include ActivityPubHelper
+  include ActivityPubVisibilityHelper
+  include ActivityPubUtilityHelpers
 
   queue_as :default
 
@@ -99,7 +103,7 @@ class RelayAnnounceProcessorJob < ApplicationJob
       object_type: 'Note',
       actor: actor,
       content: object_data['content'] || '',
-      published_at: parse_published_time(object_data),
+      published_at: parse_published_date(object_data['published']),
       visibility: visibility,
       raw_data: object_data.to_json,
       local: false,
@@ -110,27 +114,5 @@ class RelayAnnounceProcessorJob < ApplicationJob
     Rails.logger.info "Created relay post from #{actor.display_name || actor.username}@#{actor.domain}"
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "Failed to create ActivityPub object from relay: #{e.message}"
-  end
-
-  def determine_visibility(object_data)
-    to = Array(object_data['to'])
-    cc = Array(object_data['cc'])
-
-    if to.include?('https://www.w3.org/ns/activitystreams#Public')
-      'public'
-    elsif cc.include?('https://www.w3.org/ns/activitystreams#Public')
-      'unlisted'
-    else
-      'unlisted' # デフォルト
-    end
-  end
-
-  def parse_published_time(object_data)
-    published = object_data['published']
-    return Time.current unless published
-
-    Time.zone.parse(published)
-  rescue ArgumentError
-    Time.current
   end
 end

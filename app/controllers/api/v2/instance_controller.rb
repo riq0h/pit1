@@ -147,8 +147,6 @@ module Api
           ENV.fetch('INSTANCE_DESCRIPTION', nil)
         when 'instance_contact_email', 'contact_email'
           ENV.fetch('INSTANCE_CONTACT_EMAIL', nil)
-        else
-          nil
         end
       end
     end

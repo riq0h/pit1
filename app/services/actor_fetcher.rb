@@ -1,7 +1,12 @@
 # frozen_string_literal: true
 
+require_relative 'concerns/actor_attachment_processing'
+require_relative 'concerns/featured_collection_fetching'
+
 class ActorFetcher
   include HTTParty
+  include ActorAttachmentProcessing
+  include FeaturedCollectionFetching
 
   def initialize
     @timeout = 15
@@ -125,35 +130,6 @@ class ActorFetcher
     }
   end
 
-  # ActivityPub attachmentからfieldsを抽出
-  def extract_fields_from_attachments(actor_data)
-    attachments = actor_data['attachment'] || []
-    return [] unless attachments.is_a?(Array)
-
-    attachments.filter_map do |attachment|
-      next unless attachment.is_a?(Hash) && attachment['type'] == 'PropertyValue'
-
-      {
-        name: attachment['name'],
-        value: attachment['value']
-      }
-    end
-  end
-
-  # 画像URL抽出（icon/header）
-  def extract_image_url(image_data)
-    return nil if image_data.blank?
-
-    case image_data
-    when String
-      image_data
-    when Hash
-      image_data['url'] || image_data['href']
-    when Array
-      image_data.first&.dig('url') || image_data.first&.dig('href')
-    end
-  end
-
   # アクターのemoji情報を処理
   def process_actor_emojis(actor, actor_data)
     tags = Array(actor_data['tag'])
@@ -180,14 +156,5 @@ class ActorFetcher
     end
   rescue StandardError => e
     Rails.logger.error "❌ Failed to process actor emojis: #{e.message}"
-  end
-
-  def fetch_featured_collection_async(actor)
-    return if actor.featured_url.blank?
-
-    # Featured Collection を非同期で取得
-    FeaturedCollectionFetcher.new.fetch_for_actor(actor)
-  rescue StandardError => e
-    Rails.logger.error "❌ Failed to fetch featured collection for #{actor.username}@#{actor.domain}: #{e.message}"
   end
 end

@@ -19,7 +19,7 @@ class FeaturedCollectionFetcher
     Rails.logger.info "📌 Fetching featured collection for #{actor.username}@#{actor.domain}"
 
     # featured collectionを取得（共通クライアントを使用）
-    collection_data = ActivityPubClient.fetch_object(actor.featured_url)
+    collection_data = ActivityPubHttpClient.fetch_object(actor.featured_url)
     return [] unless collection_data
 
     featured_items = extract_featured_items(collection_data)
@@ -65,8 +65,6 @@ class FeaturedCollectionFetcher
         item # すでにURIの文字列
       when Hash
         item['id'] || item['url'] # オブジェクトの場合はidまたはurlを抽出
-      else
-        nil
       end
     end
   end

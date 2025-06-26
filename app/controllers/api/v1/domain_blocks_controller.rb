@@ -7,7 +7,7 @@ module Api
 
       # GET /api/v1/domain_blocks
       def index
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         domain_blocks = paginated_domain_blocks
         domains = domain_blocks.pluck(:domain)
@@ -49,10 +49,10 @@ module Api
 
       # POST /api/v1/domain_blocks
       def create
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         domain = normalized_domain_param
-        return render json: { error: 'Domain parameter is required' }, status: :unprocessable_entity if domain.blank?
+        return render_validation_failed('Domain parameter is required') if domain.blank?
 
         create_domain_block(domain)
       end
@@ -68,15 +68,15 @@ module Api
         render json: { error: 'Validation failed', details: e.record.errors.full_messages }, status: :unprocessable_entity
       rescue StandardError => e
         Rails.logger.error "Domain block creation failed: #{e.message}"
-        render json: { error: 'Failed to block domain' }, status: :unprocessable_entity
+        render_operation_failed('Block domain')
       end
 
       # DELETE /api/v1/domain_blocks
       def destroy
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         domain = params[:domain]&.strip&.downcase
-        return render json: { error: 'Domain parameter is required' }, status: :unprocessable_entity if domain.blank?
+        return render_validation_failed('Domain parameter is required') if domain.blank?
 
         domain_block = current_user.domain_blocks.find_by(domain: domain)
 
@@ -84,7 +84,7 @@ module Api
           domain_block.destroy
           render json: {}
         else
-          render json: { error: 'Domain not found in blocks' }, status: :not_found
+          render_not_found('Domain')
         end
       end
 

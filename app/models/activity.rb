@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class Activity < ApplicationRecord
+  include SnowflakeIdGeneration
+  include RemoteLocalHelper
+
   # === 定数 ===
   ACTIVITY_TYPES = %w[
     Create Update Delete Follow Accept Reject Block Undo
@@ -41,10 +44,6 @@ class Activity < ApplicationRecord
 
   def local?
     local
-  end
-
-  def remote?
-    !local
   end
 
   def target_object

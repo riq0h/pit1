@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class ObjectsController < ApplicationController
+  include ActivityPubRequestHandling
+
   skip_before_action :verify_authenticity_token
   before_action :set_object, only: [:show]
   before_action :ensure_activitypub_request, only: [:show]
@@ -28,19 +30,12 @@ class ObjectsController < ApplicationController
 
     return if @object
 
-    render json: { error: 'Object not found' }, status: :not_found
+    render_not_found('Object')
   end
 
   def ensure_activitypub_request
-    # ActivityPubリクエストかチェック
-    return if activitypub_request?
-
-    # HTML表示にリダイレクト
-    username = params[:username] || @object&.actor&.username
-    id = params[:id]
-    redirect_to post_html_path(username: username, id: id), status: :moved_permanently
+    super(status: :moved_permanently)
   end
-
 
   def build_object_data(object)
     base_data = build_base_object_data(object)

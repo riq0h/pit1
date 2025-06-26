@@ -2,6 +2,7 @@
 
 module SearchStatusSerializer
   include PollSerializer
+  include MediaSerializer
   def serialized_status(status)
     base_status_data(status).merge(
       additional_status_data(status)
@@ -63,24 +64,14 @@ module SearchStatusSerializer
       remote_url: attachment.remote_url,
       description: attachment.description,
       blurhash: attachment.blurhash,
-      meta: build_media_meta_data(attachment)
+      meta: build_search_media_meta(attachment)
     }
   end
 
-  def build_media_meta_data(attachment)
+  def build_search_media_meta(attachment)
+    # 検索用には original メタデータのみを返す（MediaSerializer の original 部分を使用）
     {
-      original: {
-        width: attachment.width,
-        height: attachment.height,
-        size: "#{attachment.width}x#{attachment.height}",
-        aspect: calculate_aspect_ratio(attachment)
-      }
+      original: build_original_meta(attachment)
     }
-  end
-
-  def calculate_aspect_ratio(attachment)
-    return nil unless attachment.width && attachment.height
-
-    attachment.width.to_f / attachment.height
   end
 end

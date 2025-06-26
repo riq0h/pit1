@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class SendActivityJob < ApplicationJob
+  include ActivityPubObjectBuilding
+
   queue_as :default
 
   # Activity配信ジョブ
@@ -72,44 +74,10 @@ class SendActivityJob < ApplicationJob
       'type' => 'Update',
       'actor' => activity.actor.ap_id,
       'published' => activity.published_at.iso8601,
-      'object' => build_updated_object_data(activity.object),
+      'object' => activity.object.to_activitypub,
       'to' => build_activity_audience(activity.object, :to),
       'cc' => build_activity_audience(activity.object, :cc)
     }
-  end
-
-  def build_updated_object_data(object)
-    updated_data = {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
-      'id' => object.ap_id,
-      'type' => object.object_type,
-      'attributedTo' => object.actor.ap_id,
-      'content' => object.content,
-      'published' => object.published_at.iso8601,
-      'url' => object.public_url,
-      'to' => build_activity_audience(object, :to),
-      'cc' => build_activity_audience(object, :cc),
-      'sensitive' => object.sensitive?,
-      'summary' => object.summary,
-      'inReplyTo' => object.in_reply_to_ap_id,
-      'attachment' => build_object_attachments(object),
-      'tag' => build_object_tags(object)
-    }
-
-    updated_data['updated'] = object.edited_at.iso8601 if object.edited?
-    updated_data.compact
-  end
-
-  def build_object_attachments(object)
-    ActivityBuilders::AttachmentBuilder.new(object).build
-  end
-
-  def build_object_tags(object)
-    ActivityBuilders::TagBuilder.new(object).build
-  end
-
-  def build_activity_audience(object, type)
-    ActivityBuilders::AudienceBuilder.new(object).build(type)
   end
 
   def log_delivery_result(success, inbox_url)

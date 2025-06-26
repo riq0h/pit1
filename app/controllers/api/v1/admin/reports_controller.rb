@@ -4,6 +4,7 @@ module Api
   module V1
     module Admin
       class ReportsController < Api::BaseController
+        include AdminAuthorization
         before_action :doorkeeper_authorize!
         before_action :require_admin!
 
@@ -16,35 +17,27 @@ module Api
 
         # GET /api/v1/admin/reports/:id
         def show
-          render json: { error: 'Report not found' }, status: :not_found
+          render_not_found('Report')
         end
 
         # POST /api/v1/admin/reports/:id/assign_to_self
         def assign_to_self
-          render json: { error: 'Reports are not implemented in Letter' }, status: :not_implemented
+          render_not_implemented('Reports')
         end
 
         # POST /api/v1/admin/reports/:id/unassign
         def unassign
-          render json: { error: 'Reports are not implemented in Letter' }, status: :not_implemented
+          render_not_implemented('Reports')
         end
 
         # POST /api/v1/admin/reports/:id/resolve
         def resolve
-          render json: { error: 'Reports are not implemented in Letter' }, status: :not_implemented
+          render_not_implemented('Reports')
         end
 
         # POST /api/v1/admin/reports/:id/reopen
         def reopen
-          render json: { error: 'Reports are not implemented in Letter' }, status: :not_implemented
-        end
-
-        private
-
-        def require_admin!
-          return if current_user&.admin?
-
-          render json: { error: 'Admin access required' }, status: :forbidden
+          render_not_implemented('Reports')
         end
       end
     end

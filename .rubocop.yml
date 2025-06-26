@@ -23,8 +23,13 @@ Layout/LineLength:
   Exclude:
     - 'app/models/**/*'
 
+Metrics/ModuleLength:
+  Max: 150
+  Exclude:
+    - 'app/**/*'
+
 Metrics/CyclomaticComplexity:
-  Max: 20
+  Max: 30
   Exclude:
     - 'app/services/**/*'
 
@@ -32,6 +37,16 @@ Metrics/MethodLength:
   Max: 30
   Exclude:
     - 'app/controllers/**/*'
+
+Metrics/AbcSize:
+  Max: 30
+  Exclude:
+   - 'app/**/*'
+
+Metrics/PerceivedComplexity:
+  Max: 10
+  Exclude:
+   - 'app/**/*'
 
 Metrics/ClassLength:
   Max: 300

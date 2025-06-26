@@ -3,6 +3,8 @@
 module Api
   module V1
     class FollowedTagsController < Api::BaseController
+      include HashtagHistoryBuilder
+
       before_action :doorkeeper_authorize!
       before_action :require_user!
 
@@ -21,18 +23,6 @@ module Api
         end
 
         render json: tags
-      end
-
-      private
-
-      def build_hashtag_history(tag)
-        [
-          {
-            day: Time.current.beginning_of_day.to_i.to_s,
-            uses: (tag.usage_count || 0).to_s,
-            accounts: '1'
-          }
-        ]
       end
     end
   end

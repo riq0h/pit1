@@ -1,19 +1,26 @@
 # frozen_string_literal: true
 
-class ActivityPubClient
+class ActivityPubHttpClient
   include HTTParty
 
-  def self.fetch_object(uri)
-    new.fetch_object(uri)
+  USER_AGENT = 'Letter/1.0 (ActivityPub Bot)'
+  ACCEPT_HEADERS = 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
+  DEFAULT_TIMEOUT = 10
+
+  def self.fetch_object(uri, timeout: DEFAULT_TIMEOUT)
+    new.fetch_object(uri, timeout: timeout)
   end
 
-  def fetch_object(uri)
+  def fetch_object(uri, timeout: DEFAULT_TIMEOUT)
     Rails.logger.debug { "🌐 Fetching ActivityPub object: #{uri}" }
 
     response = HTTParty.get(
       uri,
-      headers: headers,
-      timeout: 10,
+      headers: {
+        'Accept' => ACCEPT_HEADERS,
+        'User-Agent' => USER_AGENT
+      },
+      timeout: timeout,
       follow_redirects: true
     )
 
@@ -29,14 +36,5 @@ class ActivityPubClient
   rescue StandardError => e
     Rails.logger.error "❌ Failed to fetch ActivityPub object #{uri}: #{e.message}"
     nil
-  end
-
-  private
-
-  def headers
-    {
-      'Accept' => 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
-      'User-Agent' => 'letter/0.1 (ActivityPub)'
-    }
   end
 end

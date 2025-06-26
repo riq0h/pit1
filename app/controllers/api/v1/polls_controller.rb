@@ -19,7 +19,7 @@ module Api
         if @poll.vote_for!(current_user, choices)
           render json: serialize_poll(@poll, current_user)
         else
-          render json: { error: 'Invalid vote or poll expired' }, status: :unprocessable_entity
+          render_invalid_action('Invalid vote or poll expired')
         end
       end
 
@@ -28,7 +28,7 @@ module Api
       def set_poll
         @poll = Poll.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: 'Poll not found' }, status: :not_found
+        render_not_found('Poll')
       end
 
       def parse_vote_choices

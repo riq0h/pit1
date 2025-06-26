@@ -3,7 +3,7 @@
 class SendAcceptJob < ApplicationJob
   require 'net/http'
   require 'timeout'
-  
+
   queue_as :default
 
   def perform(follow)
@@ -11,13 +11,13 @@ class SendAcceptJob < ApplicationJob
 
     # 対応するActivity recordを取得
     activity_record = find_accept_activity(follow)
-    
+
     accept_activity = build_accept_activity(follow)
     result = send_accept_activity(accept_activity, follow)
 
     handle_response(result, follow, activity_record)
   rescue StandardError => e
-    handle_error(e, follow)
+    handle_error(e, 'Accept job error')
   end
 
   private
@@ -39,12 +39,11 @@ class SendAcceptJob < ApplicationJob
 
   def send_accept_activity(activity, follow)
     sender = ActivitySender.new
-    result = sender.send_activity(
+    sender.send_activity(
       activity: activity,
       target_inbox: follow.actor.inbox_url,
       signing_actor: follow.target_actor
     )
-    result
   end
 
   def find_accept_activity(follow)
@@ -67,7 +66,7 @@ class SendAcceptJob < ApplicationJob
   end
 
   def handle_failure(follow, activity_record, response)
-    error_details = response[:error] || "未知のエラー"
+    error_details = response[:error] || '未知のエラー'
     Rails.logger.error "❌ Failed to send Accept for follow #{follow.id}: #{error_details}"
 
     if executions < 3
@@ -88,7 +87,7 @@ class SendAcceptJob < ApplicationJob
         delivery_attempts: activity_record.delivery_attempts + 1
       )
     else
-      error_msg = response[:error] || "HTTP request failed"
+      error_msg = response[:error] || 'HTTP request failed'
       activity_record.update!(
         delivery_attempts: activity_record.delivery_attempts + 1,
         last_delivery_error: error_msg
@@ -104,14 +103,5 @@ class SendAcceptJob < ApplicationJob
       delivered: false,
       last_delivery_error: final_error
     )
-  end
-
-  def handle_error(error, _follow)
-    Rails.logger.error "💥 Accept job error: #{error.message}"
-    Rails.logger.error error.backtrace.first(3).join("\n")
-
-    raise error unless executions < 3
-
-    retry_job(wait: 1.minute)
   end
 end

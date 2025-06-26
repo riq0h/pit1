@@ -17,14 +17,14 @@ module Api
       def create
         # Letter は2ユーザ限定のため推薦機能は不要
         # 互換性のために422エラーを返す
-        render json: { error: 'Feature not available in Letter' }, status: :unprocessable_entity
+        render_not_implemented('Feature')
       end
 
       # DELETE /api/v1/accounts/:id/unpin
       def destroy
         # Letter は2ユーザ限定のため推薦機能は不要
         # 互換性のために422エラーを返す
-        render json: { error: 'Feature not available in Letter' }, status: :unprocessable_entity
+        render_not_implemented('Feature')
       end
     end
   end

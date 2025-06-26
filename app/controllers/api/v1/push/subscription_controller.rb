@@ -4,6 +4,8 @@ module Api
   module V1
     module Push
       class SubscriptionController < Api::BaseController
+        include ValidationErrorRendering
+
         before_action :doorkeeper_authorize!
         before_action :require_user!
         before_action :set_subscription, only: %i[show update destroy]
@@ -13,7 +15,7 @@ module Api
           if @subscription
             render json: serialized_subscription(@subscription)
           else
-            render json: { error: 'Push subscription not found' }, status: :not_found
+            render_not_found('Push subscription')
           end
         end
 
@@ -30,7 +32,7 @@ module Api
           @subscription.assign_attributes(
             p256dh_key: subscription_params[:keys][:p256dh],
             auth_key: subscription_params[:keys][:auth],
-            data: { 
+            data: {
               alerts: extract_alerts,
               policy: params.dig(:data, :policy) || 'all'
             }.to_json
@@ -63,7 +65,7 @@ module Api
               }, status: :unprocessable_entity
             end
           else
-            render json: { error: 'Push subscription not found' }, status: :not_found
+            render_not_found('Push subscription')
           end
         end
 
@@ -73,7 +75,7 @@ module Api
             @subscription.destroy
             render json: {}
           else
-            render json: { error: 'Push subscription not found' }, status: :not_found
+            render_not_found('Push subscription')
           end
         end
 
@@ -103,10 +105,6 @@ module Api
           # Strong Parametersを適切に処理
           permitted_alerts = alerts_params.permit(*default_alerts.keys, 'admin.sign_up', 'admin.report')
           default_alerts.merge(permitted_alerts.to_h)
-        end
-
-        def render_validation_error(message)
-          render json: { error: message }, status: :unprocessable_entity
         end
 
         def serialized_subscription(subscription)

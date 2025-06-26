@@ -40,7 +40,7 @@ module Api
       def set_notification
         @notification = current_user.notifications.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: 'Notification not found' }, status: :not_found
+        render_not_found('Notification')
       end
 
       def filtered_notifications
@@ -201,7 +201,7 @@ module Api
       end
 
       def apply_pagination(notifications)
-        notifications = notifications.where('notifications.id < ?', params[:max_id]) if params[:max_id].present?
+        notifications = notifications.where(notifications: { id: ...(params[:max_id]) }) if params[:max_id].present?
 
         notifications = notifications.where('notifications.id > ?', params[:since_id]) if params[:since_id].present?
 

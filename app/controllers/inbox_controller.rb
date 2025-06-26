@@ -5,6 +5,7 @@ class InboxController < ApplicationController
   include ActivityPubHandlers
   include ActivityPubObjectHandlers
   include ActivityPubCreateHandlers
+  include GeneralErrorHandler
 
   # CSRFトークン無効化（外部からのPOST）
   skip_before_action :verify_authenticity_token
@@ -64,7 +65,7 @@ class InboxController < ApplicationController
 
   def handle_signature_error(error)
     Rails.logger.error "🔒 HTTP Signature error: #{error.message}"
-    render json: { error: 'Invalid signature' }, status: :unauthorized
+    render_authentication_required
   end
 
   def check_if_sender_blocked
@@ -98,11 +99,5 @@ class InboxController < ApplicationController
 
   def log_blocked_activity(prefix, suffix = '')
     Rails.logger.info "🚫 #{prefix} #{@sender.ap_id} #{suffix} tried to send #{@activity['type']} to #{@target_actor.ap_id}"
-  end
-
-  def handle_general_error(error)
-    Rails.logger.error "💥 Inbox processing error: #{error.message}"
-    Rails.logger.error error.backtrace.first(5).join("\n")
-    head :internal_server_error
   end
 end

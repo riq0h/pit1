@@ -45,18 +45,10 @@ module ActivityPubMediaHandler
   end
 
   def extract_filename_from_url(url)
-    uri = URI.parse(url)
-    filename = File.basename(uri.path)
-    filename.presence || 'unknown_file'
-  rescue URI::InvalidURIError
-    'unknown_file'
+    UrlFilenameExtractor.extract(url)
   end
 
   def determine_media_type_from_content_type(content_type)
-    return 'image' if content_type&.start_with?('image/')
-    return 'video' if content_type&.start_with?('video/')
-    return 'audio' if content_type&.start_with?('audio/')
-
-    'document'
+    MediaTypeDetector.determine(content_type)
   end
 end

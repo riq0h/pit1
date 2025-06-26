@@ -5,6 +5,8 @@ module Api
     class AccountsController < Api::BaseController
       include StatusSerializationHelper
       include ApiPagination
+      include ValidationErrorRendering
+      include FeaturedTagSerializer
 
       before_action :doorkeeper_authorize!, except: [:show]
       after_action :insert_pagination_headers, only: %i[statuses followers following]
@@ -15,7 +17,7 @@ module Api
       # GET /api/v1/accounts/verify_credentials
       def verify_credentials
         doorkeeper_authorize!
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         render json: serialized_account(current_user, is_self: true)
       end
@@ -37,7 +39,7 @@ module Api
       def statuses
         pinned_only = params[:pinned] == 'true'
         exclude_replies = params[:exclude_replies] == 'true'
-        exclude_reblogs = params[:exclude_reblogs] == 'true'
+        params[:exclude_reblogs]
         only_media = params[:only_media] == 'true'
         limit = limit_param
 
@@ -147,7 +149,7 @@ module Api
 
       # POST /api/v1/accounts/:id/unblock
       def unblock
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         block = current_user.blocks.find_by(target_actor: @account)
         block&.destroy
@@ -157,8 +159,8 @@ module Api
 
       # POST /api/v1/accounts/:id/mute
       def mute
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
-        return render json: { error: 'Cannot mute yourself' }, status: :unprocessable_entity if @account == current_user
+        return render_authentication_required unless current_user
+        return render_self_action_forbidden('mute') if @account == current_user
 
         notifications = params[:notifications] != false
         mute = current_user.mutes.find_or_initialize_by(target_actor: @account)
@@ -170,7 +172,7 @@ module Api
 
       # POST /api/v1/accounts/:id/unmute
       def unmute
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         mute = current_user.mutes.find_by(target_actor: @account)
         mute&.destroy
@@ -181,7 +183,7 @@ module Api
       # GET /api/v1/accounts/search
       def search
         return unless doorkeeper_authorize! :read
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         query = params[:q].to_s.strip
         limit = [params.fetch(:limit, 40).to_i, 80].min
@@ -202,22 +204,22 @@ module Api
       # GET /api/v1/accounts/lookup
       def lookup
         return unless doorkeeper_authorize! :read
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         acct = params[:acct].to_s.strip
-        return render json: { error: 'Missing acct parameter' }, status: :unprocessable_entity if acct.blank?
+        return render_missing_parameter('acct') if acct.blank?
 
         account = lookup_account(acct)
         if account
           render json: serialized_account(account)
         else
-          render json: { error: 'Record not found' }, status: :not_found
+          render_not_found
         end
       end
 
       # GET /api/v1/accounts/relationships
       def relationships
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         account_ids = Array(params[:id]).map(&:to_i)
         accounts = Actor.where(id: account_ids)
@@ -251,7 +253,7 @@ module Api
 
       # POST /api/v1/accounts/:id/note
       def note
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         comment = params[:comment] || ''
 
@@ -261,7 +263,7 @@ module Api
           note = current_user.account_notes.find_or_initialize_by(target_actor: @account)
           note.comment = comment
 
-          return render json: { error: 'Failed to save note', details: note.errors.full_messages }, status: :unprocessable_entity unless note.save
+          return render_validation_failed_with_details('Failed to save note', note.errors.full_messages) unless note.save
         end
 
         render json: serialized_relationship(@account)
@@ -274,7 +276,7 @@ module Api
       end
 
       def render_follow_error
-        render json: { error: 'Cannot follow yourself' }, status: :unprocessable_content
+        render_self_action_forbidden('follow')
       end
 
       def find_existing_follow
@@ -302,19 +304,19 @@ module Api
           Rails.logger.info "Follow request created for #{@account.ap_id}"
           render json: serialized_relationship(@account)
         else
-          render json: { error: 'Follow failed', details: ['Could not create follow relationship'] }, status: :unprocessable_entity
+          render_validation_failed_with_details('Follow failed', ['Could not create follow relationship'])
         end
       end
 
       def render_follow_creation_error(follow)
         Rails.logger.error "Failed to create follow: #{follow.errors.full_messages}"
-        render json: { error: 'Follow failed', details: follow.errors.full_messages }, status: :unprocessable_entity
+        render_validation_failed_with_details('Follow failed', follow.errors.full_messages)
       end
 
       def set_account
         @account = Actor.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: 'Record not found' }, status: :not_found
+        render_not_found
       end
 
       def account_params
@@ -342,7 +344,7 @@ module Api
       end
 
       def render_unauthorized
-        render json: { error: 'This action requires authentication' }, status: :unauthorized
+        render_authentication_required
       end
 
       def process_file_uploads
@@ -369,13 +371,6 @@ module Api
         else
           render_validation_error
         end
-      end
-
-      def render_validation_error
-        render json: {
-          error: 'Validation failed',
-          details: current_user.errors.full_messages
-        }, status: :unprocessable_entity
       end
 
       def valid_upload?(file)
@@ -431,20 +426,12 @@ module Api
         }
       end
 
-      def default_avatar_url
-        '/icon.png'
-      end
-
-      def default_header_url
-        '/icon.png'
-      end
-
       def render_block_authentication_error
-        render json: { error: 'This action requires authentication' }, status: :unauthorized
+        render_authentication_required
       end
 
       def render_block_self_error
-        render json: { error: 'Cannot block yourself' }, status: :unprocessable_entity
+        render_self_action_forbidden('block')
       end
 
       def process_block_action
@@ -494,15 +481,6 @@ module Api
 
       def set_account_for_featured_tags
         @account = Actor.find(params[:id])
-      end
-
-      def serialized_featured_tag(featured_tag)
-        {
-          id: featured_tag.id.to_s,
-          name: featured_tag.name,
-          statuses_count: featured_tag.statuses_count,
-          last_status_at: featured_tag.last_status_at&.iso8601
-        }
       end
 
       def apply_timeline_pagination(query)

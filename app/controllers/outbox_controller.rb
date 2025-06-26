@@ -2,6 +2,10 @@
 
 class OutboxController < ApplicationController
   include ActivityPubBlockerControl
+  include ActivityPubRequestHandling
+  include ActivityPubObjectBuilding
+  include ActivityDataBuilder
+  include ErrorResponseHelper
 
   skip_before_action :verify_authenticity_token
   before_action :set_actor
@@ -25,26 +29,7 @@ class OutboxController < ApplicationController
 
     return if @actor
 
-    render json: { error: 'Actor not found' }, status: :not_found
-  end
-
-  def ensure_activitypub_request
-    # ActivityPubリクエストかチェック
-    return if activitypub_request?
-
-    redirect_to profile_path(@actor.username)
-  end
-
-  def activitypub_request?
-    return true if request.content_type&.include?('application/activity+json')
-    return true if request.content_type&.include?('application/ld+json')
-
-    accept_header = request.headers['Accept'] || ''
-    return true if accept_header.include?('application/activity+json')
-    return true if accept_header.include?('application/ld+json')
-
-    # デフォルトではActivityPubとして扱う
-    true
+    render_not_found('Actor')
   end
 
   def build_outbox_collection(actor)
@@ -76,117 +61,5 @@ class OutboxController < ApplicationController
       'partOf' => actor.outbox_url,
       'orderedItems' => activities.map { |activity| build_activity_data(activity) }
     }
-  end
-
-  def build_activity_data(activity)
-    base_data = {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
-      'id' => activity.ap_id,
-      'type' => activity.activity_type,
-      'actor' => activity.actor.ap_id,
-      'published' => activity.published_at.iso8601
-    }
-
-    # Activityタイプ別の詳細データ追加
-    case activity.activity_type
-    when 'Create'
-      add_create_activity_data(base_data, activity)
-    when 'Follow'
-      add_follow_activity_data(base_data, activity)
-    when 'Accept', 'Reject'
-      add_response_activity_data(base_data, activity)
-    when 'Announce'
-      add_announce_activity_data(base_data, activity)
-    when 'Like'
-      add_like_activity_data(base_data, activity)
-    else
-      base_data
-    end
-  end
-
-  def add_create_activity_data(base_data, activity)
-    return base_data unless activity.object
-
-    base_data.merge(
-      'object' => build_embedded_object(activity.object),
-      'to' => build_activity_audience(activity.object, :to),
-      'cc' => build_activity_audience(activity.object, :cc)
-    )
-  end
-
-  def add_follow_activity_data(base_data, activity)
-    base_data.merge('object' => activity.target_ap_id)
-  end
-
-  def add_response_activity_data(base_data, activity)
-    base_data.merge('object' => activity.target_ap_id)
-  end
-
-  def add_announce_activity_data(base_data, activity)
-    base_data.merge(
-      'object' => activity.target_ap_id,
-      'to' => ['https://www.w3.org/ns/activitystreams#Public'],
-      'cc' => [activity.actor.followers_url]
-    )
-  end
-
-  def add_like_activity_data(base_data, activity)
-    base_data.merge('object' => activity.target_ap_id)
-  end
-
-  def build_embedded_object(object)
-    {
-      '@context' => 'https://www.w3.org/ns/activitystreams',
-      'id' => object.ap_id,
-      'type' => object.object_type,
-      'attributedTo' => object.actor.ap_id,
-      'content' => object.content,
-      'published' => object.published_at.iso8601,
-      'url' => object.public_url,
-      'to' => build_activity_audience(object, :to),
-      'cc' => build_activity_audience(object, :cc),
-      'sensitive' => object.sensitive?,
-      'summary' => object.summary,
-      'inReplyTo' => object.in_reply_to_ap_id,
-      'attachment' => build_object_attachments(object),
-      'tag' => build_object_tags(object)
-    }.compact
-  end
-
-  def build_activity_audience(object, type)
-    ActivityBuilders::AudienceBuilder.new(object).build(type)
-  end
-
-  def build_object_attachments(object)
-    object.media_attachments.map do |attachment|
-      {
-        'type' => 'Document',
-        'mediaType' => attachment.content_type,
-        'url' => build_attachment_url(attachment),
-        'name' => attachment.description || attachment.file_name,
-        'width' => attachment.width,
-        'height' => attachment.height,
-        'blurhash' => attachment.blurhash
-      }.compact
-    end
-  end
-
-  def build_attachment_url(attachment)
-    # ローカルファイルの場合はurlメソッドを使用
-    return attachment.url if attachment.file.attached?
-
-    # リモートURLがある場合は相対URLを絶対URLに変換
-    return nil if attachment.remote_url.blank?
-
-    if attachment.remote_url.start_with?('/')
-      base_url = Rails.application.config.activitypub.base_url
-      "#{base_url}#{attachment.remote_url}"
-    else
-      attachment.remote_url
-    end
-  end
-
-  def build_object_tags(object)
-    ActivityBuilders::TagBuilder.new(object).build
   end
 end

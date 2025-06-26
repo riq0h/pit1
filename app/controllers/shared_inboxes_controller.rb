@@ -5,6 +5,7 @@ class SharedInboxesController < ApplicationController
   include ActivityPubHandlers
   include ActivityPubObjectHandlers
   include ActivityPubCreateHandlers
+  include GeneralErrorHandler
 
   # CSRFトークン無効化（外部からのPOST）
   skip_before_action :verify_authenticity_token
@@ -163,11 +164,5 @@ class SharedInboxesController < ApplicationController
 
     # リレーからのUndo処理（通常はフォロー解除）
     head :accepted
-  end
-
-  def handle_general_error(error)
-    Rails.logger.error "Shared inbox processing error: #{error.message}"
-    Rails.logger.error error.backtrace.first(5).join("\n")
-    head :internal_server_error
   end
 end

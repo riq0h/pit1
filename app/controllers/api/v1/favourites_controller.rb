@@ -10,7 +10,7 @@ module Api
       # GET /api/v1/favourites
       def index
         doorkeeper_authorize! :read
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         favourites = current_user.favourites
                                  .joins(:object)

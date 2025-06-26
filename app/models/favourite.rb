@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class Favourite < ApplicationRecord
+  include ApIdGeneration
+  include NotificationCreation
+
   belongs_to :actor, class_name: 'Actor'
   belongs_to :object, class_name: 'ActivityPubObject'
 
@@ -10,17 +13,11 @@ class Favourite < ApplicationRecord
 
   before_validation :set_ap_id, on: :create
   after_create :increment_favourites_count
+  after_create :create_notification
   after_create :send_push_notification
   after_destroy :decrement_favourites_count
 
   private
-
-  def set_ap_id
-    return if ap_id.present?
-
-    snowflake_id = Letter::Snowflake.generate
-    self.ap_id = "#{Rails.application.config.activitypub.base_url}/#{snowflake_id}"
-  end
 
   def increment_favourites_count
     object.increment!(:favourites_count)
@@ -28,6 +25,10 @@ class Favourite < ApplicationRecord
 
   def decrement_favourites_count
     object.decrement!(:favourites_count)
+  end
+
+  def create_notification
+    create_notification_for_favourite
   end
 
   def send_push_notification

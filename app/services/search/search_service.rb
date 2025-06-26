@@ -113,7 +113,7 @@ module Search
     end
 
     def account_query?
-      search_query.match?(/^@?[\w.-]+@[\w.-]+\.\w+$/) || search_query.start_with?('@')
+      AccountIdentifierParser.account_query?(search_query)
     end
 
     def url_query?

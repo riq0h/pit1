@@ -18,15 +18,4 @@ module EmojiHelper
               rel: 'emoji',
               draggable: 'false'
   end
-
-  def emoji_react_component_props(custom_emojis)
-    custom_emojis.map do |emoji|
-      {
-        shortcode: emoji.shortcode,
-        static_url: emoji.static_url,
-        url: emoji.url,
-        visible_in_picker: true
-      }
-    end
-  end
 end

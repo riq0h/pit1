@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class StatusEdit < ApplicationRecord
+  include SnowflakeIdGeneration
+
   belongs_to :object, class_name: 'ActivityPubObject', primary_key: :id
 
   # Rails 8のJSONフィールド定義
@@ -55,11 +57,5 @@ class StatusEdit < ApplicationRecord
 
   def set_defaults
     self.created_at ||= Time.current
-  end
-
-  def generate_snowflake_id
-    return if id.present?
-
-    self.id = Letter::Snowflake.generate
   end
 end

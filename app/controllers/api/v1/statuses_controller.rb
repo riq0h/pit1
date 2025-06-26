@@ -11,6 +11,7 @@ module Api
       include StatusSerializationHelper
       include TextLinkingHelper
       include ApiPagination
+      include ValidationErrorRendering
 
       before_action :doorkeeper_authorize!, except: [:show]
       after_action :insert_pagination_headers, only: %i[reblogged_by favourited_by]
@@ -35,7 +36,7 @@ module Api
 
       # POST /api/v1/statuses
       def create
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         # Handle scheduled status
         return create_scheduled_status if params[:scheduled_at].present?
@@ -61,7 +62,7 @@ module Api
             poll = create_poll_for_status_with_data(@poll_data)
             unless poll
               @status.destroy
-              return render json: { error: 'Failed to create poll' }, status: :unprocessable_entity
+              return render_operation_failed('Create poll')
             end
           end
 
@@ -75,22 +76,21 @@ module Api
 
       # POST /api/v1/statuses/:id/favourite
       def favourite
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         favourite = current_user.favourites.find_or_create_by(object: @status)
 
         if favourite.persisted?
           create_like_activity(@status)
-          create_favourite_notification(favourite, @status)
           render json: serialized_status(@status)
         else
-          render json: { error: 'Failed to favourite status' }, status: :unprocessable_entity
+          render_operation_failed('Favourite')
         end
       end
 
       # POST /api/v1/statuses/:id/unfavourite
       def unfavourite
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         favourite = current_user.favourites.find_by(object: @status)
 
@@ -104,16 +104,15 @@ module Api
 
       # POST /api/v1/statuses/:id/reblog
       def reblog
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         reblog = current_user.reblogs.find_or_create_by(object: @status)
 
         if reblog.persisted?
           create_announce_activity(@status)
-          create_reblog_notification(reblog, @status)
           render json: serialized_status(@status)
         else
-          render json: { error: 'Failed to reblog status' }, status: :unprocessable_entity
+          render_operation_failed('Reblog')
         end
       end
 
@@ -135,7 +134,7 @@ module Api
 
       # POST /api/v1/statuses/:id/quote
       def quote
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         quote_params = build_quote_params
         quoted_status = @status
@@ -169,7 +168,7 @@ module Api
 
       # POST /api/v1/statuses/:id/unreblog
       def unreblog
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         reblog = current_user.reblogs.find_by(object: @status)
 
@@ -183,26 +182,24 @@ module Api
 
       # POST /api/v1/statuses/:id/pin
       def pin
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
-        return render json: { error: 'You can only pin your own statuses' }, status: :unprocessable_entity unless @status.actor == current_user
+        return render_authentication_required unless current_user
+        return render_insufficient_permission('pin your own statuses') unless @status.actor == current_user
 
         # Mastodonの制限: 最大5個まで
-        if current_user.pinned_statuses.count >= 5
-          return render json: { error: 'You have already pinned the maximum number of statuses' }, status: :unprocessable_entity
-        end
+        return render_limit_exceeded('pinned') if current_user.pinned_statuses.count >= 5
 
         pinned_status = current_user.pinned_statuses.find_or_create_by(object: @status)
 
         if pinned_status.persisted?
           render json: serialized_status(@status)
         else
-          render json: { error: 'Failed to pin status' }, status: :unprocessable_entity
+          render_operation_failed('Pin status')
         end
       end
 
       # POST /api/v1/statuses/:id/unpin
       def unpin
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         pinned_status = current_user.pinned_statuses.find_by(object: @status)
         pinned_status&.destroy
@@ -213,21 +210,21 @@ module Api
       # POST /api/v1/statuses/:id/bookmark
       def bookmark
         doorkeeper_authorize! :write
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         bookmark = current_user.bookmarks.find_or_create_by(object: @status)
 
         if bookmark.persisted?
           render json: serialized_status(@status)
         else
-          render json: { error: 'Failed to bookmark status' }, status: :unprocessable_entity
+          render_operation_failed('Bookmark')
         end
       end
 
       # POST /api/v1/statuses/:id/unbookmark
       def unbookmark
         doorkeeper_authorize! :write
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         bookmark = current_user.bookmarks.find_by(object: @status)
         bookmark&.destroy
@@ -237,8 +234,8 @@ module Api
 
       # PUT /api/v1/statuses/:id
       def update
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
-        return render json: { error: 'Not authorized' }, status: :forbidden unless @status.actor == current_user
+        return render_authentication_required unless current_user
+        return render_not_authorized unless @status.actor == current_user
 
         edit_params = build_edit_params
 
@@ -268,8 +265,8 @@ module Api
       # GET /api/v1/statuses/:id/source
       def source
         doorkeeper_authorize! :read
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
-        return render json: { error: 'Not authorized' }, status: :forbidden unless @status.actor == current_user
+        return render_authentication_required unless current_user
+        return render_not_authorized unless @status.actor == current_user
 
         render json: {
           id: @status.id.to_s,
@@ -280,8 +277,8 @@ module Api
 
       # DELETE /api/v1/statuses/:id
       def destroy
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
-        return render json: { error: 'Not authorized' }, status: :forbidden unless @status.actor == current_user
+        return render_authentication_required unless current_user
+        return render_not_authorized unless @status.actor == current_user
 
         @status.destroy
         render json: serialized_status(@status)
@@ -308,13 +305,6 @@ module Api
           processed: true
         )
         @status.media_attachments = media_attachments
-      end
-
-      def render_validation_error(object)
-        render json: {
-          error: 'Validation failed',
-          details: object.errors.full_messages
-        }, status: :unprocessable_entity
       end
 
       def set_status
@@ -489,17 +479,6 @@ module Api
                          .limit(20)
       end
 
-      def create_favourite_notification(favourite, status)
-        return if favourite.actor == status.actor
-
-        Notification.create_favourite_notification(favourite, status)
-      end
-
-      def create_reblog_notification(reblog, status)
-        return if reblog.actor == status.actor
-
-        Notification.create_reblog_notification(reblog, status)
-      end
 
       def convert_mentions_to_html_links
         return if @status.content.blank?
@@ -586,7 +565,7 @@ module Api
         }
       end
 
-      def build_quote_status_object(quoted_status, quote_params)
+      def build_quote_status_object(_quoted_status, quote_params)
         current_user.objects.build(
           content: quote_params[:content],
           visibility: quote_params[:visibility],
@@ -611,7 +590,7 @@ module Api
 
       def create_scheduled_status
         scheduled_at = parse_scheduled_at
-        return render json: { error: 'Invalid scheduled_at format' }, status: :unprocessable_entity unless scheduled_at
+        return render_validation_failed('Invalid scheduled_at format') unless scheduled_at
 
         scheduled_params = prepare_scheduled_params
         media_attachment_ids = params[:media_ids] || []

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class FollowingController < ApplicationController
+  include ErrorResponseHelper
   skip_before_action :verify_authenticity_token
 
   def show
@@ -8,7 +9,7 @@ class FollowingController < ApplicationController
     @actor = Actor.find_by(username: username, local: true)
 
     unless @actor
-      render json: { error: 'Actor not found' }, status: :not_found
+      render_not_found('Actor')
       return
     end
 

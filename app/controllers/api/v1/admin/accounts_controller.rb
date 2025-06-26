@@ -4,6 +4,8 @@ module Api
   module V1
     module Admin
       class AccountsController < Api::BaseController
+        include AdminAuthorization
+
         before_action :doorkeeper_authorize!
         before_action :require_admin!
         before_action :set_account, except: [:index]
@@ -53,13 +55,7 @@ module Api
         def set_account
           @account = Actor.find(params[:id])
         rescue ActiveRecord::RecordNotFound
-          render json: { error: 'Account not found' }, status: :not_found
-        end
-
-        def require_admin!
-          return if current_user&.admin?
-
-          render json: { error: 'Admin access required' }, status: :forbidden
+          render_not_found('Account')
         end
 
         def render_error(message, status)

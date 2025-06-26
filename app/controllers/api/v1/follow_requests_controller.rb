@@ -27,7 +27,7 @@ module Api
       # フォローリクエストを承認
       def authorize
         if @follow_request.accepted?
-          render json: { error: 'Follow request already authorized' }, status: :unprocessable_entity
+          render_validation_failed('Follow request already authorized')
           return
         end
 
@@ -45,7 +45,7 @@ module Api
       # フォローリクエストを拒否
       def reject
         if @follow_request.accepted?
-          render json: { error: 'Follow request already authorized' }, status: :unprocessable_entity
+          render_validation_failed('Follow request already authorized')
           return
         end
 
@@ -63,7 +63,7 @@ module Api
 
         return if @follow_request
 
-        render json: { error: 'Follow request not found' }, status: :not_found
+        render_not_found('Follow request')
       end
 
       def account_json(actor)

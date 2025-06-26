@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
 class FeaturedController < ApplicationController
+  include ErrorResponseHelper
   def show
     username = params[:username]
     @actor = Actor.find_by(username: username, local: true)
 
     unless @actor
-      render json: { error: 'Actor not found' }, status: :not_found
+      render_not_found('Actor')
       return
     end
 

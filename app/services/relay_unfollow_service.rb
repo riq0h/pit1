@@ -2,6 +2,7 @@
 
 class RelayUnfollowService
   include ActivityPubHelper
+  include RelayActorManagement
 
   def call(relay)
     @relay = relay
@@ -41,12 +42,7 @@ class RelayUnfollowService
 
   private
 
-  def get_local_actor
-    # ローカルの管理者アカウントを取得
-    Actor.where(local: true, admin: true).first || Actor.where(local: true).first
-  end
-
-  def create_undo_activity(relay_actor_data)
+  def create_undo_activity(_relay_actor_data)
     undo_id = "#{@local_actor.ap_id}#follows/relay/undo/#{SecureRandom.uuid}"
 
     # 元のFollow アクティビティを再構築
@@ -66,17 +62,5 @@ class RelayUnfollowService
       'to' => ['https://www.w3.org/ns/activitystreams#Public'],
       'cc' => []
     }
-  end
-
-  def deliver_activity(activity, inbox_url)
-    activity_sender = ActivitySender.new
-    activity_sender.send_activity(
-      activity: activity,
-      target_inbox: inbox_url,
-      signing_actor: @local_actor
-    )
-  rescue StandardError => e
-    Rails.logger.error "Failed to deliver Undo activity: #{e.message}"
-    false
   end
 end

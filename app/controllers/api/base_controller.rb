@@ -4,6 +4,7 @@ module Api
   class BaseController < ActionController::API
     include ActionController::Helpers
     include Doorkeeper::Rails::Helpers
+    include ErrorResponseHelper
 
     before_action :set_cache_headers
     before_action :set_cors_headers
@@ -33,14 +34,14 @@ module Api
     end
 
     def require_authenticated_user!
-      render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+      render_authentication_required unless current_user
     end
 
     def require_user!
       if current_user && !current_user.local?
-        render json: { error: 'This method is only available to local users' }, status: :unprocessable_content
+        render_local_only
       elsif !current_user
-        render json: { error: 'This action requires authentication' }, status: :unauthorized
+        render_authentication_required
       end
     end
 
@@ -113,23 +114,15 @@ module Api
     end
 
     def not_found
-      render json: { error: 'Record not found' }, status: :not_found
+      render_not_found
     end
 
     def unprocessable_entity
-      render json: { error: 'Validation failed' }, status: :unprocessable_content
+      render_validation_failed
     end
 
     def too_many_requests
-      render json: { error: 'Rate limit exceeded' }, status: :too_many_requests
-    end
-
-    def render_empty
-      render json: {}, status: :ok
-    end
-
-    def render_empty_success
-      render json: {}, status: :ok
+      render_rate_limited
     end
   end
 end

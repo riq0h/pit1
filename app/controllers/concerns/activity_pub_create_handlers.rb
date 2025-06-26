@@ -4,8 +4,10 @@ require_relative '../../services/html_stripper'
 
 module ActivityPubCreateHandlers
   extend ActiveSupport::Concern
+  include ActivityPubVisibilityHelper
   include ActivityPubMediaHandler
   include ActivityPubConversationHandler
+  include ActivityPubUtilityHelpers
 
   private
 
@@ -67,7 +69,7 @@ module ActivityPubCreateHandlers
       url: object_data['url'],
       in_reply_to_ap_id: object_data['inReplyTo'],
       conversation_ap_id: object_data['conversation'],
-      published_at: parse_published_time(object_data['published']),
+      published_at: parse_published_date(object_data['published']),
       sensitive: object_data['sensitive'] || false,
       visibility: determine_visibility(object_data),
       raw_data: object_data.to_json,
@@ -78,23 +80,6 @@ module ActivityPubCreateHandlers
     attributes[:relay_id] = @preserve_relay_info.id if @preserve_relay_info
 
     attributes
-  end
-
-  def parse_published_time(published_str)
-    return Time.current unless published_str
-
-    Time.zone.parse(published_str)
-  end
-
-  def determine_visibility(object_data)
-    to = Array(object_data['to'])
-    cc = Array(object_data['cc'])
-
-    return 'public' if to.include?('https://www.w3.org/ns/activitystreams#Public')
-    return 'unlisted' if cc.include?('https://www.w3.org/ns/activitystreams#Public')
-    return 'private' if to.include?(@target_actor.followers_url)
-
-    'direct'
   end
 
   def handle_mentions(object, object_data)
@@ -202,7 +187,7 @@ module ActivityPubCreateHandlers
                    1.day.from_now
                  end
 
-    poll = Poll.create!(
+    Poll.create!(
       object: object,
       options: options,
       expires_at: expires_at,

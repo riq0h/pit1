@@ -39,16 +39,16 @@
   <%= render 'shared/post_card_content', 
              content: display_content %>
 
-  <!-- 共通返信カウント -->
-  <% if display_replies_count > 0 %>
-    <%= render 'shared/post_card_replies', 
-               replies_count: display_replies_count %>
-  <% end %>
-
   <!-- 共通メディア -->
   <% if display_media.any? %>
     <%= render 'shared/post_card_media', 
                media_attachments: display_media %>
+  <% end %>
+
+  <!-- 共通返信カウント -->
+  <% if display_replies_count > 0 %>
+    <%= render 'shared/post_card_replies', 
+               replies_count: display_replies_count %>
   <% end %>
 
 </article>

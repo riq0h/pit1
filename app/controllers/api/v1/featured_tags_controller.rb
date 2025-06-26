@@ -3,6 +3,9 @@
 module Api
   module V1
     class FeaturedTagsController < Api::BaseController
+      include TagSerializer
+      include FeaturedTagSerializer
+
       before_action :doorkeeper_authorize!
       before_action :require_user!
       before_action :set_featured_tag, only: [:destroy]
@@ -16,7 +19,7 @@ module Api
       # POST /api/v1/featured_tags
       def create
         tag_name = params[:name].to_s.strip.downcase
-        return render json: { error: 'Tag name is required' }, status: :unprocessable_entity if tag_name.blank?
+        return render_validation_failed('Tag name is required') if tag_name.blank?
 
         # タグを作成または取得
         tag = Tag.find_or_create_by(name: tag_name)
@@ -33,7 +36,7 @@ module Api
           update_featured_tag_count(featured_tag)
           render json: serialized_featured_tag(featured_tag)
         else
-          render json: { error: 'Failed to create featured tag' }, status: :unprocessable_entity
+          render_operation_failed('Create featured tag')
         end
       end
 
@@ -54,30 +57,13 @@ module Api
                          .order('MAX(object_tags.created_at) DESC')
                          .limit(10)
 
-        render json: recent_tags.map { |tag| serialized_tag(tag) }
+        render json: recent_tags.map { |tag| serialized_tag(tag, include_history: false) }
       end
 
       private
 
       def set_featured_tag
         @featured_tag = current_user.featured_tags.find(params[:id])
-      end
-
-      def serialized_featured_tag(featured_tag)
-        {
-          id: featured_tag.id.to_s,
-          name: featured_tag.name,
-          statuses_count: featured_tag.statuses_count,
-          last_status_at: featured_tag.last_status_at&.iso8601
-        }
-      end
-
-      def serialized_tag(tag)
-        {
-          name: tag.name,
-          url: "#{request.base_url}/tags/#{tag.name}",
-          history: []
-        }
       end
 
       def update_featured_tag_count(featured_tag)

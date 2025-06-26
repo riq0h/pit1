@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class Actor < ApplicationRecord
+  include UrlBuildable
   has_secure_password validations: false
 
   attribute :settings, :json, default: -> { {} }
@@ -26,7 +27,6 @@ class Actor < ApplicationRecord
   has_many :web_push_subscriptions, dependent: :destroy
   has_many :notifications, dependent: :destroy, foreign_key: :account_id, inverse_of: :account
   has_many :sent_notifications, dependent: :destroy, foreign_key: :from_account_id, class_name: 'Notification', inverse_of: :from_account
-
 
   # Active Storage統合
   has_one_attached :avatar
@@ -462,22 +462,6 @@ class Actor < ApplicationRecord
     end
   end
 
-  # Format profile link URL as HTML link
-  def format_profile_link_value(value)
-    return value unless value.match?(/\Ahttps?:\/\//)
-
-    begin
-      domain = begin
-        URI.parse(value).host
-      rescue StandardError
-        value
-      end
-      %(<a href="#{CGI.escapeHTML(value)}" target="_blank" rel="nofollow noopener noreferrer me">#{CGI.escapeHTML(domain)}</a>)
-    rescue URI::InvalidURIError
-      CGI.escapeHTML(value)
-    end
-  end
-
   # ActivityPub用のプロフィールリンクvalue形式化（HTML内のemojiもショートコード化）
   def format_profile_link_value_for_activitypub(value)
     converted_value = convert_emoji_html_to_shortcode(value)
@@ -542,25 +526,6 @@ class Actor < ApplicationRecord
   def get_base_url(_request = nil)
     # 常に設定からのドメインを使用（.envで設定されたACTIVITYPUB_DOMAINを優先）
     build_url_from_config
-  end
-
-  def build_url_from_request(request)
-    scheme = request.ssl? ? 'https' : 'http'
-    port = request.port
-    host = request.host
-
-    return "#{scheme}://#{host}" if default_port?(scheme, port)
-
-    "#{scheme}://#{host}:#{port}"
-  end
-
-  def build_url_from_config
-    # .envで設定された値を使用
-    Rails.application.config.activitypub.base_url
-  end
-
-  def default_port?(scheme, port)
-    (scheme == 'https' && port == 443) || (scheme == 'http' && port == 80)
   end
 
   # RSA鍵ペア生成

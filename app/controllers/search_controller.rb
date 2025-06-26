@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class SearchController < ApplicationController
+  include PaginationHelper
   def index
     initialize_search_params
     return if @query.blank?
@@ -44,8 +45,7 @@ class SearchController < ApplicationController
   end
 
   def setup_pagination
-    @next_offset = params[:offset].to_i + 30
-    @more_posts_available = @posts.count == 30
+    setup_offset_pagination(30)
   end
 
   def render_partial_if_needed

@@ -70,7 +70,7 @@ module Api
       def set_filter
         @filter = current_user.filters.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: 'Filter not found' }, status: :not_found
+        render_not_found('Filter')
       end
 
       def filter_params

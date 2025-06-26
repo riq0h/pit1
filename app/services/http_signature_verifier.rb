@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
+require_relative 'concerns/actor_attachment_processing'
+require_relative 'concerns/featured_collection_fetching'
+
 class HttpSignatureVerifier
+  include ActorAttachmentProcessing
+  include FeaturedCollectionFetching
+
   attr_reader :method, :path, :headers, :body
 
   def initialize(method:, path:, headers:, body:)
@@ -221,7 +227,7 @@ class HttpSignatureVerifier
       headers[header_name.downcase] ||
       headers[header_name.upcase] ||
       headers[header_name.titleize] ||
-      headers.find { |k, v| k.to_s.downcase == header_name.downcase }&.last
+      headers.find { |k, _v| k.to_s.downcase == header_name.downcase }&.last
   end
 
   def build_request_target_header
@@ -240,21 +246,6 @@ class HttpSignatureVerifier
     # Mastodon標準: ヘッダー値の正規化
     normalized_value = value.to_s.strip.gsub(/\s+/, ' ')
     "#{header_name.downcase}: #{normalized_value}"
-  end
-
-  # ActivityPub attachmentからfieldsを抽出
-  def extract_fields_from_attachments(actor_data)
-    attachments = actor_data['attachment'] || []
-    return [] unless attachments.is_a?(Array)
-
-    attachments.filter_map do |attachment|
-      next unless attachment.is_a?(Hash) && attachment['type'] == 'PropertyValue'
-
-      {
-        name: attachment['name'],
-        value: attachment['value']
-      }
-    end
   end
 
   # 署名検証
@@ -282,16 +273,5 @@ class HttpSignatureVerifier
   rescue StandardError => e
     Rails.logger.debug { "Signature verification error: #{e.message}" }
     false
-  end
-
-  private
-
-  def fetch_featured_collection_async(actor)
-    return if actor.featured_url.blank?
-
-    # Featured Collection を非同期で取得
-    FeaturedCollectionFetcher.new.fetch_for_actor(actor)
-  rescue StandardError => e
-    Rails.logger.error "Failed to fetch featured collection for #{actor.username}@#{actor.domain}: #{e.message}"
   end
 end

@@ -129,7 +129,7 @@ class WebPushNotificationService
     send_notification(
       account,
       'poll',
-      "投票が終了しました",
+      '投票が終了しました',
       strip_tags(status.content || ''),
       {
         notification_id: notification_id,
@@ -170,8 +170,6 @@ class WebPushNotificationService
       }
     )
   end
-
-  private
 
   def self.strip_tags(html)
     return '' if html.blank?

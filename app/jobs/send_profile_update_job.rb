@@ -27,11 +27,11 @@ class SendProfileUpdateJob < ApplicationJob
   def build_update_activity(actor)
     {
       '@context': 'https://www.w3.org/ns/activitystreams',
-      'id': "#{actor.ap_id}#updates/#{Time.now.to_i}",
-      'type': 'Update',
-      'actor': actor.ap_id,
-      'to': ['https://www.w3.org/ns/activitystreams#Public'],
-      'object': actor.to_activitypub
+      id: "#{actor.ap_id}#updates/#{Time.now.to_i}",
+      type: 'Update',
+      actor: actor.ap_id,
+      to: ['https://www.w3.org/ns/activitystreams#Public'],
+      object: actor.to_activitypub
     }
   end
 
@@ -45,7 +45,7 @@ class SendProfileUpdateJob < ApplicationJob
         begin
           raw_data = JSON.parse(follower.raw_data)
           shared_inbox = raw_data.dig('endpoints', 'sharedInbox')
-          
+
           if shared_inbox.present?
             inboxes.add(shared_inbox)
           else
@@ -65,7 +65,7 @@ class SendProfileUpdateJob < ApplicationJob
 
   def send_update_activity(update_activity, inbox_url, actor)
     activity_sender = ActivitySender.new
-    
+
     result = activity_sender.send_activity(
       activity: update_activity,
       target_inbox: inbox_url,
@@ -73,11 +73,11 @@ class SendProfileUpdateJob < ApplicationJob
     )
 
     success = result.is_a?(Hash) ? result[:success] : result
-    
+
     if success
       Rails.logger.info "✅ Profile update sent successfully to #{inbox_url}"
     else
-      error_msg = result.is_a?(Hash) ? result[:error] : "Unknown error"
+      error_msg = result.is_a?(Hash) ? result[:error] : 'Unknown error'
       Rails.logger.warn "❌ Failed to send profile update to #{inbox_url}: #{error_msg}"
     end
 

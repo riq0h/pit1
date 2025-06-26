@@ -13,7 +13,7 @@ module Api
 
       # GET /api/v1/timelines/home
       def home
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         timeline_items = build_home_timeline_query
         @paginated_items = timeline_items

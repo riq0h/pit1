@@ -9,7 +9,7 @@ module Api
 
       # GET /api/v1/conversations
       def index
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
+        return render_authentication_required unless current_user
 
         conversations = current_user.conversations
                                     .includes(:participants, :last_status)
@@ -28,8 +28,8 @@ module Api
 
       # DELETE /api/v1/conversations/:id
       def destroy
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
-        return render json: { error: 'Conversation not found' }, status: :not_found unless @conversation
+        return render_authentication_required unless current_user
+        return render_not_found('Conversation') unless @conversation
 
         @conversation.destroy
         render json: {}, status: :ok
@@ -37,8 +37,8 @@ module Api
 
       # POST /api/v1/conversations/:id/read
       def read
-        return render json: { error: 'This action requires authentication' }, status: :unauthorized unless current_user
-        return render json: { error: 'Conversation not found' }, status: :not_found unless @conversation
+        return render_authentication_required unless current_user
+        return render_not_found('Conversation') unless @conversation
 
         @conversation.mark_as_read!
         render json: serialized_conversation(@conversation)

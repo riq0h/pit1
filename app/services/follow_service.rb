@@ -2,9 +2,11 @@
 
 require 'net/http'
 require 'stringio'
+require_relative 'concerns/actor_attachment_processing'
 
 class FollowService
   include ActivityPubHelper
+  include ActorAttachmentProcessing
 
   def initialize(actor)
     @actor = actor
@@ -59,15 +61,7 @@ class FollowService
   end
 
   def parse_acct(acct)
-    # @username@domainまたはusername@domain形式を処理
-    clean_acct = acct.gsub(/^@/, '')
-    parts = clean_acct.split('@')
-
-    if parts.length == 2
-      [parts[0], parts[1]]
-    else
-      [clean_acct, nil] # ローカルユーザ
-    end
+    AccountIdentifierParser.parse_acct(acct)
   end
 
   def find_or_fetch_actor(username, domain)
@@ -85,7 +79,7 @@ class FollowService
   end
 
   def fetch_remote_actor(username, domain)
-    webfinger_uri = "acct:#{username}@#{domain}"
+    webfinger_uri = AccountIdentifierParser.build_webfinger_uri(username, domain)
     webfinger_service = WebFingerService.new
 
     actor_data = webfinger_service.fetch_actor_data(webfinger_uri)
@@ -211,20 +205,6 @@ class FollowService
     when /gif/ then '.gif'
     when /webp/ then '.webp'
     else '.bin'
-    end
-  end
-
-  def extract_fields_from_attachments(actor_data)
-    attachments = actor_data['attachment'] || []
-    return [] unless attachments.is_a?(Array)
-
-    attachments.filter_map do |attachment|
-      next unless attachment.is_a?(Hash) && attachment['type'] == 'PropertyValue'
-
-      {
-        name: attachment['name'],
-        value: attachment['value']
-      }
     end
   end
 

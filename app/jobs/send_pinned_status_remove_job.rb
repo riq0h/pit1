@@ -6,7 +6,7 @@ class SendPinnedStatusRemoveJob < ApplicationJob
   def perform(actor_id, object_id)
     actor = Actor.find(actor_id)
     object = ActivityPubObject.find(object_id)
-    
+
     return unless actor.local?
 
     remove_activity = build_remove_activity(actor, object)
@@ -29,8 +29,8 @@ class SendPinnedStatusRemoveJob < ApplicationJob
 
   def distribute_activity(activity, actor)
     follower_inboxes = actor.followers.where(local: false).pluck(:shared_inbox_url, :inbox_url)
-                           .map { |shared, inbox| shared.presence || inbox }
-                           .compact.uniq
+                            .filter_map { |shared, inbox| shared.presence || inbox }
+                            .uniq
 
     follower_inboxes.each do |inbox_url|
       send_activity_to_inbox(activity, inbox_url, actor)
@@ -39,19 +39,19 @@ class SendPinnedStatusRemoveJob < ApplicationJob
 
   def send_activity_to_inbox(activity, inbox_url, actor)
     activity_sender = ActivitySender.new
-    
+
     success = activity_sender.send_activity(
       activity: activity,
       target_inbox: inbox_url,
       signing_actor: actor
     )
-    
+
     if success
       Rails.logger.info "✅ Remove activity sent successfully to #{inbox_url}"
     else
       Rails.logger.warn "❌ Failed to send Remove activity to #{inbox_url}"
     end
-    
+
     success
   rescue StandardError => e
     Rails.logger.error "💥 Error sending Remove activity to #{inbox_url}: #{e.message}"

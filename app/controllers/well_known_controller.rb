@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class WellKnownController < ApplicationController
+  include UrlBuildable
   skip_before_action :verify_authenticity_token
 
   # GET /.well-known/webfinger
@@ -51,8 +52,7 @@ class WellKnownController < ApplicationController
   end
 
   def parse_acct_resource(resource)
-    account_identifier = resource.sub('acct:', '')
-    account_identifier.split('@')
+    AccountIdentifierParser.parse_acct_uri(resource) || []
   end
 
   def find_actor_by_url(resource)
@@ -133,24 +133,6 @@ class WellKnownController < ApplicationController
 
   def base_url
     @base_url ||= build_url_from_config
-  end
-
-  def build_url_from_request
-    scheme = request.ssl? ? 'https' : 'http'
-    port = request.port
-    host = request.host
-
-    return "#{scheme}://#{host}" if default_port?(scheme, port)
-
-    "#{scheme}://#{host}:#{port}"
-  end
-
-  def build_url_from_config
-    Rails.application.config.activitypub.base_url
-  end
-
-  def default_port?(scheme, port)
-    (scheme == 'https' && port == 443) || (scheme == 'http' && port == 80)
   end
 
   def render_webfinger_error(message)

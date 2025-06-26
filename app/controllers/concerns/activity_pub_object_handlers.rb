@@ -2,6 +2,8 @@
 
 module ActivityPubObjectHandlers
   extend ActiveSupport::Concern
+  include ActivityPubVisibilityHelper
+  include ActivityPubMediaHandler
 
   private
 
@@ -104,22 +106,6 @@ module ActivityPubObjectHandlers
     Rails.logger.warn "⚠️ Failed to create media attachment: #{e.message}"
   end
 
-  def extract_filename_from_url(url)
-    uri = URI.parse(url)
-    filename = File.basename(uri.path)
-    filename.presence || 'unknown_file'
-  rescue URI::InvalidURIError
-    'unknown_file'
-  end
-
-  def determine_media_type_from_content_type(content_type)
-    return 'image' if content_type&.start_with?('image/')
-    return 'video' if content_type&.start_with?('video/')
-    return 'audio' if content_type&.start_with?('audio/')
-
-    'document'
-  end
-
   # Delete Activity処理
   def handle_delete_activity
     Rails.logger.info '🗑️ Processing Delete activity'
@@ -147,14 +133,4 @@ module ActivityPubObjectHandlers
   end
 
   # 可視性判定
-  def determine_visibility(object_data)
-    to = Array(object_data['to'])
-    cc = Array(object_data['cc'])
-
-    return 'public' if to.include?('https://www.w3.org/ns/activitystreams#Public')
-    return 'unlisted' if cc.include?('https://www.w3.org/ns/activitystreams#Public')
-    return 'private' if to.include?(@target_actor.followers_url)
-
-    'direct'
-  end
 end

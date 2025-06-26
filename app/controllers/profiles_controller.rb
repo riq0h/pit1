@@ -2,6 +2,8 @@
 
 class ProfilesController < ApplicationController
   include StatusSerializer
+  include PaginationHelper
+  include TimelineBuilder
   before_action :find_actor
 
   def show
@@ -82,46 +84,19 @@ class ProfilesController < ApplicationController
   def build_user_timeline_items(posts, reblogs, pinned_posts)
     # Pinned postsを先に追加（最上部に表示）
     timeline_items = pinned_posts.map do |pinned_status|
-      build_user_pinned_timeline_item(pinned_status.object)
+      build_pinned_timeline_item(pinned_status.object)
     end
 
     posts.find_each do |post|
       # Pinned postsも元の時系列位置に表示するため、重複除外は行わない
-      timeline_items << build_user_post_timeline_item(post)
+      timeline_items << build_post_timeline_item(post)
     end
 
     reblogs.find_each do |reblog|
-      timeline_items << build_user_reblog_timeline_item(reblog)
+      timeline_items << build_reblog_timeline_item(reblog)
     end
 
     timeline_items
-  end
-
-  def build_user_post_timeline_item(post)
-    {
-      type: :post,
-      item: post,
-      published_at: post.published_at,
-      id: "post_#{post.id}"
-    }
-  end
-
-  def build_user_reblog_timeline_item(reblog)
-    {
-      type: :reblog,
-      item: reblog,
-      published_at: reblog.created_at,
-      id: "reblog_#{reblog.id}"
-    }
-  end
-
-  def build_user_pinned_timeline_item(post)
-    {
-      type: :pinned_post,
-      item: post,
-      published_at: post.published_at,
-      id: "pinned_#{post.id}"
-    }
   end
 
   def load_pinned_posts
@@ -159,14 +134,6 @@ class ProfilesController < ApplicationController
             .distinct
 
     apply_pagination_filters(query).limit(30)
-  end
-
-  def apply_pagination_filters(query)
-    if params[:max_id].present?
-      reference_post = find_post_by_id(params[:max_id])
-      query = query.where(published_at: ...reference_post.published_at) if reference_post
-    end
-    query
   end
 
   def apply_timeline_pagination_filters(timeline_items)
@@ -210,13 +177,6 @@ class ProfilesController < ApplicationController
 
   def get_post_display_id(timeline_item)
     timeline_item[:id]
-  end
-
-  def setup_pagination
-    return unless @posts.any?
-
-    @older_max_id = get_post_display_id(@posts.last) if @posts.last
-    @more_posts_available = check_older_posts_available
   end
 
   def check_older_posts_available

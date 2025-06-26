@@ -2,6 +2,7 @@
 
 class RelayFollowService
   include ActivityPubHelper
+  include RelayActorManagement
 
   def call(relay)
     @relay = relay
@@ -41,20 +42,7 @@ class RelayFollowService
 
   private
 
-  def get_local_actor
-    # ローカルの管理者アカウントを取得
-    actor = Actor.where(local: true, admin: true).first || Actor.where(local: true).first
-
-    # ap_idが設定されていない場合は設定
-    if actor && actor.ap_id.blank?
-      actor.send(:set_ap_urls)
-      actor.save!
-    end
-
-    actor
-  end
-
-  def create_follow_activity(relay_actor_data)
+  def create_follow_activity(_relay_actor_data)
     activity_id = "#{@local_actor.ap_id}#follows/relay/#{SecureRandom.uuid}"
 
     {
@@ -65,17 +53,5 @@ class RelayFollowService
       'object' => 'https://www.w3.org/ns/activitystreams#Public',
       'to' => ['https://www.w3.org/ns/activitystreams#Public']
     }
-  end
-
-  def deliver_activity(activity, inbox_url)
-    activity_sender = ActivitySender.new
-    activity_sender.send_activity(
-      activity: activity,
-      target_inbox: inbox_url,
-      signing_actor: @local_actor
-    )
-  rescue StandardError => e
-    Rails.logger.error "Failed to deliver Follow activity: #{e.message}"
-    false
   end
 end
