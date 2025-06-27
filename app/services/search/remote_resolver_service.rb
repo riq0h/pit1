@@ -29,6 +29,44 @@ module Search
       end
     end
 
+    def search_domain_accounts(domain)
+      return [] unless domain_query?(domain)
+
+      accounts = []
+
+      # 既存のローカルデータベースから検索
+      existing_accounts = Actor.where(domain: domain)
+                               .where(local: false)
+                               .order(updated_at: :desc)
+                               .limit(10)
+      accounts.concat(existing_accounts)
+
+      # リモートドメインから新しいアクターを発見
+      if accounts.length < 20
+        remote_accounts = discover_remote_domain_accounts(domain)
+        accounts.concat(remote_accounts)
+      end
+
+      accounts.uniq(&:id).take(20)
+    end
+
+    def discover_remote_domain_accounts(domain)
+      return [] if domain.blank?
+
+      discovered_accounts = []
+
+      # 1. インスタンス情報からユーザを発見
+      discovered_accounts.concat(fetch_instance_directory(domain))
+
+      # 2. よく知られたアカウントを試す
+      discovered_accounts.concat(try_common_usernames(domain))
+
+      discovered_accounts.uniq(&:id).take(10)
+    rescue StandardError => e
+      Rails.logger.warn "ドメインアクター発見エラー (#{domain}): #{e.message}"
+      []
+    end
+
     def resolve_remote_status(url)
       return nil unless url_query?(url)
 
@@ -158,8 +196,85 @@ module Search
       AccountIdentifierParser.account_query?(query)
     end
 
+    def domain_query?(query)
+      AccountIdentifierParser.domain_query?(query)
+    end
+
     def url_query?(query)
       query.match?(/^https?:\/\//)
+    end
+
+    def fetch_instance_directory(domain)
+      return [] if domain.blank?
+
+      begin
+        uri = URI("https://#{domain}/api/v1/directory")
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = true
+        http.read_timeout = 5
+        http.open_timeout = 3
+
+        request = Net::HTTP::Get.new(uri.path)
+        request['Accept'] = 'application/json'
+        request['User-Agent'] = 'letter/0.1 (ActivityPub)'
+
+        response = http.request(request)
+        return [] unless response.code == '200'
+
+        directory_data = JSON.parse(response.body)
+        return [] unless directory_data.is_a?(Array)
+
+        directory_data.take(5).filter_map do |account_data|
+          next unless account_data['username'] && account_data['acct']
+
+          create_actor_from_directory_data(account_data, domain)
+        end
+      rescue StandardError => e
+        Rails.logger.debug { "ディレクトリ取得失敗 (#{domain}): #{e.message}" }
+        []
+      end
+    end
+
+    def try_common_usernames(domain)
+      return [] if domain.blank?
+
+      common_usernames = %w[admin info news announce bot moderator support]
+      discovered = []
+
+      common_usernames.each do |username|
+        break if discovered.length >= 3
+
+        account = try_resolve_account("#{username}@#{domain}")
+        discovered << account if account
+      end
+
+      discovered
+    end
+
+    def create_actor_from_directory_data(account_data, domain)
+      username = account_data['username']
+      return nil unless username
+
+      # 既存アクターをチェック
+      existing_actor = Actor.find_by(username: username, domain: domain)
+      return existing_actor if existing_actor
+
+      # WebFingerで完全なプロフィールを取得
+      try_resolve_account("#{username}@#{domain}")
+    end
+
+    def try_resolve_account(acct)
+      return nil if acct.blank?
+
+      begin
+        actor_data = @web_finger_service.fetch_actor_data(acct)
+        return nil unless actor_data
+
+        create_actor_from_data(actor_data)
+      rescue StandardError => e
+        Rails.logger.debug { "アカウント解決失敗 (#{acct}): #{e.message}" }
+        nil
+      end
     end
   end
 end

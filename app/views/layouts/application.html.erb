@@ -28,12 +28,9 @@
     
     <!-- RSSフィード -->
     <% if controller_name == 'profiles' && @actor %>
-      <link rel="alternate" type="application/rss+xml" title="<%= @actor.display_name.presence || @actor.username %> - RSS" href="<%= "/@#{@actor.username}.rss" %>">
+      <link rel="alternate" type="application/rss+xml" title="<%= @actor.display_name.presence || @actor.username %>" href="<%= "/@#{@actor.username}.rss" %>">
     <% end %>
-    <link rel="alternate" type="application/atom+xml" title="<%= blog_title %> - ローカルタイムライン" href="/local.atom">
-
-    <%# インストール可能なアプリ用のPWAマニフェストを有効化（config/routes.rbでも有効化することを確認！） %>
-    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+    <link rel="alternate" type="application/atom+xml" title="<%= blog_title %>" href="/local.atom">
 
     <!-- Webフォント -->
     <link href="https://fonts.bunny.net/css?family=noto-sans-jp:300,400,600" rel="stylesheet" />
@@ -57,7 +54,7 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400; background-color: <%= background_color %>; overflow-y: scroll; --page-background-color: <%= background_color %>;">
+  <body class="text-gray-900" style="font-family: 'Noto Sans JP', sans-serif; font-weight: 400; background-color: <%= background_color %>; --page-background-color: <%= background_color %>;">
     <!-- ブログ風シンプルヘッダー -->
     <header class="max-w-4xl mx-auto px-6 py-8">
       <div class="flex justify-between items-center">

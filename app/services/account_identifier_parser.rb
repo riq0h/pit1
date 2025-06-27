@@ -36,7 +36,14 @@ class AccountIdentifierParser
   def self.account_query?(query)
     return false if query.blank?
 
-    query.match?(/^@?[\w.-]+@[\w.-]+\.\w+$/) || query.start_with?('@')
+    query.match?(/^@?[\w.-]+@[\w.-]+\.\w+$/) || query.start_with?('@') || domain_query?(query)
+  end
+
+  def self.domain_query?(query)
+    return false if query.blank?
+
+    # domain.com形式（@やusernameなし）
+    query.match?(/^[\w.-]+\.\w+$/) && query.exclude?('@')
   end
 
   def self.extract_mention_data(mention)

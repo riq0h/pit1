@@ -636,7 +636,9 @@ module Api
         # textパラメータは削除（statusを使用）
         base_params.delete('text')
 
-        # Add poll parameters if present
+        # visibilityのデフォルト値を確保
+        base_params['visibility'] ||= 'public'
+
         base_params['poll'] = poll_params if poll_params.present?
 
         base_params

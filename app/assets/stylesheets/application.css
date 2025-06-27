@@ -1,3 +1,9 @@
+/* スクロールバー常時表示（初回読み込み問題対策） */
+html {
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable;
+}
+
 /* フォーカス時の角丸を削除 */
 *:focus {
   outline: none !important;

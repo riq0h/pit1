@@ -33,8 +33,8 @@ class ScheduledStatus < ApplicationRecord
         content: status_params[:status],
         visibility: status_params[:visibility] || 'public',
         sensitive: status_params[:sensitive] || false,
-        spoiler_text: status_params[:spoiler_text],
-        in_reply_to_id: status_params[:in_reply_to_id],
+        summary: status_params[:spoiler_text],
+        in_reply_to_ap_id: status_params[:in_reply_to_id],
         published_at: Time.current,
         local: true,
         ap_id: generate_ap_id
@@ -133,13 +133,15 @@ class ScheduledStatus < ApplicationRecord
   end
 
   def serialize_params
-    # Mastodon APIとの互換性のため、statusをtextとしても提供
     base_params = params.except('poll').merge(
       poll: params['poll'] ? serialize_poll_params : nil
     ).compact
 
-    # statusフィールドが存在する場合、textフィールドとしても提供
+    # Mastodon API互換性のためtextフィールドも提供
     base_params['text'] = base_params['status'] if base_params['status'].present?
+
+    # visibilityフィールドが必須のため、デフォルト値を確保
+    base_params['visibility'] ||= 'public'
 
     base_params
   end

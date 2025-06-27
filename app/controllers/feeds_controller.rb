@@ -36,6 +36,6 @@ class FeedsController < ApplicationController
   private
 
   def set_cache_headers
-    response.headers['Cache-Control'] = 'public, max-age=300' # 5分キャッシュ
+    response.headers['Cache-Control'] = 'public, max-age=300'
   end
 end

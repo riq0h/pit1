@@ -25,6 +25,7 @@ module Search
 
       accounts = []
       accounts.concat(resolve_remote_accounts) if should_resolve_remote_accounts?
+      accounts.concat(search_domain_accounts) if should_search_domain_accounts?
       accounts.concat(search_local_accounts) if should_search_local_accounts?
       accounts.uniq(&:id)
     end
@@ -53,6 +54,12 @@ module Search
 
       remote_account = remote_resolver.resolve_remote_account(search_query)
       remote_account ? [remote_account] : []
+    end
+
+    def search_domain_accounts
+      return [] unless domain_query?
+
+      remote_resolver.search_domain_accounts(search_query)
     end
 
     def resolve_remote_statuses
@@ -114,6 +121,14 @@ module Search
 
     def account_query?
       AccountIdentifierParser.account_query?(search_query)
+    end
+
+    def domain_query?
+      AccountIdentifierParser.domain_query?(search_query)
+    end
+
+    def should_search_domain_accounts?
+      domain_query?
     end
 
     def url_query?
