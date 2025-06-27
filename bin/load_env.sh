@@ -5,7 +5,7 @@
 
 load_env_vars() {
     if [ ! -f .env ]; then
-        echo "ERROR: .env file not found"
+        echo "ERROR: .envファイルが見つかりません"
         return 1
     fi
     
@@ -15,12 +15,12 @@ load_env_vars() {
     
     # 必須環境変数のチェック
     if [ -z "$ACTIVITYPUB_DOMAIN" ]; then
-        echo "ERROR: ACTIVITYPUB_DOMAIN not set in .env"
+        echo "ERROR: ACTIVITYPUB_DOMAINが.envで設定されていません"
         return 1
     fi
     
     if [ -z "$ACTIVITYPUB_PROTOCOL" ]; then
-        echo "WARNING: ACTIVITYPUB_PROTOCOL not set, defaulting to https"
+        echo "WARNING: ACTIVITYPUB_PROTOCOLが設定されていないためhttpsを使用"
         export ACTIVITYPUB_PROTOCOL="https"
     fi
     

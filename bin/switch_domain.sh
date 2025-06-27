@@ -1,20 +1,20 @@
 #!/bin/bash
 
-# Letter ActivityPub Instance - Domain Switch Script
+# letter - Domain Switch Script
 # ドメイン切り替えスクリプト
 # 使用法: ./switch_domain.sh <新しいドメイン> [プロトコル]
 # 例: ./switch_domain.sh abc123.serveo.net https
 
 set -e
 
-# Get the directory of this script and the project root
+# スクリプトのディレクトリとプロジェクトルートを取得
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Change to project root to ensure relative paths work
 cd "$PROJECT_ROOT"
 
-# Load environment variables
+# 環境変数を読み込み
 source bin/load_env.sh
 
 # Colors for output
@@ -48,11 +48,11 @@ print_info() {
     echo -e "${CYAN}ℹ️${NC} $1"
 }
 
-# Main function
+# メイン関数
 main() {
-    print_header "Letter ActivityPub ドメイン切り替え"
+    print_header "letter ドメイン切り替え"
     
-    # Check arguments
+    # 引数をチェック
     if [ $# -lt 1 ]; then
         print_error "使用法: $0 <新しいドメイン> [プロトコル]"
         print_error "例: $0 abc123.serveo.net https"
@@ -66,11 +66,11 @@ main() {
     print_info "新しいドメイン: $NEW_DOMAIN"
     print_info "プロトコル: $NEW_PROTOCOL"
     
-    # Get current domain from .env
+    # .envから現在のドメインを取得
     CURRENT_DOMAIN=$(grep "^ACTIVITYPUB_DOMAIN=" .env | cut -d'=' -f2)
     print_info "現在のドメイン: $CURRENT_DOMAIN"
     
-    # Confirm the change
+    # 変更を確認
     echo ""
     print_warning "この操作により以下が実行されます:"
     echo "  1. .envファイルの更新"
@@ -87,7 +87,7 @@ main() {
     
     print_info "ステップ 1/5: .envファイルの更新..."
     
-    # Update .env file
+    # .envファイルを更新
     sed -i "s/^ACTIVITYPUB_DOMAIN=.*/ACTIVITYPUB_DOMAIN=$NEW_DOMAIN/" .env
     sed -i "s/^ACTIVITYPUB_PROTOCOL=.*/ACTIVITYPUB_PROTOCOL=$NEW_PROTOCOL/" .env
     
@@ -95,7 +95,7 @@ main() {
     
     print_info "ステップ 2/5: 現在のサーバを停止中..."
     
-    # Stop current server
+    # 現在のサーバを停止
     pkill -f "rails server" 2>/dev/null || true
     pkill -f "puma" 2>/dev/null || true
     rm -f tmp/pids/server.pid
@@ -104,9 +104,9 @@ main() {
     
     print_info "ステップ 3/5: データベース内のActor URLを更新中..."
 
-    # Create Ruby script for database update
+    # データベース更新用Rubyスクリプトを作成
     cat > /tmp/update_actor_for_domain_switch.rb << 'EOF'
-# Update all local Actor URLs to new domain
+# 全てのローカルActor URLを新ドメインに更新
 local_actors = Actor.where(local: true)
 
 if local_actors.any?
@@ -116,7 +116,7 @@ if local_actors.any?
   local_actors.each do |actor|
     old_ap_id = actor.ap_id
     
-    # Build update hash
+    # 更新ハッシュを構築
     update_params = {
       ap_id: "#{new_base_url}/users/#{actor.username}",
       inbox_url: "#{new_base_url}/users/#{actor.username}/inbox",
@@ -137,27 +137,27 @@ else
 end
 EOF
     
-    # Load environment variables and run database update
+    # 環境変数を読み込み and run database update
     run_with_env "load '/tmp/update_actor_for_domain_switch.rb'"
     
-    # Clean up temporary file
+    # 一時ファイルをクリーンアップ
     rm -f /tmp/update_actor_for_domain_switch.rb
     
     print_success "データベースのURLを更新しました"
     
     print_info "ステップ 4/5: サーバを再起動中..."
     
-    # Start server with new configuration
+    # 新設定でサーバを開始
     "$SCRIPT_DIR/cleanup_and_start.sh"
     
     print_success "新しいドメインでサーバを再起動しました"
     
     print_info "ステップ 5/5: 設定を確認中..."
     
-    # Wait a moment for server to start
+    # サーバ起動まで少し待機
     sleep 3
     
-    # Verify the new configuration
+    # 新設定を検証
     echo ""
     print_header "ドメイン切り替え完了"
     print_info "確認情報:"
@@ -165,7 +165,7 @@ EOF
     echo "  ドメイン: $NEW_DOMAIN"
     echo "  プロトコル: $NEW_PROTOCOL"
     
-    # Check which users exist and show examples
+    # 存在するユーザをチェックして例を表示
     FIRST_USER=$(run_with_env "puts Actor.where(local: true).first&.username" 2>/dev/null)
     if [ -n "$FIRST_USER" ]; then
       echo "  サンプルActor URL: $NEW_PROTOCOL://$NEW_DOMAIN/users/$FIRST_USER"
@@ -184,5 +184,5 @@ EOF
     fi
 }
 
-# Run main function
+# メイン関数を実行
 main "$@"

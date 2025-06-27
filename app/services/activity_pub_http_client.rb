@@ -3,7 +3,7 @@
 class ActivityPubHttpClient
   include HTTParty
 
-  USER_AGENT = 'Letter/1.0 (ActivityPub Bot)'
+  USER_AGENT = 'letter/0.1'
   ACCEPT_HEADERS = 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
   DEFAULT_TIMEOUT = 10
 

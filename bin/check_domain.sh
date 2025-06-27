@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Letter ActivityPub Instance - Domain Configuration Check Script
+# letter - Domain Configuration Check Script
 # ドメイン設定確認スクリプト
 
 set -e
@@ -59,7 +59,7 @@ print_debug() {
     fi
 }
 
-print_header "Letter ActivityPub ドメイン設定確認"
+print_header "letter ドメイン設定確認"
 
 # .envファイルをチェック
 if [ -f .env ]; then

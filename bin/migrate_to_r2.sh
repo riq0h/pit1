@@ -1,21 +1,21 @@
 #!/bin/bash
 
-# Letter ActivityPub Instance - Cloudflare R2 Migration Script
+# letter - Cloudflare R2 Migration Script
 # ローカルストレージの画像をCloudflare R2に移行します
 
 set -e
 
-# Get the directory of this script and the project root
+# スクリプトのディレクトリとプロジェクトルートを取得
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Change to project root to ensure relative paths work
 cd "$PROJECT_ROOT"
 
-# Load environment variables
+# 環境変数を読み込み
 source bin/load_env.sh
 
-# Colors for output
+# 出力用の色設定
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -23,7 +23,7 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Function to print colored output
+# カラー出力用関数
 print_header() {
     echo -e "${BLUE}========================================${NC}"
     echo -e "${BLUE}$1${NC}"
@@ -46,17 +46,17 @@ print_info() {
     echo -e "${CYAN}ℹ️${NC} $1"
 }
 
-print_header "Letter ActivityPub - Cloudflare R2 移行"
+print_header "letter - Cloudflare R2 移行"
 echo ""
 
-# Check if R2 is enabled
+# R2が有効かチェック
 if [[ "$S3_ENABLED" != "true" ]]; then
     print_error "Cloudflare R2が無効になっています"
     print_info "移行を実行するには、.envファイルでS3_ENABLED=trueに設定してください"
     exit 1
 fi
 
-# Check required R2 configuration
+# 必要なR2設定をチェック
 missing_config=false
 
 if [[ -z "$S3_ENDPOINT" ]]; then
@@ -90,7 +90,7 @@ print_info "エンドポイント: $S3_ENDPOINT"
 print_info "バケット: $S3_BUCKET"
 echo ""
 
-# Get migration statistics
+# 移行統計を取得
 print_info "現在のファイル状況を確認中..."
 
 migration_stats=$(run_with_env "
@@ -139,7 +139,7 @@ puts \"total_local|#{total_local}\"
 puts \"total_r2|#{total_r2}\"
 ")
 
-# Parse migration statistics
+# 移行統計を解析
 media_count=$(echo "$migration_stats" | grep "^media_attachments" | cut -d'|' -f2)
 emoji_count=$(echo "$migration_stats" | grep "^custom_emojis" | cut -d'|' -f2)
 avatar_count=$(echo "$migration_stats" | grep "^actor_avatars" | cut -d'|' -f2)
@@ -162,7 +162,7 @@ if [[ "$local_total" -eq 0 ]]; then
     exit 0
 fi
 
-# Confirm migration
+# 移行を確認
 echo -n "これらのファイルをCloudflare R2に移行しますか？ [y/N]: "
 read -r confirmation
 
@@ -173,7 +173,7 @@ fi
 
 echo ""
 
-# Get batch size
+# バッチサイズを取得
 while true; do
     echo -n "バッチサイズを入力してください (10-200, デフォルト: 50): "
     read -r batch_size
@@ -193,7 +193,7 @@ done
 echo ""
 print_info "バッチサイズ: $batch_size でR2への移行を開始します..."
 
-# Execute migration
+# 移行を実行
 migration_result=$(run_with_env "
 begin
   MigrateToR2Job.perform_now(batch_size: $batch_size)
@@ -212,7 +212,7 @@ echo ""
 if [[ "$status" == "success" ]]; then
     print_success "$message"
     
-    # Get final statistics
+    # 最終統計を取得
     final_stats=$(run_with_env "
     total_local = ActiveStorage::Blob.where(service_name: ['local', nil]).count
     total_r2 = ActiveStorage::Blob.where(service_name: 'cloudflare_r2').count

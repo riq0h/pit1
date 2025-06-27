@@ -1,21 +1,21 @@
 #!/bin/bash
 
-# Letter ActivityPub Instance - Account Management Script
-# Manages local accounts with 2-account limit enforcement
+# letter - Account Management Script
+# 2アカウント制限でローカルアカウントを管理
 
 set -e
 
-# Get the directory of this script and the project root
+# スクリプトのディレクトリとプロジェクトルートを取得
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Change to project root to ensure relative paths work
+# 相対パスが正しく動作するようプロジェクトルートに移動
 cd "$PROJECT_ROOT"
 
-# Load environment variables
+# 環境変数を読み込み
 source bin/load_env.sh
 
-# Colors for output
+# 出力用の色設定
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -23,7 +23,7 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Function to print colored output
+# カラー出力用関数
 print_header() {
     echo -e "${BLUE}========================================${NC}"
     echo -e "${BLUE}$1${NC}"
@@ -46,7 +46,7 @@ print_info() {
     echo -e "${CYAN}ℹ️${NC} $1"
 }
 
-# Function to get current local accounts
+# 現在のローカルアカウントを取得する関数
 get_local_accounts() {
     run_with_env "
     accounts = Actor.where(local: true)
@@ -57,7 +57,7 @@ get_local_accounts() {
     " | tail -1
 }
 
-# Function to list account details
+# アカウント詳細をリスト表示する関数
 list_accounts_detailed() {
     echo ""
     print_info "現在のローカルアカウント:"
@@ -81,7 +81,7 @@ list_accounts_detailed() {
     "
 }
 
-# Function to create new account
+# 新アカウント作成関数
 create_account() {
     echo ""
     print_header "新しいアカウントの作成"
@@ -90,7 +90,7 @@ create_account() {
     print_info "アカウント情報を入力してください:"
     echo ""
     
-    # Get username
+    # ユーザ名を取得
     while true; do
         read -p "ユーザ名 (英数字とアンダースコアのみ): " username
         
@@ -104,7 +104,7 @@ create_account() {
             continue
         fi
         
-        # Check if username already exists
+        # ユーザ名が既に存在するかチェック
         existing_check=$(run_with_env "
         if Actor.exists?(username: '$username', local: true)
           puts 'exists'
@@ -121,7 +121,7 @@ create_account() {
         break
     done
     
-    # Get password
+    # パスワードを取得
     while true; do
         read -s -p "パスワード (6文字以上): " password
         echo ""
@@ -140,10 +140,10 @@ create_account() {
         break
     done
     
-    # Get display name (optional)
+    # 表示名を取得(オプション)
     read -p "表示名 (オプション): " display_name
     
-    # Get note (optional)
+    # ノートを取得(オプション)
     read -p "プロフィール (オプション): " note
     
     echo ""
@@ -164,7 +164,7 @@ create_account() {
     echo ""
     print_info "アカウントを作成中..."
     
-    # Create account using Rails
+    # Railsでアカウントを作成
     creation_result=$(run_with_env "
     begin
       actor = Actor.new(
@@ -220,13 +220,13 @@ create_account() {
     fi
 }
 
-# Function to delete account
+# アカウント削除関数
 delete_account() {
     local account_number=$1
     
     print_info "アカウント削除の確認..."
     
-    # Get account details
+    # アカウント詳細を取得
     account_info=$(run_with_env "
     accounts = Actor.where(local: true).order(:created_at)
     if accounts.length >= $account_number
@@ -275,12 +275,12 @@ delete_account() {
     echo ""
     print_info "アカウントを削除中..."
     
-    # Delete account using improved deletion logic
+    # 改善された削除ロジックでアカウントを削除
     deletion_result=$(run_with_env "
     begin
       actor = Actor.find($account_id)
       
-      # Delete all dependent records in the correct order
+      # 全ての依存レコードを正しい順序で削除
       puts 'Deleting OAuth tokens...'
       Doorkeeper::AccessToken.where(resource_owner_id: actor.id).delete_all
       Doorkeeper::AccessGrant.where(resource_owner_id: actor.id).delete_all
@@ -350,14 +350,14 @@ delete_account() {
     fi
 }
 
-# Main script
+# メインスクリプト
 main() {
-    print_header "Letter ActivityPub アカウント管理"
+    print_header "letter アカウント管理"
     
     print_info "このインスタンスは最大2個のローカルアカウントまで作成できます"
     echo ""
     
-    # Get current account count
+    # 現在のアカウント数を取得
     account_count=$(get_local_accounts)
     
     case $account_count in

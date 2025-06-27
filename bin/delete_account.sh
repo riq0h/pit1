@@ -1,21 +1,21 @@
 #!/bin/bash
 
-# Letter ActivityPub Instance - Account Deletion Script
-# Deletes accounts with all dependent records
+# letter - Account Deletion Script
+# 全ての依存レコードと共にアカウントを削除
 
 set -e
 
-# Get the directory of this script and the project root
+# スクリプトのディレクトリとプロジェクトルートを取得
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Change to project root to ensure relative paths work
+# 相対パスが正しく動作するようプロジェクトルートに移動
 cd "$PROJECT_ROOT"
 
-# Load environment variables
+# 環境変数を読み込み
 source bin/load_env.sh
 
-# Colors for output
+# 出力用の色設定
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -23,7 +23,7 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Function to print colored output
+# カラー出力用関数
 print_header() {
     echo -e "${BLUE}========================================${NC}"
     echo -e "${BLUE}$1${NC}"
@@ -46,14 +46,14 @@ print_info() {
     echo -e "${CYAN}ℹ️${NC} $1"
 }
 
-# Function to delete an actor by ID or username
+# IDまたはユーザ名でアクターを削除する関数
 delete_actor() {
     local identifier="$1"
     
-    # Ruby script to delete an actor
+    # アクター削除用Rubyスクリプト
     deletion_result=$(run_with_env "
     begin
-      # Find actor by ID or username
+      # IDまたはユーザ名でアクターを検索
       if '$identifier'.match?(/^\\d+$/)
         actor = Actor.find_by(id: '$identifier')
       else
@@ -69,7 +69,7 @@ delete_actor() {
       puts 'found'
       puts \"ID: #{actor.id}, ユーザ名: #{actor.username}, 表示名: #{actor.display_name || '未設定'}\"
       
-      # Delete all dependent records in the correct order
+      # 全ての依存レコードを正しい順序で削除
       puts 'OAuthトークンを削除中...'
       begin
         Doorkeeper::AccessToken.where(resource_owner_id: actor.id).delete_all
@@ -79,10 +79,10 @@ delete_actor() {
       end
       
       puts '関連レコードを削除中...'
-      # Direct SQL deletion to avoid association issues
+      # アソシエーション問題を回避するための直接SQL削除
       actor_id = actor.id
       
-      # Delete using direct SQL to avoid ActiveRecord association problems
+      # ActiveRecordアソシエーション問題を回避するため直接SQLで削除
       ActiveRecord::Base.connection.execute(\"DELETE FROM web_push_subscriptions WHERE actor_id = #{actor_id}\")
       ActiveRecord::Base.connection.execute(\"DELETE FROM notifications WHERE account_id = #{actor_id}\")
       ActiveRecord::Base.connection.execute(\"DELETE FROM notifications WHERE from_account_id = #{actor_id}\")
@@ -110,7 +110,7 @@ delete_actor() {
     echo "$deletion_result"
 }
 
-# Main function
+# メイン関数
 main() {
     print_header "アカウント削除"
     

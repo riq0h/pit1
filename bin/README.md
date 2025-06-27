@@ -1,4 +1,4 @@
-# Letter ActivityPub Instance Management Scripts
+# letter Management Scripts
 
 bin/ディレクトリには、ActivityPub機能を管理するためのスクリプトが含まれています。
 

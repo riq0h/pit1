@@ -1,21 +1,21 @@
 #!/bin/bash
 
-# Letter ActivityPub Instance - OAuth Token Generation Script
+# letter - OAuth Token Generation Script
 # OAuthアクセストークンを生成して API 利用を可能にします
 
 set -e
 
-# Get the directory of this script and the project root
+# スクリプトのディレクトリとプロジェクトルートを取得
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Change to project root to ensure relative paths work
 cd "$PROJECT_ROOT"
 
-# Load environment variables
+# 環境変数を読み込み
 source bin/load_env.sh
 
-# Colors for output
+# 出力用の色設定
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -23,7 +23,7 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Function to print colored output
+# カラー出力用関数
 print_header() {
     echo -e "${BLUE}========================================${NC}"
     echo -e "${BLUE}$1${NC}"
@@ -46,7 +46,7 @@ print_info() {
     echo -e "${CYAN}ℹ️${NC} $1"
 }
 
-print_header "Letter ActivityPub OAuth トークン生成"
+print_header "letter OAuth トークン生成"
 echo ""
 
 print_info "このスクリプトはAPIアクセス用のOAuthトークンを生成します"
@@ -61,13 +61,13 @@ while true; do
         continue
     fi
     
-    # Basic username validation
+    # 基本的なユーザ名検証
     if [[ ! "$username" =~ ^[a-zA-Z0-9_]+$ ]]; then
         print_error "ユーザ名は英数字とアンダースコアのみ使用できます"
         continue
     fi
     
-    # Check if user exists
+    # ユーザが存在するかチェック
     user_check=$(run_with_env "
     if Actor.exists?(username: '$username', local: true)
       puts 'exists'
@@ -174,7 +174,7 @@ rm -f tmp_create_token.rb
 
 echo ""
 
-# Parse results
+# 結果を解析
 status=$(echo "$result" | grep "^success\|^error\|^exists" | head -1 | cut -d'|' -f1)
 message=$(echo "$result" | grep "^success\|^error\|^exists" | head -1 | cut -d'|' -f2)
 app_name=$(echo "$result" | grep "^app_name" | cut -d'|' -f2)

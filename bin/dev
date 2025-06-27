@@ -5,11 +5,11 @@ if ! gem list foreman -i --silent; then
   gem install foreman
 fi
 
-# Default to port 3000 if not specified
+# 未指定の場合はポート3000をデフォルトに設定
 export PORT="${PORT:-3000}"
 
-# Let the debug gem allow remote connections,
-# but avoid loading until `debugger` is called
+# debug gemでリモート接続を許可し、
+# `debugger`が呼ばれるまで読み込みを回避
 export RUBY_DEBUG_OPEN="true"
 export RUBY_DEBUG_LAZY="true"
 

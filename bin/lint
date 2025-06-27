@@ -6,14 +6,14 @@ set -e
 echo "🚀 Running letter Linting..."
 echo ""
 
-# Colors for output
+# 出力用の色設定
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Function to print status
+# ステータス出力用関数
 print_status() {
     echo -e "${BLUE}[letter]${NC} $1"
 }
@@ -30,7 +30,7 @@ print_error() {
     echo -e "${RED}✗${NC} $1"
 }
 
-# Check if required tools are available
+# 必要なツールが利用可能かチェック
 check_dependencies() {
     print_status "Checking dependencies..."
     
@@ -47,7 +47,7 @@ check_dependencies() {
     print_success "Dependencies check passed"
 }
 
-# Run Rubocop
+# Rubocopを実行
 run_rubocop() {
     print_status "Running Rubocop (Ruby linting)..."
     
@@ -59,7 +59,7 @@ run_rubocop() {
     fi
 }
 
-# Run ESLint
+# ESLintを実行
 run_eslint() {
     print_status "Running ESLint (JavaScript linting)..."
     
@@ -80,7 +80,7 @@ run_eslint() {
     fi
 }
 
-# Run Prettier
+# Prettierを実行
 run_prettier() {
     print_status "Running Prettier (Code formatting)..."
     
@@ -101,7 +101,7 @@ run_prettier() {
     fi
 }
 
-# Main execution
+# メイン実行
 main() {
     echo "=========================================="
     echo "🔍 letter Linting Suite"
@@ -113,7 +113,7 @@ main() {
     
     local exit_code=0
     
-    # Run all linters
+    # 全てのリンターを実行
     if ! run_rubocop; then
         exit_code=1
     fi
@@ -129,7 +129,7 @@ main() {
     fi
     echo ""
     
-    # Summary
+    # サマリー
     echo "=========================================="
     if [ $exit_code -eq 0 ]; then
         print_success "All linting checks passed! 🎉"
@@ -150,7 +150,7 @@ main() {
     exit $exit_code
 }
 
-# Handle command line arguments
+# コマンドライン引数を処理
 case "${1:-}" in
     --help|-h)
         echo "letter Linting Suite"

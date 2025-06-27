@@ -1,21 +1,21 @@
 #!/bin/bash
 
-# Letter ActivityPub Instance - Complete Cleanup & Restart Script
+# letter - Complete Cleanup & Restart Script
 # 完全クリーンアップ＆再起動スクリプト
 
 set -e
 
-# Get the directory of this script and the project root
+# スクリプトのディレクトリとプロジェクトルートを取得
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Change to project root to ensure relative paths work
 cd "$PROJECT_ROOT"
 
-# Load environment variables
+# 環境変数を読み込み
 source bin/load_env.sh
 
-# Colors for output
+# 出力用の色設定
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -23,7 +23,7 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Function to print colored output
+# カラー出力用関数
 print_header() {
     echo -e "${BLUE}========================================${NC}"
     echo -e "${BLUE}$1${NC}"
@@ -46,7 +46,7 @@ print_info() {
     echo -e "${CYAN}ℹ️${NC} $1"
 }
 
-print_header "Letter ActivityPub 完全クリーンアップ＆再起動"
+print_header "letter 完全クリーンアップ＆再起動"
 print_info "実行時刻: $(date)"
 
 # 1. 既存プロセスのクリーンアップ

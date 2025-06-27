@@ -1,4 +1,4 @@
-# Letter ActivityPub Instance - Docker Guide
+# letter - Docker Guide
 
 このドキュメントでは、DockerとDocker Composeを使用してletterを実行する方法を説明します。
 
