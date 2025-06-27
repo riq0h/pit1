@@ -9,6 +9,8 @@ class ScheduledStatus < ApplicationRecord
   validate :validate_scheduled_time
   validate :validate_params_format
 
+  after_create :schedule_publish_job
+
   scope :due, -> { where(scheduled_at: ..Time.current) }
   scope :pending, -> { where('scheduled_at > ?', Time.current) }
   scope :for_actor, ->(actor) { where(actor: actor) }
@@ -172,5 +174,9 @@ class ScheduledStatus < ApplicationRecord
         blurhash: attachment.blurhash
       }
     end
+  end
+
+  def schedule_publish_job
+    PublishScheduledStatusJob.set(wait_until: scheduled_at).perform_later(id)
   end
 end

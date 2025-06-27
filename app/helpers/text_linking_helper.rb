@@ -28,7 +28,7 @@ module TextLinkingHelper
     text.gsub(link_pattern) do
       url = ::Regexp.last_match(1)
       display_text = mask_protocol(url)
-      "<a href=\"#{url}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #9ca3af;\">#{display_text}</a>"
+      "<a href=\"#{url}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #525252;\">#{display_text}</a>"
     end
   end
 
@@ -38,7 +38,7 @@ module TextLinkingHelper
       username = ::Regexp.last_match(1)
       domain = ::Regexp.last_match(2)
       mention_url = build_mention_url(username, domain)
-      "<a href=\"#{mention_url}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #9ca3af;\">" \
+      "<a href=\"#{mention_url}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #525252;\">" \
         "@#{username}@#{domain}</a>"
     end
   end
@@ -68,7 +68,7 @@ module TextLinkingHelper
       unless inside_tag
         # リンク化
         display_text = mask_protocol(url[0])
-        linked_url = "<a href=\"#{url[0]}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #9ca3af;\">#{display_text}</a>"
+        linked_url = "<a href=\"#{url[0]}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #525252;\">#{display_text}</a>"
 
         # オフセットを考慮して置換
         actual_start = url_start + offset
@@ -87,7 +87,7 @@ module TextLinkingHelper
       username = ::Regexp.last_match(1)
       domain = ::Regexp.last_match(2)
       mention_url = build_mention_url(username, domain)
-      "<a href=\"#{mention_url}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #9ca3af;\">" \
+      "<a href=\"#{mention_url}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #525252;\">" \
         "@#{username}@#{domain}</a>"
     end
   end
