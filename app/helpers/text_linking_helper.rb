@@ -25,9 +25,11 @@ module TextLinkingHelper
 
   def apply_url_links(text)
     link_pattern = /(https?:\/\/[^\s]+)/
-    link_template = '<a href="\1" target="_blank" rel="noopener noreferrer">' \
-                    '\1</a>'
-    text.gsub(link_pattern, link_template)
+    text.gsub(link_pattern) do
+      url = ::Regexp.last_match(1)
+      display_text = mask_protocol(url)
+      "<a href=\"#{url}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #9ca3af;\">#{display_text}</a>"
+    end
   end
 
   def apply_mention_links(text)
@@ -36,7 +38,7 @@ module TextLinkingHelper
       username = ::Regexp.last_match(1)
       domain = ::Regexp.last_match(2)
       mention_url = build_mention_url(username, domain)
-      "<a href=\"#{mention_url}\" target=\"_blank\" rel=\"noopener noreferrer\">" \
+      "<a href=\"#{mention_url}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #9ca3af;\">" \
         "@#{username}@#{domain}</a>"
     end
   end
@@ -65,7 +67,8 @@ module TextLinkingHelper
 
       unless inside_tag
         # リンク化
-        linked_url = "<a href=\"#{url[0]}\" target=\"_blank\" rel=\"noopener noreferrer\">#{url[0]}</a>"
+        display_text = mask_protocol(url[0])
+        linked_url = "<a href=\"#{url[0]}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #9ca3af;\">#{display_text}</a>"
 
         # オフセットを考慮して置換
         actual_start = url_start + offset
@@ -84,7 +87,7 @@ module TextLinkingHelper
       username = ::Regexp.last_match(1)
       domain = ::Regexp.last_match(2)
       mention_url = build_mention_url(username, domain)
-      "<a href=\"#{mention_url}\" target=\"_blank\" rel=\"noopener noreferrer\">" \
+      "<a href=\"#{mention_url}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #9ca3af;\">" \
         "@#{username}@#{domain}</a>"
     end
   end
@@ -96,5 +99,54 @@ module TextLinkingHelper
     return '#' if safe_username.empty? || safe_domain.empty?
 
     "https://#{ERB::Util.url_encode(safe_domain)}/users/#{ERB::Util.url_encode(safe_username)}"
+  end
+
+  def mask_protocol(url)
+    # https://をマスクして表示
+    return url unless url.start_with?('https://')
+
+    url.delete_prefix('https://')
+  end
+
+  def extract_urls_from_content(content)
+    return [] if content.blank?
+
+    # HTMLタグ内のURLとプレーンテキストのURLを抽出
+    urls = []
+
+    # <a href="URL">形式のURLを抽出
+    content.scan(/<a[^>]+href=["']([^"']+)["'][^>]*>/i) do |url|
+      urls << url[0]
+    end
+
+    # プレーンテキストのURLを抽出
+    content.scan(/(https?:\/\/[^\s<>]+)/i) do |url|
+      urls << url[0]
+    end
+
+    urls.uniq.select { |url| valid_preview_url?(url) }
+  end
+
+  def valid_preview_url?(url)
+    return false if url.blank?
+
+    begin
+      uri = URI.parse(url)
+      return false unless %w[http https].include?(uri.scheme)
+      return false if uri.host.blank?
+
+      # ActivityPubのユーザリンク（メンション）は除外
+      # /users/username や /@username 形式のパスを除外
+      return false if /^\/(users\/|@)/.match?(uri.path)
+
+      # 画像・動画・音声ファイルは除外
+      path = uri.path.downcase
+      media_extensions = %w[.jpg .jpeg .png .gif .webp .mp4 .mp3 .wav .avi .mov .pdf]
+      return false if media_extensions.any? { |ext| path.end_with?(ext) }
+
+      true
+    rescue URI::InvalidURIError
+      false
+    end
   end
 end

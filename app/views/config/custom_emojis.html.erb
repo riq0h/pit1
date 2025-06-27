@@ -19,7 +19,7 @@
 
   <!-- タブナビゲーション -->
   <div class="mb-6">
-    <nav class="flex space-x-1 border-b border-gray-200">
+    <nav class="flex space-x-1">
       <%= link_to config_custom_emojis_path(tab: 'local'), 
           class: "tab-link #{@tab == 'local' ? 'tab-link-active' : 'tab-link-inactive'}" do %>
         ローカル
@@ -53,15 +53,18 @@
           </div>
           
           <div class="flex-shrink-0">
-            <%= form.select :enabled, 
-                options_for_select([
-                  ['すべて', ''],
-                  ['有効のみ', 'true'],
-                  ['無効のみ', 'false']
-                ], params[:enabled]),
-                {},
-                class: "form-select",
-                onchange: "this.form.requestSubmit()" %>
+            <label class="custom-select">
+              <%= form.select :enabled, 
+                  options_for_select([
+                    ['すべて', ''],
+                    ['有効のみ', 'true'],
+                    ['無効のみ', 'false']
+                  ], params[:enabled]),
+                  {},
+                  class: "form-select",
+                  style: "height: 2.60rem;",
+                  onchange: "this.form.requestSubmit()" %>
+            </label>
           </div>
           
           <%= form.submit "検索", 
@@ -79,24 +82,30 @@
           </div>
           
           <div class="flex-shrink-0">
-            <%= form.select :enabled, 
-                options_for_select([
-                  ['すべて', ''],
-                  ['有効のみ', 'true'],
-                  ['無効のみ', 'false']
-                ], params[:enabled]),
-                {},
-                class: "form-select",
-                onchange: "this.form.requestSubmit()" %>
+            <label class="custom-select">
+              <%= form.select :enabled, 
+                  options_for_select([
+                    ['すべて', ''],
+                    ['有効のみ', 'true'],
+                    ['無効のみ', 'false']
+                  ], params[:enabled]),
+                  {},
+                  class: "form-select",
+                  style: "height: 2.60rem;",
+                  onchange: "this.form.requestSubmit()" %>
+            </label>
           </div>
           
           <% if @remote_domains.present? %>
             <div class="flex-shrink-0">
-              <%= form.select :domain, 
-                  options_for_select([['全ドメイン', '']] + @remote_domains.map { |domain, count| ["#{domain} (#{count})", domain] }, params[:domain]),
-                  {},
-                  class: "form-select",
-                  onchange: "this.form.requestSubmit()" %>
+              <label class="custom-select">
+                <%= form.select :domain, 
+                    options_for_select([['全ドメイン', '']] + @remote_domains.map { |domain, count| ["#{domain} (#{count})", domain] }, params[:domain]),
+                    {},
+                    class: "form-select",
+                    style: "height: 2.60rem;",
+                    onchange: "this.form.requestSubmit()" %>
+              </label>
             </div>
           <% end %>
           
@@ -108,18 +117,22 @@
       <!-- リモート絵文字発見機能 -->
       <% if @tab == 'remote' %>
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-          <%= form_with url: discover_remote_config_custom_emojis_path, method: :post, class: "flex items-center space-x-2 flex-1" do |discovery_form| %>
-            <div class="flex-1">
+          <%= form_with url: discover_remote_config_custom_emojis_path, method: :post, class: "flex items-center space-x-4 flex-1" do |discovery_form| %>
+            <div class="flex-1 max-w-xs sm:max-w-sm">
               <%= discovery_form.text_field :domain, 
                   placeholder: "ドメインから発見（例: mastodon.social）",
                   class: "w-full form-input" %>
             </div>
-            <%= discovery_form.submit "発見", 
-                class: "btn-secondary whitespace-nowrap" %>
+            <div class="flex-shrink-0">
+              <%= discovery_form.submit "発見", 
+                  class: "btn-secondary whitespace-nowrap" %>
+            </div>
           <% end %>
-          <%= button_to "全ドメイン発見", discover_remote_config_custom_emojis_path, 
-              method: :post,
-              class: "btn-secondary w-full sm:w-auto" %>
+          <div class="flex-shrink-0">
+            <%= button_to "全ドメイン発見", discover_remote_config_custom_emojis_path, 
+                method: :post,
+                class: "btn-secondary whitespace-nowrap" %>
+          </div>
         </div>
       <% end %>
     <% end %>

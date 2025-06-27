@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS "relays" ("id" integer PRIMARY KEY AUTOINCREMENT NOT 
 CREATE UNIQUE INDEX "index_relays_on_inbox_url" ON "relays" ("inbox_url") /*application='Letter'*/;
 CREATE INDEX "index_relays_on_state" ON "relays" ("state") /*application='Letter'*/;
 CREATE INDEX "index_relays_on_follow_activity_id" ON "relays" ("follow_activity_id") /*application='Letter'*/;
+CREATE TABLE IF NOT EXISTS "link_previews" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "url" varchar NOT NULL, "title" varchar, "description" text, "image" varchar, "site_name" varchar, "preview_type" varchar DEFAULT 'website', "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
+CREATE UNIQUE INDEX "index_link_previews_on_url" ON "link_previews" ("url") /*application='Letter'*/;
 CREATE TABLE IF NOT EXISTS "follows" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "actor_id" integer NOT NULL, "target_actor_id" integer NOT NULL, "ap_id" varchar, "follow_activity_ap_id" varchar, "accepted" boolean DEFAULT 0, "accepted_at" datetime(6), "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_66a3328916"
 FOREIGN KEY ("actor_id")
   REFERENCES "actors" ("id")

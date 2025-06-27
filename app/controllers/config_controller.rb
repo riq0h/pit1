@@ -215,10 +215,13 @@ class ConfigController < ApplicationController
 
     actor_params = params.expect(actor: [:note, :avatar, :display_name, { fields: %i[name value] }])
 
-    # fieldsをJSON形式で保存
-    if actor_params[:fields].present?
-      clean_fields = actor_params[:fields].reject { |field| field[:name].blank? && field[:value].blank? }
-      actor_params[:fields] = clean_fields.to_json
+    # fieldsパラメータの再構成（配列形式からハッシュの配列へ）
+    if params[:actor][:fields].present?
+      fields_array = []
+      params[:actor][:fields].each do |field|
+        fields_array << { name: field[:name], value: field[:value] } if field[:name].present? || field[:value].present?
+      end
+      actor_params[:fields] = fields_array.to_json if fields_array.any?
     end
 
     current_user.update(actor_params)

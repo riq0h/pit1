@@ -1,0 +1,51 @@
+<%
+  # リンクプレビュー表示コンポーネント
+  # パラメータ: content (投稿内容)
+%>
+
+<%
+  # 投稿内容からURLを抽出
+  urls = extract_urls_from_content(content)
+  preview_url = urls.first # 最初のURLのみプレビュー表示
+%>
+
+<% if preview_url.present? %>
+  <% link_preview = LinkPreview.fetch_or_create(preview_url) %>
+  <% if link_preview&.title.present? %>
+    <div class="mt-3 border border-gray-200 overflow-hidden">
+      <a href="<%= link_preview.url %>" target="_blank" rel="noopener noreferrer" class="block hover:bg-gray-50 transition-colors">
+        <% if link_preview.image.present? %>
+          <div class="bg-gray-100 overflow-hidden" style="height: 200px;">
+            <img src="<%= link_preview.image %>" 
+                 alt="<%= link_preview.title %>"
+                 class="w-full h-full object-cover"
+                 loading="lazy"
+                 onerror="this.parentElement.style.display='none'">
+          </div>
+        <% end %>
+        
+        <div class="p-3">
+          <% if link_preview.site_name.present? %>
+            <div class="text-xs text-gray-500 mb-1">
+              <%= CGI.escapeHTML(link_preview.site_name) %>
+            </div>
+          <% end %>
+          
+          <div class="text-sm font-medium text-gray-900 line-clamp-2 mb-1">
+            <%= CGI.escapeHTML(link_preview.title) %>
+          </div>
+          
+          <% if link_preview.description.present? %>
+            <div class="text-xs text-gray-600 line-clamp-2">
+              <%= CGI.escapeHTML(link_preview.truncated_description(120)) %>
+            </div>
+          <% end %>
+          
+          <div class="text-xs text-gray-400 mt-2">
+            <%= mask_protocol(link_preview.url) %>
+          </div>
+        </div>
+      </a>
+    </div>
+  <% end %>
+<% end %>

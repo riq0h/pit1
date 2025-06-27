@@ -59,6 +59,10 @@
     <div class="whitespace-pre-wrap break-words"><%= final_content.html_safe %></div>
   </div>
 
+  <!-- リンクプレビュー -->
+  <%= render 'shared/post_card_link_preview', 
+             content: post.content %>
+
   <!-- メディア添付（ブログ記事内の画像として表示） -->
   <% if post.media_attachments.any? %>
     <div class="mt-6">

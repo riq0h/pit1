@@ -39,6 +39,10 @@
   <%= render 'shared/post_card_content', 
              content: display_content %>
 
+  <!-- リンクプレビュー -->
+  <%= render 'shared/post_card_link_preview', 
+             content: display_content %>
+
   <!-- 共通メディア -->
   <% if display_media.any? %>
     <%= render 'shared/post_card_media', 

@@ -50,6 +50,10 @@ Rails.application.routes.draw do
   # ホームページ
   root 'home#index'
 
+  # RSS/Atom feeds（プロフィールルートより先に定義）
+  get '/@:username.rss', to: 'feeds#user', format: :rss
+  get '/local.atom', to: 'feeds#local', format: :atom
+
   # ユーザプロフィール
   get '/@:username', to: 'profiles#show', as: :profile
   # 個別投稿表示
@@ -357,9 +361,6 @@ Rails.application.routes.draw do
   # 追加ルート
   # ================================
 
-  # RSS/Atom feeds
-  get '/@:username.rss', to: 'feeds#user', format: :rss
-  get '/local.atom', to: 'feeds#local', format: :atom
 
   # 静的ページ
   get '/about', to: 'pages#about'

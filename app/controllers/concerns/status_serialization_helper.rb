@@ -64,7 +64,7 @@ module StatusSerializationHelper
       mentions: serialized_mentions(status),
       tags: serialized_tags(status),
       emojis: serialized_emojis(status),
-      card: nil,
+      card: serialize_preview_card(status),
       poll: serialize_poll(status)
     }
   end
@@ -156,5 +156,35 @@ module StatusSerializationHelper
     end
 
     result
+  end
+
+  def serialize_preview_card(status)
+    return nil if status.content.blank?
+
+    # 投稿内容からURLを抽出
+    urls = extract_urls_from_content(status.content)
+    return nil if urls.empty?
+
+    # 最初のURLのプレビューカードを取得
+    preview_url = urls.first
+    link_preview = LinkPreview.find_by(url: preview_url)
+    return nil if link_preview&.title.blank?
+
+    {
+      url: link_preview.url,
+      title: link_preview.title || '',
+      description: link_preview.description || '',
+      type: link_preview.preview_type || 'link',
+      author_name: '',
+      author_url: '',
+      provider_name: link_preview.site_name || '',
+      provider_url: '',
+      html: '',
+      width: 0,
+      height: 0,
+      image: link_preview.image,
+      embed_url: '',
+      blurhash: nil
+    }
   end
 end

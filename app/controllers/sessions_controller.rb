@@ -28,10 +28,10 @@ class SessionsController < ApplicationController
   private
 
   def find_local_actor
-    username = params[:username]&.strip&.downcase
+    username = params[:username]&.strip
     return nil if username.blank?
 
-    Actor.local.find_by(username: username)
+    Actor.local.where('LOWER(username) = LOWER(?)', username).first
   end
 
   def login_success(actor)

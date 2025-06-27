@@ -86,20 +86,18 @@
 </div>
 
 <!-- タブナビゲーション -->
-<nav class="mb-8">
-  <div class="flex">
+<div class="mb-8">
+  <nav class="flex space-x-1">
     <%= link_to profile_path(@actor.username), 
-        class: "px-6 py-3 transition-colors #{@current_tab == 'posts' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-700'}", 
-        style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
+        class: "tab-link #{@current_tab == 'posts' ? 'tab-link-active' : 'tab-link-inactive'}" do %>
       投稿
     <% end %>
     <%= link_to profile_path(@actor.username, tab: 'media'), 
-        class: "px-6 py-3 transition-colors #{@current_tab == 'media' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-700'}", 
-        style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;" do %>
+        class: "tab-link #{@current_tab == 'media' ? 'tab-link-active' : 'tab-link-inactive'}" do %>
       画像
     <% end %>
-  </div>
-</nav>
+  </nav>
+</div>
 
 <!-- 検索結果エリア -->
 <%= turbo_frame_tag "search_results" do %>

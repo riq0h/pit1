@@ -25,6 +25,12 @@
     <%= csp_meta_tag %>
 
     <%= yield :head %>
+    
+    <!-- RSSフィード -->
+    <% if controller_name == 'profiles' && @actor %>
+      <link rel="alternate" type="application/rss+xml" title="<%= @actor.display_name.presence || @actor.username %> - RSS" href="<%= "/@#{@actor.username}.rss" %>">
+    <% end %>
+    <link rel="alternate" type="application/atom+xml" title="<%= blog_title %> - ローカルタイムライン" href="/local.atom">
 
     <%# インストール可能なアプリ用のPWAマニフェストを有効化（config/routes.rbでも有効化することを確認！） %>
     <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
@@ -76,7 +82,7 @@
                                     autocomplete: "off",
                                     autocorrect: "off",
                                     spellcheck: "false",
-                                    class: "px-2 py-1 border border-gray-300 text-xs sm:text-sm h-6 w-16 sm:w-20 focus:outline-none focus:border-gray-500",
+                                    class: "px-2 py-1 border border-gray-300 text-xs sm:text-sm h-6 w-16 sm:w-20 focus:border-gray-500",
                                     data: { turbo_action: "advance" } %>
                 <% if controller_name == 'profiles' && @actor %>
                   <%= form.hidden_field :username, value: @actor.username %>

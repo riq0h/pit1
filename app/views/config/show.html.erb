@@ -159,25 +159,22 @@
               <% begin %>
                 <% existing_links = JSON.parse(current_user.fields) %>
                 <% existing_links.each_with_index do |link, index| %>
-                  <div class="profile-link-item flex items-center">
+                  <div class="profile-link-item flex items-center gap-3">
                     <div class="w-24">
                       <input type="text" name="actor[fields][][name]" 
                              value="<%= link['name'] %>"
                              placeholder="ラベル"
-                             class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
-                             class="text-normal">
+                             class="w-full px-3 py-2 border border-gray-300 focus:border-gray-500 transition-colors text-sm">
                     </div>
-                    <div class="flex-1 mx-3">
+                    <div class="flex-1">
                       <input type="text" name="actor[fields][][value]" 
                              value="<%= link['value'] %>"
                              placeholder="値を入力"
-                             class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
-                             class="text-normal">
+                             class="w-full px-3 py-2 border border-gray-300 focus:border-gray-500 transition-colors text-sm">
                     </div>
-                    <div class="ml-2">
+                    <div>
                       <button type="button" onclick="removeProfileLink(this)" 
-                              class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm <%= 'hidden' if existing_links.length <= 1 %>"
-                              class="text-normal">
+                              class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm <%= 'hidden' if existing_links.length <= 1 %>">
                         削除
                       </button>
                     </div>
@@ -185,25 +182,24 @@
                 <% end %>
               <% rescue JSON::ParserError %>
                 <!-- JSON解析エラーの場合はデフォルトを表示 -->
-                <div class="profile-link-item flex items-center">
+                <div class="profile-link-item flex items-center gap-3">
                   <div class="w-24">
                     <input type="text" name="actor[fields][][name]" 
                            value=""
                            placeholder="ラベル"
-                           class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
+                           class="w-full px-3 py-2 border border-gray-300 focus:border-gray-500 transition-colors text-sm"
                            class="text-normal">
                   </div>
-                  <div class="flex-1 mx-3">
+                  <div class="flex-1">
                     <input type="text" name="actor[fields][][value]" 
                            value=""
                            placeholder="値を入力"
-                           class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
+                           class="w-full px-3 py-2 border border-gray-300 focus:border-gray-500 transition-colors text-sm"
                            class="text-normal">
                   </div>
-                  <div class="ml-2">
+                  <div>
                     <button type="button" onclick="removeProfileLink(this)" 
-                            class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm hidden"
-                            class="text-normal">
+                            class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm hidden">
                       削除
                     </button>
                   </div>
@@ -211,25 +207,24 @@
               <% end %>
             <% else %>
               <!-- 既存データがない場合のデフォルト表示 -->
-              <div class="profile-link-item flex items-center">
+              <div class="profile-link-item flex items-center gap-3">
                 <div class="w-24">
                   <input type="text" name="actor[fields][][name]" 
                          value=""
                          placeholder="ラベル"
-                         class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
+                         class="w-full px-3 py-2 border border-gray-300 focus:border-gray-500 transition-colors text-sm"
                          class="text-normal">
                 </div>
-                <div class="flex-1 mx-3">
+                <div class="flex-1">
                   <input type="text" name="actor[fields][][value]" 
                          value=""
                          placeholder="値を入力"
-                         class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
+                         class="w-full px-3 py-2 border border-gray-300 focus:border-gray-500 transition-colors text-sm"
                          class="text-normal">
                 </div>
-                <div class="ml-2">
+                <div>
                   <button type="button" onclick="removeProfileLink(this)" 
-                          class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm hidden"
-                          class="text-normal">
+                          class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm hidden">
                     削除
                   </button>
                 </div>
@@ -354,7 +349,7 @@
                 value: @config[:background_color],
                 placeholder: "#fdfbfb",
                 pattern: "#[0-9a-fA-F]{6}",
-                class: "flex-1 px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors font-mono",
+                class: "flex-1 px-3 py-2 border border-gray-300 focus:border-gray-500 transition-colors font-mono",
                 style: "font-family: 'Noto Sans JP', sans-serif; font-weight: 400;",
                 id: "background_color_input",
                 oninput: "updateColorPreview(this.value)" %>
@@ -510,26 +505,23 @@ function addProfileLink() {
   }
   
   const newItem = document.createElement('div');
-  newItem.className = 'profile-link-item flex items-center';
+  newItem.className = 'profile-link-item flex items-center gap-3';
   newItem.innerHTML = `
     <div class="w-24">
       <input type="text" name="actor[fields][][name]" 
              value=""
              placeholder="ラベル"
-             class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
-             class="text-normal">
+             class="w-full px-3 py-2 border border-gray-300 focus:border-gray-500 transition-colors text-sm">
     </div>
-    <div class="flex-1 mx-3">
+    <div class="flex-1">
       <input type="text" name="actor[fields][][value]" 
              value=""
              placeholder="値を入力"
-             class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-gray-500 transition-colors text-sm"
-             class="text-normal">
+             class="w-full px-3 py-2 border border-gray-300 focus:border-gray-500 transition-colors text-sm">
     </div>
-    <div class="ml-2">
+    <div>
       <button type="button" onclick="removeProfileLink(this)" 
-              class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm"
-              class="text-normal">
+              class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm">
         削除
       </button>
     </div>

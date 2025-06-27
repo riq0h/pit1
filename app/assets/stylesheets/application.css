@@ -1,3 +1,14 @@
+/* フォーカス時の角丸を削除 */
+*:focus {
+  outline: none !important;
+  border-radius: 0 !important;
+}
+
+*:focus-visible {
+  outline: none !important;
+  border-radius: 0 !important;
+}
+
 /* ActivityPub固有のスタイル */
 .activity-stream {
   @apply space-y-4;
@@ -127,6 +138,62 @@ a:not(.no-hover):not(.btn-secondary):active {
 a {
   text-decoration: none !important;
 }
+
+/* invisibleクラスでプロトコル部分を非表示 */
+.invisible {
+  display: none !important;
+}
+
+/* 行数制限クラス */
+.line-clamp-2 {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+/* カスタムセレクトボックス */
+.custom-select {
+  position: relative;
+  display: inline-block;
+}
+
+.custom-select select {
+  appearance: none;
+  background: var(--page-background-color, #fdfbfb);
+  border: 1px solid #d1d5db;
+  border-radius: 0;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  cursor: pointer;
+}
+
+.custom-select::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid #6b7280;
+  pointer-events: none;
+}
+
+/* すべてのselect要素にカスタムスタイル適用 */
+select {
+  appearance: none !important;
+  background: var(--page-background-color, #fdfbfb) !important;
+  border-radius: 0 !important;
+}
+
+select:focus {
+  border-color: #6b7280 !important;
+}
+
 
 /* 投稿カード共通スタイル - 最高優先度 */
 .post-card-avatar-container {
@@ -300,7 +367,6 @@ a {
 }
 
 .form-input:focus {
-  outline: none !important;
   border-color: #6b7280 !important;
 }
 
@@ -313,7 +379,6 @@ a {
 }
 
 .form-select:focus {
-  outline: none !important;
   border-color: #6b7280 !important;
 }
 
@@ -353,7 +418,7 @@ a {
 }
 
 .tab-link-active {
-  border-bottom: 2px solid #6b7280 !important;
+  border-bottom: 1px solid #9ca3af !important;
   color: #111827 !important;
 }
 

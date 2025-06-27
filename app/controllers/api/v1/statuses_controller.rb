@@ -323,14 +323,18 @@ module Api
       end
 
       def permit_status_params
-        params.permit(:status, :in_reply_to_id, :sensitive, :spoiler_text, :visibility, :language, media_ids: [], mentions: [],
-                                                                                                   poll: [:expires_in, :multiple, :hide_totals, { options: [] }])
+        params.permit(:status, :text, :in_reply_to_id, :sensitive, :spoiler_text, :visibility, :language, media_ids: [], mentions: [],
+                                                                                                          poll: [:expires_in, :multiple, :hide_totals, { options: [] }])
       end
 
       def transform_param_keys(permitted_params)
+        # textパラメータがある場合はstatusにマップ
+        permitted_params['status'] = permitted_params['text'] if permitted_params['text'].present? && permitted_params['status'].blank?
+
         permitted_params.transform_keys do |key|
           case key
           when 'status' then 'content'
+          when 'text' then 'content'
           when 'spoiler_text' then 'summary'
           when 'in_reply_to_id' then 'in_reply_to_ap_id'
           else key
@@ -479,7 +483,6 @@ module Api
                          .limit(20)
       end
 
-
       def convert_mentions_to_html_links
         return if @status.content.blank?
         return if @status.content.include?('<a ') # 既にHTMLリンクが含まれている場合はスキップ
@@ -593,6 +596,10 @@ module Api
         return render_validation_failed('Invalid scheduled_at format') unless scheduled_at
 
         scheduled_params = prepare_scheduled_params
+
+        # statusパラメータの存在を確認
+        return render_validation_failed('Status text is required') if scheduled_params['status'].blank?
+
         media_attachment_ids = params[:media_ids] || []
 
         scheduled_status = current_user.scheduled_statuses.build(
@@ -617,9 +624,17 @@ module Api
       end
 
       def prepare_scheduled_params
-        base_params = params.permit(:status, :in_reply_to_id, :sensitive, :spoiler_text, :visibility, :language)
-                            .to_h
-                            .compact
+        # 予約投稿パラメータ許可
+        permitted = params.permit(:status, :text, :in_reply_to_id, :sensitive, :spoiler_text, :visibility, :language,
+                                  poll: [:expires_in, :multiple, :hide_totals, { options: [] }])
+
+        base_params = permitted.to_h.compact
+
+        # textパラメータがある場合はstatusにマップ
+        base_params['status'] = base_params['text'] if base_params['text'].present? && base_params['status'].blank?
+
+        # textパラメータは削除（statusを使用）
+        base_params.delete('text')
 
         # Add poll parameters if present
         base_params['poll'] = poll_params if poll_params.present?

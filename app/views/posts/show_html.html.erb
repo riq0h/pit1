@@ -51,6 +51,10 @@
     <div class="whitespace-pre-wrap break-words"><%= final_content.html_safe %></div>
   </div>
 
+  <!-- リンクプレビュー -->
+  <%= render 'shared/post_card_link_preview', 
+             content: @post.content %>
+
   <!-- メディア添付 -->
   <% if @post.media_attachments.any? %>
     <div class="mb-4">
@@ -147,6 +151,10 @@
             %>
             <div class="whitespace-pre-wrap break-words"><%= final_reply_content.html_safe %></div>
           </div>
+
+          <!-- リンクプレビュー -->
+          <%= render 'shared/post_card_link_preview', 
+                     content: reply.content %>
 
           <!-- メディア添付 -->
           <% if reply.media_attachments.any? %>

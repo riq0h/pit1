@@ -133,9 +133,15 @@ class ScheduledStatus < ApplicationRecord
   end
 
   def serialize_params
-    params.except('poll').merge(
+    # Mastodon APIとの互換性のため、statusをtextとしても提供
+    base_params = params.except('poll').merge(
       poll: params['poll'] ? serialize_poll_params : nil
     ).compact
+
+    # statusフィールドが存在する場合、textフィールドとしても提供
+    base_params['text'] = base_params['status'] if base_params['status'].present?
+
+    base_params
   end
 
   def serialize_poll_params

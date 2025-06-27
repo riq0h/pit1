@@ -45,7 +45,7 @@ module ErrorResponseHelper
     render json: { error: "#{feature} not available in letter" }, status: :unprocessable_entity
   end
 
-  # ローカルユーザー限定
+  # ローカルユーザ限定
   def render_local_only
     render json: { error: 'This method is only available to local users' }, status: :unprocessable_content
   end

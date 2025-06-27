@@ -12,30 +12,37 @@
             
             <div class="flex items-center space-x-1">
               <% if params[:tab] == 'remote' %>
-                <%= form.select :action_type, 
-                    options_for_select([
-                      ['操作選択', ''],
-                      ['コピー', 'copy'],
-                      ['有効化', 'enable'],
-                      ['無効化', 'disable'],
-                      ['削除', 'delete']
-                    ]),
-                    {},
-                    class: "form-select text-xs" %>
+                <label class="custom-select">
+                  <%= form.select :action_type, 
+                      options_for_select([
+                        ['操作選択', ''],
+                        ['コピー', 'copy'],
+                        ['有効化', 'enable'],
+                        ['無効化', 'disable'],
+                        ['削除', 'delete']
+                      ]),
+                      {},
+                      class: "text-xs",
+                      style: "height: 2rem;" %>
+                </label>
               <% else %>
-                <%= form.select :action_type, 
-                    options_for_select([
-                      ['操作選択', ''],
-                      ['有効化', 'enable'],
-                      ['無効化', 'disable'],
-                      ['削除', 'delete']
-                    ]),
-                    {},
-                    class: "form-select text-xs" %>
+                <label class="custom-select">
+                  <%= form.select :action_type, 
+                      options_for_select([
+                        ['操作選択', ''],
+                        ['有効化', 'enable'],
+                        ['無効化', 'disable'],
+                        ['削除', 'delete']
+                      ]),
+                      {},
+                      class: "text-xs",
+                      style: "height: 2rem;" %>
+                </label>
               <% end %>
               
               <%= form.submit "実行", 
                   class: "btn-secondary text-xs whitespace-nowrap",
+                  style: "height: 2rem;",
                   onclick: "return confirmBulkAction()" %>
               
               <%= form.hidden_field :tab, value: params[:tab] %>
@@ -52,7 +59,7 @@
     <!-- 絵文字リスト -->
     <div class="divide-y divide-gray-200">
       <% custom_emojis.each do |emoji| %>
-        <div class="px-4 sm:px-6 py-4 flex items-center justify-between">
+        <div class="px-4 sm:px-6 py-4 flex items-center justify-between gap-2">
           <div class="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
             <input type="checkbox" name="emoji_ids[]" value="<%= emoji.id %>" 
                    class="emoji-checkbox custom-checkbox flex-shrink-0"
@@ -90,7 +97,7 @@
             </div>
           </div>
           
-          <div class="flex items-center space-x-1 sm:space-x-3 flex-shrink-0 ml-2">
+          <div class="flex items-center space-x-1 sm:space-x-3 flex-shrink-0">
             <!-- 編集アイコン（ローカル絵文字のみ） -->
             <% if emoji.local? %>
               <%= link_to edit_config_custom_emoji_path(emoji), 

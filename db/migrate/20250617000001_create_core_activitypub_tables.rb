@@ -159,5 +159,17 @@ class CreateCoreActivitypubTables < ActiveRecord::Migration[8.0]
       
       t.timestamps
     end
+
+    # リンクプレビュー（OGP）テーブル
+    create_table :link_previews do |t|
+      t.string :url, null: false, index: { unique: true }
+      t.string :title
+      t.text :description
+      t.string :image
+      t.string :site_name
+      t.string :preview_type, default: 'website'
+      
+      t.timestamps
+    end
   end
 end
