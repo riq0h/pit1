@@ -98,7 +98,7 @@ class CreateCoreActivitypubTables < ActiveRecord::Migration[8.0]
 
     # ActivityPubアクティビティテーブル
     create_table :activities, id: :string do |t|
-      # ActivityPub metadata
+      # ActivityPubメタデータ
       t.string :ap_id, null: false, index: { unique: true }
       t.string :activity_type, null: false, index: true
       t.references :actor, foreign_key: true, type: :integer, null: false, index: true

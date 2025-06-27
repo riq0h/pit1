@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= content_for?(:title) ? yield(:title) + ' - Letter' : 'Letter' %></title>
+  <title><%= content_for?(:title) ? yield(:title) + ' | letter' : 'letter' %></title>
   <%= csrf_meta_tags %>
   <%= csp_meta_tag %>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Google Fonts -->
+  <!-- Googleフォント -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   
-  <!-- Custom Styles -->
+  <!-- カスタムスタイル -->
   <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
   <style>
     body {

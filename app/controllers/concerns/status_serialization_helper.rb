@@ -147,7 +147,7 @@ module StatusSerializationHelper
     poll = status.poll
     result = poll.to_mastodon_api
 
-    # Add current user specific data if authenticated
+    # 認証済みの場合は現在のユーザ固有データを追加
     if current_user
       # 一度のクエリで投票情報を取得
       user_votes = poll.poll_votes.where(actor: current_user)

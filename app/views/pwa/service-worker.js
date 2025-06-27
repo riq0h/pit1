@@ -1,4 +1,4 @@
-// Add a service worker for processing Web Push notifications:
+// Webプッシュ通知処理用のサービスワーカーを追加:
 //
 // self.addEventListener("push", async (event) => {
 //   const { title, options } = await event.data.json()

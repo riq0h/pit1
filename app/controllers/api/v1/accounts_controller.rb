@@ -435,11 +435,11 @@ module Api
       end
 
       def process_block_action
-        # Remove any existing follow relationships (both directions)
+        # 既存のフォロー関係を削除（双方向）
         current_user.follows.find_by(target_actor: @account)&.destroy
         @account.follows.find_by(target_actor: current_user)&.destroy
 
-        # Create block
+        # ブロックを作成
         current_user.blocks.find_or_create_by(target_actor: @account)
       end
 

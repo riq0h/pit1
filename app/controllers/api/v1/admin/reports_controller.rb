@@ -10,7 +10,7 @@ module Api
 
         # GET /api/v1/admin/reports
         def index
-          # Letterでは簡素化されたレポート機能
+          # letterでは簡素化されたレポート機能
           # 実際のレポートシステムは今回は未実装
           render json: []
         end

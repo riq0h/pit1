@@ -35,7 +35,7 @@ class ActivityPubObject < ApplicationRecord
   has_many :quotes_of_this, class_name: 'QuotePost', dependent: :destroy, foreign_key: :quoted_object_id, inverse_of: :quoted_object
   has_one :poll, dependent: :destroy, foreign_key: :object_id, primary_key: :id
 
-  # Conversations (for direct messages)
+  # 会話（ダイレクトメッセージ用）
   belongs_to :conversation, optional: true
 
   # === スコープ ===

@@ -38,7 +38,7 @@ module Api
 
       # GET /api/v1/trends/links
       def links
-        # Letterでは外部リンクのトレンド機能は簡素化
+        # letterでは外部リンクのトレンド機能は簡素化
         # 空配列を返す
         render json: []
       end
@@ -46,7 +46,7 @@ module Api
       private
 
       def generate_trending_tags(limit)
-        # Letterでは簡素化されたトレンド機能
+        # letterでは簡素化されたトレンド機能
         # リモート投稿から使用されたタグを使用回数順で返す（ローカル投稿は除外）
         Tag.joins('JOIN object_tags ON tags.id = object_tags.tag_id')
            .joins('JOIN objects ON object_tags.object_id = objects.id')

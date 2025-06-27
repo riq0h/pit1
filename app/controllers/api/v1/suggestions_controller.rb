@@ -18,7 +18,7 @@ module Api
 
       # DELETE /api/v1/suggestions/:id
       def destroy
-        # Letterでは推奨機能のカスタマイズは簡素化
+        # letterでは推奨機能のカスタマイズは簡素化
         # 削除リクエストは受け入れるが、実際の処理は行わない
         render json: {}
       end
@@ -26,7 +26,7 @@ module Api
       private
 
       def generate_suggestions(limit)
-        # Letterでは2ユーザ制限なので、ローカルアカウントは推奨対象外
+        # letterでは2ユーザ制限なので、ローカルアカウントは推奨対象外
         # 既にフォローしていないリモートユーザから推奨
         already_following_ids = current_user.following.pluck(:id)
 

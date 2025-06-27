@@ -6,7 +6,7 @@ module Api
       before_action :doorkeeper_authorize!, only: [:verify_credentials]
 
       # POST /api/v1/apps
-      # Register a new application
+      # 新しいアプリケーションを登録
       def create
         @application = ::Doorkeeper::Application.new(application_params)
 
@@ -19,7 +19,7 @@ module Api
       end
 
       # GET /api/v1/apps/verify_credentials
-      # Verify application credentials
+      # アプリケーション認証情報を検証
       def verify_credentials
         render json: serialized_application(doorkeeper_token.application)
       end

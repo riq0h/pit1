@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom utilities for letter */
+/* カスタムユーティリティ */
 @layer utilities {
   .posts-section-spacing {
     margin-top: 2rem; /* 32px equivalent */

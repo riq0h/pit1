@@ -38,7 +38,7 @@ module Api
       def create
         return render_authentication_required unless current_user
 
-        # Handle scheduled status
+        # 予約投稿の処理
         return create_scheduled_status if params[:scheduled_at].present?
 
         @status = build_status_object

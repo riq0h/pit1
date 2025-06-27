@@ -1,4 +1,4 @@
-// ActivityPub Client-side utilities
+// ActivityPubクライアントサイドユーティリティ
 
 class ActivityPubClient {
   constructor(baseUrl) {

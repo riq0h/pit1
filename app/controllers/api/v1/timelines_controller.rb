@@ -77,7 +77,7 @@ module Api
                                  .where(is_pinned_only: false)
                                  .order('objects.id DESC')
 
-        # Apply user-specific filters if authenticated
+        # 認証済みの場合はユーザ固有のフィルタを適用
         query = apply_user_filters(query) if current_user
 
         query

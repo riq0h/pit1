@@ -40,7 +40,7 @@ module ErrorResponseHelper
     render json: { error: 'Rate limit exceeded' }, status: :too_many_requests
   end
 
-  # Letter未実装機能
+  # letter未実装機能
   def render_not_implemented(feature = 'Feature')
     render json: { error: "#{feature} not available in letter" }, status: :unprocessable_entity
   end

@@ -60,7 +60,7 @@ class Actor < ApplicationRecord
   has_many :conversation_participants, dependent: :destroy
   has_many :conversations, through: :conversation_participants
 
-  # OAuth 2.0 associations (Doorkeeper)
+  # OAuth 2.0関連
   has_many :access_grants,
            class_name: 'Doorkeeper::AccessGrant',
            foreign_key: :resource_owner_id,
@@ -238,7 +238,7 @@ class Actor < ApplicationRecord
     update_column(:posts_count, count)
   end
 
-  # Block/Mute helper methods
+  # ブロック・ミュートヘルパーメソッド
   def blocking?(actor)
     return false unless actor
 
@@ -522,7 +522,7 @@ class Actor < ApplicationRecord
     []
   end
 
-  # Get base URL from request or fallback to config
+  # ベースURL取得
   def get_base_url(_request = nil)
     # 常に設定からのドメインを使用（.envで設定されたACTIVITYPUB_DOMAINを優先）
     build_url_from_config
@@ -582,13 +582,13 @@ class Actor < ApplicationRecord
 
   public
 
-  # FollowServiceを使用して他のアクターをフォローするメソッドを追加
+  # フォロー実行
   def follow!(target_actor_or_uri)
     follow_service = FollowService.new(self)
     follow_service.follow!(target_actor_or_uri)
   end
 
-  # FollowServiceを使用して他のアクターをアンフォローするメソッドを追加
+  # アンフォロー実行
   def unfollow!(target_actor_or_uri)
     follow_service = FollowService.new(self)
     follow_service.unfollow!(target_actor_or_uri)

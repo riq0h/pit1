@@ -8,7 +8,7 @@ module Api
 
       # GET /api/v1/announcements
       def index
-        # Letterは2ユーザ制限の軽量実装のため、お知らせ機能はスタブ実装
+        # letterは2ユーザ制限の軽量実装のため、お知らせ機能はスタブ実装
         # サードパーティクライアントの互換性のため空配列を返す
         render json: []
       end

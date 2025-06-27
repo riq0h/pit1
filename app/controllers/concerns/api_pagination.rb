@@ -20,15 +20,15 @@ module ApiPagination
   def pagination_links(items)
     links = []
 
-    # Get the actual records (handle both arrays and AR relations)
+    # 実際のレコードを取得（配列とActiveRecord relationの両方を処理）
     records = items.respond_to?(:to_a) ? items.to_a : items
 
     return '' if records.empty?
 
-    # Extract IDs from records
+    # レコードからIDを抽出
     ids = extract_ids(records)
 
-    # Build pagination links
+    # ページネーションリンクを構築
     links << link_next(ids) if ids.size >= limit_param
     links << link_prev(ids) if ids.any?
 
@@ -41,10 +41,10 @@ module ApiPagination
       when ActivityPubObject
         record.id
       when Reblog
-        # For reblogs, use the reblogged object's ID for consistency
+        # リブログの場合は一貫性のためリブログ対象オブジェクトのIDを使用
         record.object_id
       when Hash
-        # Handle timeline items that are hashes with object key
+        # objectキーを持つハッシュのタイムラインアイテムを処理
         if record[:object].is_a?(ActivityPubObject)
           record[:object].id
         elsif record[:object].is_a?(Reblog)
@@ -59,7 +59,7 @@ module ApiPagination
   def link_next(ids)
     return unless ids.any?
 
-    # The last ID in the current page becomes max_id for next page
+    # 現在ページの最後のIDが次ページのmax_idになる
     max_id = ids.last
     "<#{api_pagination_url(max_id: max_id)}>; rel=\"next\""
   end
@@ -67,7 +67,7 @@ module ApiPagination
   def link_prev(ids)
     return unless ids.any?
 
-    # The first ID in the current page becomes since_id for prev page
+    # 現在ページの最初のIDが前ページのsince_idになる
     since_id = ids.first
     "<#{api_pagination_url(since_id: since_id)}>; rel=\"prev\""
   end
@@ -75,7 +75,7 @@ module ApiPagination
   def api_pagination_url(params_hash)
     url_params = request.query_parameters.merge(params_hash)
 
-    # Remove conflicting parameters
+    # 競合するパラメータを削除
     if params_hash[:max_id]
       url_params.delete(:since_id)
       url_params.delete(:min_id)
@@ -84,10 +84,10 @@ module ApiPagination
       url_params.delete(:min_id)
     end
 
-    # Ensure limit is included
+    # limitが含まれることを保証
     url_params[:limit] = limit_param
 
-    # Build URL
+    # URL構築
     "#{request.base_url}#{request.path}?#{url_params.to_query}"
   end
 
@@ -110,7 +110,7 @@ module ApiPagination
   end
 
   def include_total_count?
-    # Optional: Add total count header for some endpoints
+    # オプション: 一部のエンドポイントで総数ヘッダーを追加
     false
   end
 
@@ -120,7 +120,7 @@ module ApiPagination
     items.size
   end
 
-  # Helper method to paginate and set headers in one call
+  # ページネーションとヘッダー設定を一度に行うヘルパーメソッド
   def paginate_with_headers(items)
     @paginated_items = items
     insert_pagination_headers
