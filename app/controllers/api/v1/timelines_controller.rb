@@ -15,174 +15,35 @@ module Api
       def home
         return render_authentication_required unless current_user
 
-        timeline_items = build_home_timeline_query
+        timeline_builder = TimelineBuilderService.new(current_user, timeline_params)
+        timeline_items = timeline_builder.build_home_timeline
+
         @paginated_items = timeline_items
         render json: timeline_items.map { |item| serialize_timeline_item(item) }
       end
 
       # GET /api/v1/timelines/public
       def public
-        statuses = build_public_timeline_query
+        timeline_builder = TimelineBuilderService.new(current_user, timeline_params)
+        statuses = timeline_builder.build_public_timeline
+
         @paginated_items = statuses
         render json: statuses.map { |status| serialized_status(status) }
       end
 
       # GET /api/v1/timelines/tag/:hashtag
       def tag
-        hashtag_name = params[:hashtag]
-        statuses = build_hashtag_timeline_query(hashtag_name)
+        timeline_builder = TimelineBuilderService.new(current_user, timeline_params)
+        statuses = timeline_builder.build_hashtag_timeline(params[:hashtag])
+
         @paginated_items = statuses
         render json: statuses.map { |status| serialized_status(status) }
       end
 
       private
 
-      def build_home_timeline_query
-        followed_ids = current_user.followed_actors.pluck(:id) + [current_user.id]
-
-        statuses = base_timeline_query.where(actors: { id: followed_ids })
-        statuses = apply_pagination_filters(statuses).limit(limit_param * 2)
-
-        reblogs = Reblog.joins(:actor, :object)
-                        .where(actor_id: followed_ids)
-                        .where(objects: { visibility: %w[public unlisted] })
-                        .includes(:object, :actor)
-        reblogs = apply_reblog_pagination_filters(reblogs).limit(limit_param * 2)
-
-        merge_timeline_items(statuses, reblogs)
-      end
-
-      def build_public_timeline_query
-        statuses = base_timeline_query.where(visibility: 'public')
-        statuses = statuses.where(actors: { local: true }) if local_only?
-        apply_pagination_filters(statuses).limit(limit_param)
-      end
-
-      def build_hashtag_timeline_query(hashtag_name)
-        # ハッシュタグに関連する投稿を取得
-        tag = Tag.find_by(name: hashtag_name)
-        return ActivityPubObject.none unless tag
-
-        statuses = base_timeline_query
-                   .joins(:tags)
-                   .where(tags: { id: tag.id })
-                   .where(visibility: 'public')
-        apply_pagination_filters(statuses).limit(limit_param)
-      end
-
-      def base_timeline_query
-        query = ActivityPubObject.joins(:actor)
-                                 .includes(:poll)
-                                 .where(object_type: %w[Note Question])
-                                 .where(is_pinned_only: false)
-                                 .order('objects.id DESC')
-
-        # 認証済みの場合はユーザ固有のフィルタを適用
-        query = apply_user_filters(query) if current_user
-
-        query
-      end
-
-      def apply_user_filters(query)
-        query = exclude_blocked_users(query)
-        query = exclude_muted_users(query)
-        exclude_domain_blocked_users(query)
-      end
-
-      def exclude_blocked_users(query)
-        blocked_actor_ids = current_user.blocked_actors.pluck(:id)
-        return query unless blocked_actor_ids.any?
-
-        query.where.not(actors: { id: blocked_actor_ids })
-      end
-
-      def exclude_muted_users(query)
-        muted_actor_ids = current_user.muted_actors.pluck(:id)
-        return query unless muted_actor_ids.any?
-
-        query.where.not(actors: { id: muted_actor_ids })
-      end
-
-      def exclude_domain_blocked_users(query)
-        blocked_domains = current_user.domain_blocks.pluck(:domain)
-        return query unless blocked_domains.any?
-
-        query.where.not(actors: { domain: blocked_domains })
-      end
-
-      def apply_pagination_filters(query)
-        query = query.where(objects: { id: ...(params[:max_id]) }) if params[:max_id].present?
-        query = query.where('objects.id > ?', params[:since_id]) if params[:since_id].present? && params[:min_id].blank?
-        query = query.where('objects.id > ?', params[:min_id]) if params[:min_id].present?
-        query
-      end
-
-      def local_only?
-        params[:local].present? && params[:local] != 'false'
-      end
-
-      def apply_reblog_pagination_filters(query)
-        if params[:max_id].present?
-          max_object = ActivityPubObject.find_by(id: params[:max_id])
-          return Reblog.none unless max_object
-
-          query = query.where(reblogs: { created_at: ...max_object.published_at })
-
-        end
-
-        if params[:since_id].present? && params[:min_id].blank?
-          since_object = ActivityPubObject.find_by(id: params[:since_id])
-          query = query.where('reblogs.created_at > ?', since_object.published_at) if since_object
-        end
-
-        if params[:min_id].present?
-          min_object = ActivityPubObject.find_by(id: params[:min_id])
-          query = query.where('reblogs.created_at > ?', min_object.published_at) if min_object
-        end
-
-        query
-      end
-
-      def merge_timeline_items(statuses, reblogs)
-        status_array = statuses.to_a
-        reblog_array = reblogs.to_a
-
-        return [] if status_array.empty? && reblog_array.empty?
-
-        seen_status_ids = Set.new
-        merged_items = []
-
-        all_items = status_array.map do |status|
-          {
-            item: status,
-            timestamp: status.published_at,
-            is_reblog: false,
-            status_id: status.id
-          }
-        end
-
-        reblog_array.each do |reblog|
-          all_items << {
-            item: reblog,
-            timestamp: reblog.created_at,
-            is_reblog: true,
-            status_id: reblog.object_id
-          }
-        end
-
-        all_items.sort_by! { |item| -item[:timestamp].to_f }
-
-        all_items.each do |item_data|
-          status_id = item_data[:status_id]
-
-          next if seen_status_ids.include?(status_id)
-
-          seen_status_ids.add(status_id)
-          merged_items << item_data[:item]
-          break if merged_items.length >= limit_param
-        end
-
-        merged_items
+      def timeline_params
+        params.permit(:max_id, :since_id, :min_id, :local).merge(limit: limit_param)
       end
 
       def serialize_timeline_item(item)

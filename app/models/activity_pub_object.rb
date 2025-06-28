@@ -73,15 +73,7 @@ class ActivityPubObject < ApplicationRecord
 
   # === URL生成メソッド ===
   def public_url
-    return ap_id if ap_id.present? && !local?
-    return nil unless actor&.username
-
-    # base_urlから適切なURLを生成
-    base_url = Rails.application.config.activitypub.base_url
-    "#{base_url}/@#{actor.username}/#{id}"
-  rescue StandardError => e
-    Rails.logger.warn "Failed to generate public_url for object #{id}: #{e.message}"
-    ap_id.presence || ''
+    ActivityPubContentProcessor.new(self).public_url
   end
 
   def activitypub_url
@@ -165,117 +157,13 @@ class ActivityPubObject < ApplicationRecord
   # === ActivityPub JSON-LD出力 ===
 
   def to_activitypub
-    data = base_activitypub_data.merge(
-      extended_activitypub_data
-    )
-
-    data['inReplyTo'] = data['inReplyTo'] || nil
-    data['summary'] = data['summary'] || nil
-
-    data = data.reject { |k, v| v.nil? && %w[inReplyTo summary].exclude?(k) }
-
-    if poll.present?
-      data['type'] = 'Question'
-      data['endTime'] = poll.expires_at.iso8601 if poll.expires_at
-      data['votersCount'] = poll.voters_count || 0
-
-      # 投票オプションを追加
-      if poll.multiple
-        data['anyOf'] = build_poll_options
-      else
-        data['oneOf'] = build_poll_options
-      end
-    end
-
-    data
-  end
-
-  def base_activitypub_data
-    data = {
-      '@context' => Rails.application.config.activitypub.context_url,
-      'id' => ap_id,
-      'type' => object_type,
-      'attributedTo' => actor.ap_id,
-      'content' => build_activitypub_content,
-      'published' => published_at.iso8601,
-      'url' => public_url
-    }
-
-    # 編集済みの場合はupdatedフィールドを追加
-    data['updated'] = edited_at.iso8601 if edited?
-
-    data
-  end
-
-  def extended_activitypub_data
-    {
-      'inReplyTo' => in_reply_to_ap_id,
-      'to' => build_audience_list(:to),
-      'cc' => build_audience_list(:cc),
-      'attachment' => build_attachment_list,
-      'tag' => build_tag_list,
-      'summary' => summary,
-      'sensitive' => sensitive?,
-      'atomUri' => ap_id,
-      'conversation' => conversation_uri,
-      'likes' => likes_collection_data,
-      'shares' => shares_collection_data,
-      'source' => source_data,
-      'replies' => replies_collection_data
-    }.tap do |data|
-      # Quote情報を追加（FEP-e232およびMisskey互換）
-      if quoted?
-        quote_post = quote_posts.first
-        data['quoteUrl'] = quote_post.quoted_object.ap_id
-        data['_misskey_quote'] = quote_post.quoted_object.ap_id
-        data['quoteUri'] = quote_post.quoted_object.ap_id # Fedibird互換
-      end
-    end
-  end
-
-  def source_data
-    {
-      'content' => content_plaintext,
-      'mediaType' => 'text/plain'
-    }
-  end
-
-  def replies_collection_data
-    {
-      'type' => 'Collection',
-      'totalItems' => replies_count || 0
-    }
-  end
-
-  def conversation_uri
-    return conversation_ap_id if conversation_ap_id.present?
-
-    "tag:#{Rails.application.config.activitypub.domain},#{published_at.strftime('%Y-%m-%d')}:objectId=#{id}:objectType=Conversation"
-  end
-
-  def likes_collection_data
-    {
-      'id' => "#{ap_id}/likes",
-      'type' => 'Collection',
-      'totalItems' => favourites_count
-    }
-  end
-
-  def shares_collection_data
-    {
-      'id' => "#{ap_id}/shares",
-      'type' => 'Collection',
-      'totalItems' => reblogs_count
-    }
+    ActivityPubObjectSerializer.new(self).to_activitypub
   end
 
   # === 表示用メソッド ===
 
   def display_content
-    return content_plaintext if content.blank?
-    return content unless sensitive?
-
-    summary.presence || 'Sensitive content'
+    ActivityPubContentProcessor.new(self).display_content
   end
 
   def truncated_content(length = 500)
@@ -347,22 +235,12 @@ class ActivityPubObject < ApplicationRecord
     end
   end
 
-  private
-
-  def build_poll_options
-    return [] unless poll.present? && poll.options.present?
-
-    poll.options.map.with_index do |option, index|
-      {
-        'type' => 'Note',
-        'name' => option['title'],
-        'replies' => {
-          'type' => 'Collection',
-          'totalItems' => poll.option_votes_count(index)
-        }
-      }
-    end
+  # Quote活動を作成してActivityPub配信
+  def create_quote_activity(quoted_object)
+    ActivityPubActivityDistributor.new(self).create_quote_activity(quoted_object)
   end
+
+  private
 
   # === ActivityPub ヘルパーメソッド ===
 
@@ -477,21 +355,11 @@ class ActivityPubObject < ApplicationRecord
   end
 
   def create_delete_activity
-    Activity.create!(
-      ap_id: "#{ap_id}#delete-#{Time.current.to_i}",
-      activity_type: 'Delete',
-      actor: actor,
-      target_ap_id: ap_id,
-      published_at: Time.current,
-      local: true
-    )
+    ActivityPubActivityDistributor.new(self).create_delete_activity
   end
 
   def process_text_content
-    return if content.blank?
-
-    parser = TextParser.new(content)
-    parser.process_for_object(self)
+    ActivityPubContentProcessor.new(self).process_text_content
   end
 
   def update_actor_posts_count
@@ -507,24 +375,6 @@ class ActivityPubObject < ApplicationRecord
       activity_type: 'Update',
       actor: actor,
       object_ap_id: ap_id,
-      published_at: Time.current,
-      local: true
-    )
-
-    # ActivityPub配信をキューに追加
-    queue_activity_delivery(activity)
-  end
-
-  # Quote活動を作成してActivityPub配信
-  def create_quote_activity(quoted_object)
-    return unless local?
-
-    activity = Activity.create!(
-      ap_id: "#{ap_id}#quote-#{Time.current.to_i}",
-      activity_type: 'Quote',
-      actor: actor,
-      object_ap_id: ap_id,
-      target_ap_id: quoted_object.ap_id,
       published_at: Time.current,
       local: true
     )
@@ -572,13 +422,13 @@ class ActivityPubObject < ApplicationRecord
   # === Action Cableブロードキャスト ===
 
   def broadcast_status_update
-    StreamingBroadcastService.broadcast_status_update(self)
+    ActivityPubBroadcaster.new(self).broadcast_status_update
   rescue StandardError => e
     Rails.logger.error "💥 Streaming broadcast error: #{e.message}"
   end
 
   def broadcast_status_delete
-    StreamingBroadcastService.broadcast_status_delete(id)
+    ActivityPubBroadcaster.new(self).broadcast_status_delete
   rescue StandardError => e
     Rails.logger.error "💥 Streaming delete broadcast error: #{e.message}"
   end

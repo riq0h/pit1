@@ -29,9 +29,6 @@ Rails.application.routes.draw do
   get '/nodeinfo/2.1', to: 'nodeinfo#show'
 
   # ActivityPubアクティビティエンドポイント
-  get '/users/:username/inbox', to: 'inboxes#show'
-  post '/users/:username/inbox', to: 'inboxes#create'
-  get '/users/:username/outbox', to: 'outboxes#show'
   get '/users/:username/followers', to: 'followers#show'
   get '/users/:username/following', to: 'following#show'
   get '/users/:username/collections/featured', to: 'featured#show'
@@ -118,30 +115,33 @@ Rails.application.routes.draw do
       post '/accounts/:id/note', to: 'accounts#note'
 
       # ステータス
-      get '/statuses/:id', to: 'statuses#show'
-      get '/statuses/:id/context', to: 'statuses#context'
-      get '/statuses/:id/history', to: 'statuses#history'
-      get '/statuses/:id/source', to: 'statuses#source'
-      post '/statuses', to: 'statuses#create'
-      delete '/statuses/:id', to: 'statuses#destroy'
-      put '/statuses/:id', to: 'statuses#update'
-      post '/statuses/:id/favourite', to: 'statuses#favourite'
-      post '/statuses/:id/unfavourite', to: 'statuses#unfavourite'
-      post '/statuses/:id/reblog', to: 'statuses#reblog'
-      post '/statuses/:id/unreblog', to: 'statuses#unreblog'
-      post '/statuses/:id/quote', to: 'statuses#quote'
-      get '/statuses/:id/quoted_by', to: 'statuses#quoted_by'
-      get '/statuses/:id/reblogged_by', to: 'statuses#reblogged_by'
-      get '/statuses/:id/favourited_by', to: 'statuses#favourited_by'
-      post '/statuses/:id/pin', to: 'statuses#pin'
-      post '/statuses/:id/unpin', to: 'statuses#unpin'
-      post '/statuses/:id/bookmark', to: 'statuses#bookmark'
-      post '/statuses/:id/unbookmark', to: 'statuses#unbookmark'
+      resources :statuses, only: [:show, :create, :destroy, :update] do
+        member do
+          get :context
+          get :history
+          get :source
+          post :favourite
+          post :unfavourite
+          post :reblog
+          post :unreblog
+          post :quote
+          get :quoted_by
+          get :reblogged_by
+          get :favourited_by
+          post :pin
+          post :unpin
+          post :bookmark
+          post :unbookmark
+        end
+      end
 
       # タグ
-      get '/tags/:id', to: 'tags#show'
-      post '/tags/:id/follow', to: 'tags#follow'
-      post '/tags/:id/unfollow', to: 'tags#unfollow'
+      resources :tags, only: [:show] do
+        member do
+          post :follow
+          post :unfollow
+        end
+      end
       
       # Timelines
       get '/timelines/home', to: 'timelines#home'
@@ -152,21 +152,24 @@ Rails.application.routes.draw do
       get '/instance', to: 'instance#show'
 
       # メディア
-      post '/media', to: 'media#create'
-      get '/media/:id', to: 'media#show'
-      put '/media/:id', to: 'media#update'
+      resources :media, only: [:create, :show, :update]
 
       # Conversations (Direct Messages)
-      get '/conversations', to: 'conversations#index'
-      get '/conversations/:id', to: 'conversations#show'
-      delete '/conversations/:id', to: 'conversations#destroy'
-      post '/conversations/:id/read', to: 'conversations#read'
+      resources :conversations, only: [:index, :show, :destroy] do
+        member do
+          post :read
+        end
+      end
 
       # Notifications
-      get '/notifications', to: 'notifications#index'
-      get '/notifications/:id', to: 'notifications#show'
-      post '/notifications/clear', to: 'notifications#clear'
-      post '/notifications/:id/dismiss', to: 'notifications#dismiss'
+      resources :notifications, only: [:index, :show] do
+        collection do
+          post :clear
+        end
+        member do
+          post :dismiss
+        end
+      end
 
       # Streaming (WebSocket)
       get '/streaming', to: 'streaming#index'
@@ -219,14 +222,14 @@ Rails.application.routes.draw do
       get '/followed_tags', to: 'followed_tags#index'
       
       # 投票
-      get '/polls/:id', to: 'polls#show'
-      post '/polls/:id/votes', to: 'polls#vote'
+      resources :polls, only: [:show] do
+        member do
+          post :vote, path: 'votes'
+        end
+      end
       
       # 予約投稿
-      get '/scheduled_statuses', to: 'scheduled_statuses#index'
-      get '/scheduled_statuses/:id', to: 'scheduled_statuses#show'
-      put '/scheduled_statuses/:id', to: 'scheduled_statuses#update'
-      delete '/scheduled_statuses/:id', to: 'scheduled_statuses#destroy'
+      resources :scheduled_statuses, only: [:index, :show, :update, :destroy]
       
       # Endorsements (stub)
       get '/endorsements', to: 'endorsements#index'
@@ -247,11 +250,7 @@ Rails.application.routes.draw do
       get '/trends/links', to: 'trends#links'
       
       # フィルター
-      get '/filters', to: 'filters#index'
-      post '/filters', to: 'filters#create'
-      get '/filters/:id', to: 'filters#show'
-      put '/filters/:id', to: 'filters#update'
-      delete '/filters/:id', to: 'filters#destroy'
+      resources :filters
       
       # 設定
       get '/preferences', to: 'preferences#show'
@@ -306,14 +305,10 @@ Rails.application.routes.draw do
       get '/trends/links', to: 'trends#links'
       
       # Filters (v2)
-      get '/filters', to: 'filters#index'
-      post '/filters', to: 'filters#create'
-      get '/filters/:id', to: 'filters#show'
-      put '/filters/:id', to: 'filters#update'
-      delete '/filters/:id', to: 'filters#destroy'
+      resources :filters
       
       # Media (v2)
-      post '/media', to: 'media#create'
+      resources :media, only: [:create]
     end
   end
 
@@ -328,26 +323,6 @@ Rails.application.routes.draw do
   
   use_doorkeeper
 
-  # ================================
-  # Admin Routes
-  # ================================
-
-  namespace :admin do
-    get '/', to: 'dashboard#index'
-
-    # ユーザ管理
-    get '/users', to: 'users#index'
-    get '/users/:id', to: 'users#show'
-
-    # 連合
-    get '/instances', to: 'instances#index'
-    post '/instances/:domain/block', to: 'instances#block'
-    delete '/instances/:domain/block', to: 'instances#unblock'
-
-    # レポート
-    get '/reports', to: 'reports#index'
-    get '/reports/:id', to: 'reports#show'
-  end
 
   # ================================
   # Media & Assets
@@ -364,8 +339,6 @@ Rails.application.routes.draw do
 
   # 静的ページ
   get '/about', to: 'pages#about'
-  get '/terms', to: 'pages#terms'
-  get '/privacy', to: 'pages#privacy'
 
   # 検索
   get '/search/index', to: 'search#index', as: :search_index

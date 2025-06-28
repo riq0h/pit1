@@ -390,6 +390,8 @@ GEM
       sprockets-rails
       tilt
     securerandom (0.4.1)
+    shoulda-matchers (6.5.0)
+      activesupport (>= 5.2.0)
     solid_cable (3.0.11)
       actioncable (>= 7.2)
       activejob (>= 7.2)
@@ -509,6 +511,7 @@ DEPENDENCIES
   rubocop-rails
   rubocop-rspec
   sassc-rails
+  shoulda-matchers
   solid_cable
   solid_queue
   spring

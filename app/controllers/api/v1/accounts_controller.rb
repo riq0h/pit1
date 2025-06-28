@@ -39,60 +39,10 @@ module Api
 
       # GET /api/v1/accounts/:id/statuses
       def statuses
-        pinned_only = params[:pinned] == 'true'
-        exclude_replies = params[:exclude_replies] == 'true'
-        params[:exclude_reblogs]
-        only_media = params[:only_media] == 'true'
-        limit = limit_param
+        service_params = params.permit(:pinned, :exclude_replies, :only_media, :max_id, :since_id, :min_id)
+                               .merge(limit: limit_param)
 
-        if pinned_only
-          # Pinned statusesのみを返す
-          pinned_statuses = @account.pinned_statuses
-                                    .includes(object: %i[actor media_attachments mentions tags poll])
-                                    .ordered
-                                    .limit(limit)
-          statuses = pinned_statuses.map(&:object)
-        else
-          # 通常の投稿一覧（pinned statusesを最上部に表示）
-          base_query = @account.objects.where(object_type: %w[Note Question])
-
-          # ローカル投稿とリモート投稿の両方を含める
-          base_query = base_query.where(local: [true, false])
-
-          # リプライ除外
-          base_query = base_query.where(in_reply_to_ap_id: nil) if exclude_replies
-
-          # メディア添付のみ
-          base_query = base_query.joins(:media_attachments).distinct if only_media
-
-          # 通常の投稿を取得（ページネーション対応）
-          regular_statuses = base_query.includes(:poll, :actor, :media_attachments, :mentions, :tags).order(published_at: :desc)
-          regular_statuses = apply_timeline_pagination(regular_statuses)
-          regular_statuses = regular_statuses.limit(limit)
-
-          # Pinned statusesは最初のページでのみ表示（ページネーションパラメータがない場合のみ）
-          is_first_page = params[:max_id].blank? && params[:since_id].blank? && params[:min_id].blank?
-
-          if is_first_page
-            # Pinned statusesを取得（全ユーザ対象）
-            pinned_objects = @account.pinned_statuses
-                                     .includes(object: %i[actor media_attachments mentions tags poll])
-                                     .ordered
-                                     .map(&:object)
-
-            # Pinned statusesを除いた通常投稿
-            regular_statuses = regular_statuses.where.not(id: pinned_objects.map(&:id)) if pinned_objects.any?
-
-            # Pinned statusesを先頭に配置
-            statuses = pinned_objects + regular_statuses.to_a
-
-            # 制限数に切り詰める
-            statuses = statuses.first(limit)
-          else
-            # ページネーション中はPinnedを表示しない
-            statuses = regular_statuses.to_a
-          end
-        end
+        statuses = AccountStatusesService.new(@account, service_params).call
 
         @paginated_items = statuses
         render json: statuses.map { |status| serialized_status(status) }
@@ -413,13 +363,6 @@ module Api
 
       def set_account_for_featured_tags
         @account = Actor.find(params[:id])
-      end
-
-      def apply_timeline_pagination(query)
-        query = query.where(objects: { id: ...(params[:max_id]) }) if params[:max_id].present?
-        query = query.where('objects.id > ?', params[:since_id]) if params[:since_id].present?
-        query = query.where('objects.id > ?', params[:min_id]) if params[:min_id].present?
-        query
       end
     end
   end

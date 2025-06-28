@@ -28,18 +28,14 @@ module Api
 
       # GET /api/v1/statuses/:id
       def show
-        render json: serialized_status(@status)
+        # jbuilderビューを使用
       end
 
       # GET /api/v1/statuses/:id/context
       def context
-        ancestors = build_ancestors(@status)
-        descendants = build_descendants(@status)
-
-        render json: {
-          ancestors: ancestors.map { |status| serialized_status(status) },
-          descendants: descendants.map { |status| serialized_status(status) }
-        }
+        @ancestors = build_ancestors(@status)
+        @descendants = build_descendants(@status)
+        # jbuilderビューを使用
       end
 
       # POST /api/v1/statuses

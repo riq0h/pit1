@@ -1,0 +1,26 @@
+# frozen_string_literal: true
+
+# Mastodon API 互換の設定レスポンス
+json.extract! @preferences,
+              :default_privacy,
+              :default_sensitive,
+              :default_language,
+              :expand_spoilers,
+              :use_blurhash,
+              :use_pending_items,
+              :trends,
+              :crop_images,
+              :disable_swiping,
+              :always_send_emails,
+              :unfollow_modal,
+              :boost_modal,
+              :delete_modal,
+              :reduce_motion,
+              :system_font_ui,
+              :advanced_layout,
+              :auto_play_gif,
+              :auto_play,
+              :display_media,
+              :show_application,
+              :theme,
+              :aggregate_reblogs

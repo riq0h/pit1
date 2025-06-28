@@ -34,19 +34,7 @@ class Actor < ApplicationRecord
 
   # カスタムアップロードメソッド（フォルダ構造対応）
   def attach_avatar_with_folder(io:, filename:, content_type:)
-    if ENV['S3_ENABLED'] == 'true'
-      custom_key = "avatar/#{SecureRandom.hex(16)}"
-      blob = ActiveStorage::Blob.create_and_upload!(
-        io: io,
-        filename: filename,
-        content_type: content_type,
-        service_name: :cloudflare_r2,
-        key: custom_key
-      )
-      avatar.attach(blob)
-    else
-      avatar.attach(io: io, filename: filename, content_type: content_type)
-    end
+    ActorImageProcessor.new(self).attach_avatar_with_folder(io: io, filename: filename, content_type: content_type)
   end
 
   # フォロー関係
@@ -118,11 +106,12 @@ class Actor < ApplicationRecord
   after_update :distribute_profile_update, if: :should_distribute_profile_update?
 
   def setting(key)
-    settings[key.to_s]
+    preferences[key.to_s]
   end
 
   def update_setting(key, value)
-    update!(settings: settings.merge(key.to_s => value))
+    current_settings = settings || {}
+    update!(settings: current_settings.merge(key.to_s => value))
   end
 
   def default_settings
@@ -196,15 +185,15 @@ class Actor < ApplicationRecord
 
   # キー管理
   def public_key_object
-    @public_key_object ||= OpenSSL::PKey::RSA.new(public_key) if public_key.present?
+    ActorKeyManager.new(self).public_key_object
   end
 
   def private_key_object
-    @private_key_object ||= OpenSSL::PKey::RSA.new(private_key) if private_key.present?
+    ActorKeyManager.new(self).private_key_object
   end
 
   def public_key_id
-    "#{ap_id}#main-key"
+    ActorKeyManager.new(self).public_key_id
   end
 
   # アクティビティ生成
@@ -235,7 +224,7 @@ class Actor < ApplicationRecord
 
   # ActivityPub JSON-LD representation
   def to_activitypub(request = nil)
-    base_activitypub_data(request).merge(activitypub_links(request)).merge(activitypub_images(request)).merge(activitypub_attachments).merge(activitypub_tags).compact
+    ActorSerializer.new(self).to_activitypub(request)
   end
 
   # フォロー・フォロワー数の更新
@@ -299,33 +288,11 @@ class Actor < ApplicationRecord
 
   # Active Storage画像URLの取得
   def avatar_url
-    # ローカルユーザの場合はActiveStorageから取得
-    if local? && avatar.attached?
-      # Cloudflare R2のカスタムドメインを使用
-      if ENV['S3_ENABLED'] == 'true' && ENV['S3_ALIAS_HOST'].present?
-        "https://#{ENV.fetch('S3_ALIAS_HOST', nil)}/#{avatar.blob.key}"
-      else
-        Rails.application.routes.url_helpers.url_for(avatar)
-      end
-    else
-      # 外部ユーザの場合はraw_dataから取得
-      extract_remote_image_url('icon')
-    end
+    ActorImageProcessor.new(self).avatar_url
   end
 
   def header_image_url
-    # ローカルユーザの場合はActiveStorageから取得
-    if local? && header.attached?
-      # Cloudflare R2のカスタムドメインを使用
-      if ENV['S3_ENABLED'] == 'true' && ENV['S3_ALIAS_HOST'].present?
-        "https://#{ENV.fetch('S3_ALIAS_HOST', nil)}/#{header.blob.key}"
-      else
-        Rails.application.routes.url_helpers.url_for(header)
-      end
-    else
-      # 外部ユーザの場合はraw_dataから取得
-      extract_remote_image_url('image')
-    end
+    ActorImageProcessor.new(self).header_image_url
   end
 
   def extract_remote_image_url(field_name)
@@ -401,150 +368,6 @@ class Actor < ApplicationRecord
     end
   end
 
-  # ActivityPub base data
-  def base_activitypub_data(request = nil)
-    base_url = get_base_url(request)
-    actor_url = "#{base_url}/users/#{username}"
-
-    {
-      '@context' => [
-        Rails.application.config.activitypub.context_url,
-        'https://w3id.org/security/v1',
-        {
-          'schema' => 'http://schema.org#',
-          'PropertyValue' => 'schema:PropertyValue',
-          'value' => 'schema:value'
-        }
-      ],
-      'type' => actor_type || 'Person',
-      'id' => actor_url,
-      'preferredUsername' => username,
-      'name' => convert_emoji_html_to_shortcode(display_name),
-      'summary' => convert_emoji_html_to_shortcode(note),
-      'url' => actor_url,
-      'discoverable' => discoverable,
-      'manuallyApprovesFollowers' => manually_approves_followers
-    }
-  end
-
-  # ActivityPub URL
-  def activitypub_links(request = nil)
-    base_url = get_base_url(request)
-    actor_url = "#{base_url}/users/#{username}"
-
-    {
-      'inbox' => "#{actor_url}/inbox",
-      'outbox' => "#{actor_url}/outbox",
-      'followers' => "#{actor_url}/followers",
-      'following' => "#{actor_url}/following",
-      'featured' => "#{actor_url}/collections/featured",
-      'endpoints' => {
-        'sharedInbox' => "#{base_url}/inbox"
-      },
-      'publicKey' => {
-        'id' => "#{actor_url}#main-key",
-        'owner' => actor_url,
-        'publicKeyPem' => public_key
-      }
-    }
-  end
-
-  # ActivityPub images
-  def activitypub_images(_request = nil)
-    {
-      'icon' => avatar_url ? { 'type' => 'Image', 'url' => avatar_url } : nil,
-      'image' => header_image_url ? { 'type' => 'Image', 'url' => header_image_url } : nil
-    }
-  end
-
-  # ActivityPub profile attachments (PropertyValue)
-  def activitypub_attachments
-    return {} if fields.blank?
-
-    begin
-      links = JSON.parse(fields)
-      attachments = links.filter_map do |link|
-        next if link['name'].blank? || link['value'].blank?
-
-        {
-          'type' => 'PropertyValue',
-          'name' => convert_emoji_html_to_shortcode(link['name']),
-          'value' => format_profile_link_value_for_activitypub(link['value'])
-        }
-      end
-
-      attachments.empty? ? {} : { 'attachment' => attachments }
-    rescue JSON::ParserError
-      {}
-    end
-  end
-
-  # ActivityPub用のプロフィールリンクvalue形式化（HTML内のemojiもショートコード化）
-  def format_profile_link_value_for_activitypub(value)
-    converted_value = convert_emoji_html_to_shortcode(value)
-    return converted_value unless converted_value.match?(/\Ahttps?:\/\//)
-
-    begin
-      domain = begin
-        URI.parse(converted_value).host
-      rescue StandardError
-        converted_value
-      end
-      %(<a href="#{CGI.escapeHTML(converted_value)}" target="_blank" rel="nofollow noopener noreferrer me">#{CGI.escapeHTML(domain)}</a>)
-    rescue URI::InvalidURIError
-      CGI.escapeHTML(converted_value)
-    end
-  end
-
-  # HTMLの<img>タグをショートコード形式に変換
-  def convert_emoji_html_to_shortcode(text)
-    return text if text.blank?
-
-    # <img ... alt=":shortcode:" ...> を :shortcode: に変換
-    text.gsub(/<img[^>]*alt=":([^"]+):"[^>]*\/?>/, ':\1:')
-  end
-
-  # ActivityPub tags (emoji情報)
-  def activitypub_tags
-    emoji_tags = extract_actor_emojis
-    emoji_tags.empty? ? {} : { 'tag' => emoji_tags }
-  end
-
-  # アクターのプロフィールからemoji情報を抽出
-  def extract_actor_emojis
-    # display_name、note、fieldsからemoji shortcodeを抽出
-    text_content = [display_name, note].compact.join(' ')
-
-    # fieldsからもemoji shortcodeを抽出
-    if fields.present?
-      begin
-        fields_data = JSON.parse(fields)
-        field_content = fields_data.map { |f| [f['name'], f['value']].compact.join(' ') }.join(' ')
-        text_content += " #{field_content}"
-      rescue JSON::ParserError
-        # JSON解析エラーの場合は無視
-      end
-    end
-
-    # emojis抽出
-    emoji_regex = /:([a-zA-Z0-9_]+):/
-    shortcodes = text_content.scan(emoji_regex).flatten.uniq
-    return [] if shortcodes.empty?
-
-    # ローカル絵文字のみを対象
-    emojis = CustomEmoji.enabled.local.where(shortcode: shortcodes)
-    emojis.map(&:to_ap)
-  rescue StandardError => e
-    Rails.logger.warn "Failed to extract actor emojis for actor #{id}: #{e.message}"
-    []
-  end
-
-  # ベースURL取得
-  def get_base_url(_request = nil)
-    # 常に設定からのドメインを使用（.envで設定されたACTIVITYPUB_DOMAINを優先）
-    build_url_from_config
-  end
-
   # RSA鍵ペア生成
   def generate_key_pair
     return unless local? && private_key.blank?
@@ -607,25 +430,18 @@ class Actor < ApplicationRecord
 
   # アンフォロー実行
   def unfollow!(target_actor_or_uri)
-    follow_service = FollowService.new(self)
-    follow_service.unfollow!(target_actor_or_uri)
+    ActorActivityDistributor.new(self).unfollow!(target_actor_or_uri)
   end
 
   private
 
   # プロフィール更新を検知
   def should_distribute_profile_update?
-    return false unless local?
-
-    # プロフィールに関連する属性が変更されたかチェック
-    profile_attributes = %w[display_name note fields]
-    saved_changes.keys.any? { |attr| profile_attributes.include?(attr) } ||
-      saved_changes.key?('avatar') ||
-      saved_changes.key?('header')
+    ActorActivityDistributor.new(self).should_distribute_profile_update?
   end
 
   # プロフィール更新を配信
   def distribute_profile_update
-    SendProfileUpdateJob.perform_later(id)
+    ActorActivityDistributor.new(self).distribute_profile_update
   end
 end
