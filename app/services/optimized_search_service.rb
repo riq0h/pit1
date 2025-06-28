@@ -186,7 +186,7 @@ class OptimizedSearchService
 
   def contains_special_characters?
     # FTS5で問題を起こす可能性のある特殊文字をチェック
-    special_chars = ['@', '"', '^', '*', '(', ')', '[', ']', '{', '}', '\\']
+    special_chars = ['@', '"', '^', '*', '(', ')', '[', ']', '{', '}', '\\', '.']
     special_chars.any? { |char| query.include?(char) }
   end
 

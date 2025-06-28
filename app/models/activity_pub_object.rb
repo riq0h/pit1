@@ -3,6 +3,8 @@
 class ActivityPubObject < ApplicationRecord
   include SnowflakeIdGeneration
   include RemoteLocalHelper
+  include ActionView::Helpers::SanitizeHelper
+  include TextLinkingHelper
 
   self.table_name = 'objects'
 
@@ -33,7 +35,7 @@ class ActivityPubObject < ApplicationRecord
   has_many :status_edits, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
   has_many :quote_posts, dependent: :destroy, foreign_key: :object_id, inverse_of: :object
   has_many :quotes_of_this, class_name: 'QuotePost', dependent: :destroy, foreign_key: :quoted_object_id, inverse_of: :quoted_object
-  has_one :poll, dependent: :destroy, foreign_key: :object_id, primary_key: :id
+  has_one :poll, dependent: :destroy, foreign_key: :object_id, primary_key: :id, inverse_of: :object
 
   # 会話（ダイレクトメッセージ用）
   belongs_to :conversation, optional: true
@@ -194,7 +196,7 @@ class ActivityPubObject < ApplicationRecord
       'id' => ap_id,
       'type' => object_type,
       'attributedTo' => actor.ap_id,
-      'content' => content,
+      'content' => build_activitypub_content,
       'published' => published_at.iso8601,
       'url' => public_url
     }
@@ -292,6 +294,13 @@ class ActivityPubObject < ApplicationRecord
     # HTMLサニタイズ済みコンテンツとして扱う
     ActionController::Base.helpers.sanitize(content, tags: %w[p br strong em a],
                                                      attributes: %w[href])
+  end
+
+  def build_activitypub_content
+    return content if content.blank?
+
+    # 既存のTextLinkingHelperを使ってURLとメンションをリンク化
+    auto_link_urls(content)
   end
 
   # 編集前のスナップショットを作成
@@ -531,16 +540,8 @@ class ActivityPubObject < ApplicationRecord
     all_inboxes = mentioned_inboxes.dup
 
     case visibility
-    when 'public'
-      # Public投稿：フォロワー + メンションされたアクター
-      follower_inboxes = actor.followers.where(local: false).pluck(:inbox_url)
-      all_inboxes.concat(follower_inboxes)
-    when 'unlisted'
-      # Unlisted投稿：フォロワー + メンションされたアクター
-      follower_inboxes = actor.followers.where(local: false).pluck(:inbox_url)
-      all_inboxes.concat(follower_inboxes)
-    when 'private'
-      # フォロワー限定：フォロワー + メンションされたアクター
+    when 'public', 'unlisted', 'private'
+      # Public/Unlisted/フォロワー限定：フォロワー + メンションされたアクター
       follower_inboxes = actor.followers.where(local: false).pluck(:inbox_url)
       all_inboxes.concat(follower_inboxes)
     when 'direct'

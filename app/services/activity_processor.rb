@@ -61,7 +61,8 @@ class ActivityProcessor
       object: target_obj
     )
 
-    Rails.logger.info "❤️ Like created: Activity #{activity.id}, Favourite #{favourite.id}, favourites_count updated to #{target_obj.reload.favourites_count}"
+    Rails.logger.info "❤️ Like created: Activity #{activity.id}, Favourite #{favourite.id}, " \
+                      "favourites_count updated to #{target_obj.reload.favourites_count}"
   end
 
   def process_announce_activity

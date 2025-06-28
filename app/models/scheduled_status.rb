@@ -139,7 +139,7 @@ class ScheduledStatus < ApplicationRecord
       poll: params['poll'] ? serialize_poll_params : nil
     ).compact
 
-    # Mastodon API互換性のためtextフィールドも提供
+    # statusフィールドが存在する場合、textフィールドとしても提供
     base_params['text'] = base_params['status'] if base_params['status'].present?
 
     # visibilityフィールドが必須のため、デフォルト値を確保

@@ -3,6 +3,8 @@
 module SearchStatusSerializer
   include PollSerializer
   include MediaSerializer
+  include TextLinkingHelper
+  include StatusSerializer
   def serialized_status(status)
     base_status_data(status).merge(
       additional_status_data(status)
@@ -42,14 +44,14 @@ module SearchStatusSerializer
       muted: false,
       bookmarked: false,
       pinned: false,
-      content: status.content || '',
+      content: parse_content_for_search(status),
       reblog: nil,
       application: nil,
       account: serialized_account(status.actor),
       media_attachments: serialized_media_attachments(status),
       mentions: [],
       tags: [],
-      emojis: [],
+      emojis: serialized_emojis(status),
       card: nil,
       poll: serialize_poll_for_search(status.poll)
     }
@@ -73,5 +75,12 @@ module SearchStatusSerializer
     {
       original: build_original_meta(attachment)
     }
+  end
+
+  def parse_content_for_search(status)
+    return '' if status.content.blank?
+
+    content_with_shortcodes = parse_content_links_only(status.content)
+    auto_link_urls(content_with_shortcodes)
   end
 end

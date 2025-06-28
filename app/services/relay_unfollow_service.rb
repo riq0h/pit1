@@ -6,7 +6,7 @@ class RelayUnfollowService
 
   def call(relay)
     @relay = relay
-    @local_actor = get_local_actor
+    @local_actor = local_actor
 
     return false unless @local_actor && @relay&.accepted?
 

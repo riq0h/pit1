@@ -5,7 +5,7 @@ module RelayActorManagement
 
   private
 
-  def get_local_actor
+  def local_actor
     # ローカルの管理者アカウントを取得
     actor = Actor.where(local: true, admin: true).first || Actor.where(local: true).first
 

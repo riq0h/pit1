@@ -133,7 +133,10 @@ class ProfilesController < ApplicationController
             .order(published_at: :desc)
             .distinct
 
-    apply_pagination_filters(query).limit(30)
+    posts = apply_pagination_filters(query).limit(30)
+
+    # タイムライン形式に変換
+    posts.map { |post| build_post_timeline_item(post) }
   end
 
   def apply_timeline_pagination_filters(timeline_items)
@@ -182,13 +185,13 @@ class ProfilesController < ApplicationController
   def check_older_posts_available
     return false unless @posts.any?
 
+    # タイムライン形式の場合（mediaタブも含む）
+    last_item_time = @posts.last[:published_at]
+
     if @current_tab == 'media'
       base_query = base_media_query
-      base_query.exists?(['published_at < ?', @posts.last.published_at])
+      base_query.exists?(['published_at < ?', last_item_time])
     else
-      # タイムライン形式の場合
-      last_item_time = @posts.last[:published_at]
-
       # より古い投稿またはリポストがあるかチェック
       older_posts_exist = base_posts_query.exists?(['published_at < ?', last_item_time])
       older_reblogs_exist = Reblog.joins(:actor, :object)

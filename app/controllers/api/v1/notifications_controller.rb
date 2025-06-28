@@ -4,6 +4,10 @@ module Api
   module V1
     class NotificationsController < Api::BaseController
       include StatusSerializer
+      include StatusSerializationHelper
+      include MediaSerializer
+      include PollSerializer
+      include MentionTagSerializer
       before_action :doorkeeper_authorize!, only: %i[index show clear dismiss]
       before_action :require_user!, only: %i[index show clear dismiss]
       before_action :set_notification, only: %i[show dismiss]
@@ -191,12 +195,12 @@ module Api
       def status_metadata(status)
         {
           reblog: nil,
-          media_attachments: [],
-          mentions: [],
-          tags: [],
+          media_attachments: serialized_media_attachments(status),
+          mentions: serialized_mentions(status),
+          tags: serialized_tags(status),
           emojis: serialized_emojis(status),
           card: nil,
-          poll: nil
+          poll: serialize_poll(status)
         }
       end
 

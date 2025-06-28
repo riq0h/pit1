@@ -7,7 +7,6 @@
   <% if @query.present? && @query.strip.present? %>
     <style>
       #posts-container { display: none; }
-      body { overflow-y: scroll !important; }
     </style>
     
     <% if @posts.any? %>
@@ -51,7 +50,6 @@
   <% else %>
     <style>
       #posts-container { display: block; }
-      body { overflow-y: scroll !important; }
     </style>
   <% end %>
 <% end %>

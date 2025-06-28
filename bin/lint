@@ -3,7 +3,7 @@
 
 set -e
 
-echo "🚀 Running letter Linting..."
+echo "letter リンタシステムを実行中..."
 echo ""
 
 # 出力用の色設定
@@ -32,49 +32,49 @@ print_error() {
 
 # 必要なツールが利用可能かチェック
 check_dependencies() {
-    print_status "Checking dependencies..."
+    print_status "依存関係をチェック中..."
     
     if ! command -v bundle &> /dev/null; then
-        print_error "Bundler not found. Please install bundler first."
+        print_error "Bundlerが見つかりません。最初にbundlerをインストールしてください。"
         exit 1
     fi
     
     if ! command -v npm &> /dev/null && ! command -v yarn &> /dev/null; then
-        print_error "npm or yarn not found. Please install Node.js first."
+        print_error "npmまたはyarnが見つかりません。最初にNode.jsをインストールしてください。"
         exit 1
     fi
     
-    print_success "Dependencies check passed"
+    print_success "依存関係チェック完了"
 }
 
 # Rubocopを実行
 run_rubocop() {
-    print_status "Running Rubocop (Ruby linting)..."
+    print_status "Rubocop (Rubyリンタ) を実行中..."
     
     if bundle exec rubocop --auto-correct; then
-        print_success "Rubocop passed"
+        print_success "Rubocop 成功"
     else
-        print_error "Rubocop failed"
+        print_error "Rubocop 失敗"
         return 1
     fi
 }
 
 # ESLintを実行
 run_eslint() {
-    print_status "Running ESLint (JavaScript linting)..."
+    print_status "ESLint (JavaScriptリンタ) を実行中..."
     
     if [ -x "$(command -v npm)" ]; then
         if npm run eslint; then
-            print_success "ESLint passed"
+            print_success "ESLint 成功"
         else
-            print_error "ESLint failed"
+            print_error "ESLint 失敗"
             return 1
         fi
     elif [ -x "$(command -v yarn)" ]; then
         if yarn eslint; then
-            print_success "ESLint passed"
+            print_success "ESLint 成功"
         else
-            print_error "ESLint failed"
+            print_error "ESLint 失敗"
             return 1
         fi
     fi
@@ -82,20 +82,20 @@ run_eslint() {
 
 # Prettierを実行
 run_prettier() {
-    print_status "Running Prettier (Code formatting)..."
+    print_status "Prettier (コードフォーマッター) を実行中..."
     
     if [ -x "$(command -v npm)" ]; then
         if npm run prettier; then
-            print_success "Prettier formatting applied"
+            print_success "Prettier 整形完了"
         else
-            print_error "Prettier failed"
+            print_error "Prettier 失敗"
             return 1
         fi
     elif [ -x "$(command -v yarn)" ]; then
         if yarn prettier; then
-            print_success "Prettier formatting applied"
+            print_success "Prettier 整形完了"
         else
-            print_error "Prettier failed"
+            print_error "Prettier 失敗"
             return 1
         fi
     fi
@@ -104,7 +104,7 @@ run_prettier() {
 # メイン実行
 main() {
     echo "=========================================="
-    echo "🔍 letter Linting Suite"
+    echo "letter リンタシステム"
     echo "=========================================="
     echo ""
     
@@ -113,7 +113,7 @@ main() {
     
     local exit_code=0
     
-    # 全てのリンターを実行
+    # 全てのリンタを実行
     if ! run_rubocop; then
         exit_code=1
     fi
@@ -132,15 +132,15 @@ main() {
     # サマリー
     echo "=========================================="
     if [ $exit_code -eq 0 ]; then
-        print_success "All linting checks passed! 🎉"
+        print_success "すべてのリンタチェックが成功しました。"
         echo ""
-        echo "Your code is properly formatted and follows best practices."
+        echo "コードは適切にフォーマットされ、ベストプラクティスに従っています。"
     else
-        print_error "Some linting checks failed! 💥"
+        print_error "一部のリンタチェックが失敗しました。"
         echo ""
-        echo "Please fix the issues above before committing."
+        echo "コミットする前に、上記の問題を修正してください。"
         echo ""
-        echo "Quick fix commands:"
+        echo "クイック修正コマンド:"
         echo "  - Rubocop: bundle exec rubocop --auto-correct-all"
         echo "  - ESLint:  npm run lint:js (or yarn lint:js)"
         echo "  - Prettier: npm run prettier (or yarn prettier)"
@@ -153,17 +153,17 @@ main() {
 # コマンドライン引数を処理
 case "${1:-}" in
     --help|-h)
-        echo "letter Linting Suite"
+        echo "letter リンタツール"
         echo ""
-        echo "Usage: bin/lint [OPTION]"
+        echo "使用法: bin/lint [オプション]"
         echo ""
-        echo "Options:"
-        echo "  --help, -h     Show this help message"
-        echo "  --ruby         Run only Rubocop"
-        echo "  --js           Run only ESLint"
-        echo "  --prettier     Run only Prettier"
+        echo "オプション:"
+        echo "  --help, -h     このヘルプメッセージを表示"
+        echo "  --ruby         Rubocopのみ実行"
+        echo "  --js           ESLintのみ実行"
+        echo "  --prettier     Prettierのみ実行"
         echo ""
-        echo "Without options, runs all linters (Rubocop + ESLint + Prettier)"
+        echo "オプションなしの場合、すべてのリンタ (Rubocop + ESLint + Prettier) を実行します"
         exit 0
         ;;
     --ruby)
@@ -185,8 +185,8 @@ case "${1:-}" in
         main
         ;;
     *)
-        print_error "Unknown option: $1"
-        echo "Use 'bin/lint --help' for usage information."
+        print_error "不明なオプション: $1"
+        echo "使い方は 'bin/lint --help' を参照してください。"
         exit 1
         ;;
 esac

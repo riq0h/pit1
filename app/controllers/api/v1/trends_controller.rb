@@ -29,11 +29,7 @@ module Api
 
       # GET /api/v1/trends/statuses
       def statuses
-        limit = [params[:limit].to_i, 20].min
-        limit = 5 if limit <= 0
-
-        trending_statuses = generate_trending_statuses(limit)
-        render json: trending_statuses.map { |status| serialized_status(status) }
+        render json: []
       end
 
       # GET /api/v1/trends/links

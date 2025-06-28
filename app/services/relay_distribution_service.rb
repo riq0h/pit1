@@ -38,7 +38,7 @@ class RelayDistributionService
     success = @activity_sender.send_activity(
       activity: announce_activity,
       target_inbox: relay.inbox_url,
-      signing_actor: get_local_actor
+      signing_actor: local_actor
     )
 
     if success
@@ -53,14 +53,14 @@ class RelayDistributionService
   end
 
   def create_announce_activity(activity_pub_object, relay)
-    local_actor = get_local_actor
-    activity_id = "#{local_actor.ap_id}#announces/relay/#{SecureRandom.uuid}"
+    local_actor_instance = local_actor
+    activity_id = "#{local_actor_instance.ap_id}#announces/relay/#{SecureRandom.uuid}"
 
     {
       '@context' => 'https://www.w3.org/ns/activitystreams',
       'id' => activity_id,
       'type' => 'Announce',
-      'actor' => local_actor.ap_id,
+      'actor' => local_actor_instance.ap_id,
       'published' => Time.current.iso8601,
       'to' => ['https://www.w3.org/ns/activitystreams#Public'],
       'cc' => [relay.actor_uri],
@@ -68,8 +68,8 @@ class RelayDistributionService
     }
   end
 
-  def get_local_actor
-    @get_local_actor ||= super
+  def local_actor
+    @local_actor ||= super
   end
 
   def increment_relay_error_count(relay)

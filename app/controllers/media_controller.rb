@@ -6,10 +6,11 @@ class MediaController < ApplicationController
   # GET /media/:id
   def show
     return head :not_found unless @media_attachment
-
-    file_path = Rails.root.join('storage', 'media', @media_attachment.storage_path)
-    return head :not_found unless File.exist?(file_path)
+    return head :not_found unless @media_attachment.storage_path
     return head :not_found unless valid_storage_path?(@media_attachment.storage_path)
+
+    file_path = Rails.root.join('storage', @media_attachment.storage_path)
+    return head :not_found unless File.exist?(file_path)
 
     send_file file_path,
               type: @media_attachment.content_type,
@@ -20,10 +21,11 @@ class MediaController < ApplicationController
   # GET /media/:id/thumb
   def thumbnail
     return head :not_found unless @media_attachment
-
-    file_path = Rails.root.join('storage', 'media', @media_attachment.storage_path)
-    return head :not_found unless File.exist?(file_path)
+    return head :not_found unless @media_attachment.storage_path
     return head :not_found unless valid_storage_path?(@media_attachment.storage_path)
+
+    file_path = Rails.root.join('storage', @media_attachment.storage_path)
+    return head :not_found unless File.exist?(file_path)
 
     # 現在は元のファイルを返す（本番環境では実際のサムネイルを使用）
     send_file file_path,
@@ -43,8 +45,8 @@ class MediaController < ApplicationController
     return false if storage_path.include?('..')
     return false if storage_path.start_with?('/')
 
-    # ファイル名の形式を検証（タイムスタンプ_ランダム文字列.拡張子）
-    storage_path.match?(/\A\d+_[a-f0-9]+\.[a-z0-9]+\z/i)
+    # Active Storageのパス形式を検証（xx/xx/xxxxxxxxxxxxxxxxxx）
+    storage_path.match?(/\A[a-z0-9]{2}\/[a-z0-9]{2}\/[a-z0-9]+\z/i)
   end
 
   def sanitize_filename(filename)

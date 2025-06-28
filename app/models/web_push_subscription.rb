@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class WebPushSubscription < ApplicationRecord
+  include PushPayloadBuilder
   belongs_to :actor
 
   validates :endpoint, presence: true, uniqueness: { scope: :actor_id }
@@ -43,47 +44,7 @@ class WebPushSubscription < ApplicationRecord
   end
 
   def push_payload(notification_type, title, body, options = {})
-    # Mastodon公式アプリ用のペイロード形式
-    if endpoint&.include?('app.joinmastodon.org')
-      {
-        access_token: Doorkeeper::AccessToken.where(resource_owner_id: actor.id, revoked_at: nil).last&.token,
-        preferred_locale: 'ja',
-        notification_id: options[:notification_id]&.to_s,
-        notification_type: notification_type,
-        title: title,
-        body: body,
-        icon: options[:icon] || default_icon
-      }
-    # FCM直接用のペイロード形式
-    elsif endpoint&.include?('fcm.googleapis.com')
-      {
-        data: {
-          notification_id: options[:notification_id]&.to_s,
-          notification_type: notification_type,
-          title: title,
-          body: body,
-          icon: options[:icon] || default_icon,
-          url: options[:url],
-          preferred_locale: 'ja'
-        }
-      }
-    # 標準Web Push形式
-    else
-      {
-        notification_id: options[:notification_id]&.to_s,
-        notification_type: notification_type,
-        title: title,
-        body: body,
-        icon: options[:icon] || default_icon,
-        badge: options[:badge] || default_badge,
-        tag: options[:tag] || notification_type,
-        data: {
-          url: options[:url],
-          count: options[:count] || 1,
-          preferred_locale: 'ja'
-        }
-      }
-    end
+    build_push_payload(notification_type, title, body, options)
   end
 
   def should_send_alert?(notification_type)

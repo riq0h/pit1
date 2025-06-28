@@ -187,9 +187,6 @@ module Api
 
       def serialize_timeline_item(item)
         case item
-        when ActivityPubObject
-          # 通常のステータス
-          serialized_status(item)
         when Reblog
           # リブログ - リブログされた元投稿をラップして返す
           reblogged_status = serialized_status(item.object)
@@ -203,7 +200,7 @@ module Api
             reblog: reblogged_status
           }.merge(default_interaction_data)
         else
-          # フォールバック
+          # 通常のステータスまたはActivityPubObject
           serialized_status(item)
         end
       end

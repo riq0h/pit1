@@ -47,15 +47,12 @@ class FeaturedCollectionFetcher
   def extract_featured_items(collection_data)
     items = []
 
-    # OrderedCollectionの場合
+    # OrderedCollectionまたはOrderedCollectionPageの場合
     if collection_data['orderedItems']
       items = collection_data['orderedItems']
     # Collectionの場合
     elsif collection_data['items']
       items = collection_data['items']
-    # OrderedCollectionPageの場合
-    elsif collection_data['type'] == 'OrderedCollectionPage' && collection_data['orderedItems']
-      items = collection_data['orderedItems']
     end
 
     # itemsの内容を正規化：URIの文字列に変換

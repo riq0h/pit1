@@ -62,7 +62,7 @@
         <div class="mb-4">
           <% if media.image? %>
             <img src="<%= media.url %>" alt="<%= media.description %>" 
-                 class="max-w-full max-h-96 object-contain border border-gray-200"
+                 class="post-card-media-image"
                  loading="lazy">
           <% elsif media.video? %>
             <video class="w-full border border-gray-200" controls preload="auto" style="max-height: 70vh; min-height: 300px;">
@@ -143,7 +143,7 @@
           </header>
 
           <!-- 記事本文 -->
-          <div class="text-gray-800 leading-relaxed">
+          <div class="text-gray-800 leading-relaxed post-reply-content">
             <% 
               # 最適化された処理：メンションは投稿時/受信時に既にリンク化済み
               # URLリンク化 + 絵文字HTML変換を一括処理
@@ -163,7 +163,7 @@
                 <div class="mb-4">
                   <% if media.image? %>
                     <img src="<%= media.url %>" alt="<%= media.description %>" 
-                         class="max-w-full max-h-96 object-contain border border-gray-200"
+                         class="post-card-media-image"
                          loading="lazy">
                   <% elsif media.video? %>
                     <video class="w-full border border-gray-200" controls preload="auto" style="max-height: 70vh; min-height: 300px;">

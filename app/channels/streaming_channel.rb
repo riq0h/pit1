@@ -37,7 +37,7 @@ class StreamingChannel < ApplicationCable::Channel
     stream_from "notifications:#{current_user.id}"
   end
 
-  def stream_hashtag(local_only = false)
+  def stream_hashtag(local_only: false)
     hashtag = params[:tag]&.downcase
     return reject if hashtag.blank?
 

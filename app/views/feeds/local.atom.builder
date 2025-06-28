@@ -25,10 +25,8 @@ xml.feed 'xmlns' => 'http://www.w3.org/2005/Atom' do
       end
 
       # メディア添付があれば追加
-      if post.media_attachments.any?
-        post.media_attachments.each do |media|
-          xml.link 'rel' => 'enclosure', 'type' => media.content_type, 'href' => media.url
-        end
+      post.media_attachments.each do |media|
+        xml.link 'rel' => 'enclosure', 'type' => media.content_type, 'href' => media.url
       end
     end
   end

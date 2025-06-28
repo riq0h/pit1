@@ -10,7 +10,7 @@ echo "=== アプリケーション開始 ==="
 wait_for_dependencies() {
     echo "依存関係をチェック中..."
     # 将来: 必要に応じてデータベース接続チェックを追加
-    echo "✓ 依存関係準備完了"
+    echo "OK: 依存関係準備完了"
 }
 
 # 必要な環境変数を検証
@@ -18,17 +18,17 @@ validate_environment() {
     echo "環境変数を検証中..."
     
     if [ -z "$ACTIVITYPUB_DOMAIN" ]; then
-        echo "❌ エラー: ACTIVITYPUB_DOMAINが必要です"
+        echo "ERROR: ACTIVITYPUB_DOMAINが必要です"
         echo "docker-compose.ymlまたは.envファイルでACTIVITYPUB_DOMAINを設定してください"
         exit 1
     fi
     
     if [ -z "$ACTIVITYPUB_PROTOCOL" ]; then
-        echo "⚠️  警告: ACTIVITYPUB_PROTOCOLが設定されていません、httpsをデフォルトとします"
+        echo "WARNING: ACTIVITYPUB_PROTOCOLが設定されていません、httpsをデフォルトとします"
         export ACTIVITYPUB_PROTOCOL=https
     fi
     
-    echo "✓ 環境変数検証完了"
+    echo "OK: 環境変数検証完了"
     echo "  ドメイン: $ACTIVITYPUB_DOMAIN"
     echo "  プロトコル: $ACTIVITYPUB_PROTOCOL"
 }
@@ -38,15 +38,15 @@ setup_database() {
     echo "データベースをセットアップ中..."
     
     # データベースが存在するかチェック
-    if [ ! -f "db/development.sqlite3" ]; then
+    if [ ! -f "storage/development.sqlite3" ]; then
         echo "データベースを作成中..."
         bundle exec rails db:create
         bundle exec rails db:migrate
-        echo "✓ データベース作成とマイグレーション完了"
+        echo "OK: データベース作成とマイグレーション完了"
     else
         echo "データベースが存在します、マイグレーションを実行中..."
         bundle exec rails db:migrate
-        echo "✓ データベースマイグレーション完了"
+        echo "OK: データベースマイグレーション完了"
     fi
 }
 
@@ -58,9 +58,9 @@ prepare_assets() {
     if [ "$RAILS_ENV" = "production" ] || [ ! -d "public/assets" ]; then
         echo "アセットをプリコンパイル中..."
         bundle exec rails assets:precompile
-        echo "✓ アセットプリコンパイル完了"
+        echo "OK: アセットプリコンパイル完了"
     else
-        echo "✓ アセットは既に準備済み"
+        echo "OK: アセットは既に準備済み"
     fi
 }
 
@@ -72,7 +72,7 @@ cleanup_processes() {
     rm -f tmp/pids/server.pid
     rm -f tmp/pids/solid_queue.pid
     
-    echo "✓ プロセスクリーンアップ完了"
+    echo "OK: プロセスクリーンアップ完了"
 }
 
 # Solid Queueをバックグラウンドで開始
@@ -84,7 +84,7 @@ start_solid_queue() {
     SOLID_QUEUE_PID=$!
     echo $SOLID_QUEUE_PID > tmp/pids/solid_queue.pid
     
-    echo "✓ Solid Queue開始 (PID: $SOLID_QUEUE_PID)"
+    echo "OK: Solid Queue開始 (PID: $SOLID_QUEUE_PID)"
 }
 
 # グレースフルシャットダウンハンドラー
@@ -103,7 +103,7 @@ shutdown_handler() {
         rm -f tmp/pids/solid_queue.pid
     fi
     
-    echo "✓ グレースフルシャットダウン完了"
+    echo "OK: グレースフルシャットダウン完了"
     exit 0
 }
 

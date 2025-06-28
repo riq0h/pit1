@@ -2,7 +2,7 @@
 
 このドキュメントでは、DockerとDocker Composeを使用してletterを実行する方法を説明します。
 
-## 🚀 クイックスタート
+## クイックスタート
 
 ### 1. 前提条件
 - Docker Engine 20.10+
@@ -10,12 +10,9 @@
 
 ### 2. 環境設定
 ```bash
-# 環境変数ファイルをコピー
-cp .env.docker .env.docker.local
-
-# 環境変数を編集（必要に応じて）
+# 環境変数ファイルを作成・編集
 # 最低限、ACTIVITYPUB_DOMAINを設定してください
-nano .env.docker.local
+nano .env
 ```
 
 ### 3. サーバ起動
@@ -32,7 +29,7 @@ docker-compose up -d --build
 - ヘルスチェック: http://localhost:3000/up
 - WebFinger: http://localhost:3000/.well-known/webfinger?resource=acct:username@yourdomain
 
-## ⚙️ 設定
+## 設定
 
 ### 環境変数
 | 変数名 | 説明 | デフォルト値 | 必須 |
@@ -44,9 +41,10 @@ docker-compose up -d --build
 | `S3_ENABLED` | R2オブジェクトストレージ使用 | false | ❌ |
 | `S3_BUCKET` | R2バケット名 | - | S3_ENABLED=trueの場合必須 |
 | `S3_REGION` | R2リージョン | auto | ❌ |
-| `S3_ACCESS_KEY_ID` | R2アクセスキーID | - | S3_ENABLED=trueの場合必須 |
-| `S3_SECRET_ACCESS_KEY` | R2シークレットキー | - | S3_ENABLED=trueの場合必須 |
+| `R2_ACCESS_KEY_ID` | R2アクセスキーID | - | S3_ENABLED=trueの場合必須 |
+| `R2_SECRET_ACCESS_KEY` | R2シークレットキー | - | S3_ENABLED=trueの場合必須 |
 | `S3_ENDPOINT` | R2エンドポイント | - | S3_ENABLED=trueの場合必須 |
+| `S3_ALIAS_HOST` | R2カスタムドメイン | - | ❌ |
 
 ### ポートマッピング
 docker-compose.ymlでポートを変更できます：
@@ -61,30 +59,21 @@ ports:
 - `./log` - ログファイル
 - `./storage` - Active Storageファイル（R2使用時は不要）
 
-## 🔧 管理コマンド
+## 管理コマンド
 
-### ユーザ作成
+### letter管理スクリプト
 ```bash
-# コンテナ内でインタラクティブにユーザ作成
-docker-compose exec web ./bin/manage_accounts.sh
-
-# または直接Rails consoleを使用
-docker-compose exec web rails console
+# 統合管理スクリプトを実行
+docker-compose exec web rails runner bin/letter_manager.rb
 ```
 
-### OAuthトークン生成
-```bash
-docker-compose exec web ./bin/create_oauth_token.sh
-```
-
-### ドメイン変更
-```bash
-# 新しいドメインに切り替え
-docker-compose exec web ./bin/switch_domain.sh your-new-domain.com https
-
-# コンテナ再起動
-docker-compose restart web
-```
+このスクリプトで以下の操作が可能です：
+- アカウント作成・削除
+- OAuthトークン生成
+- VAPIDキー生成
+- ドメイン設定確認・変更
+- サーバ再起動
+- システム情報確認
 
 ### ログ確認
 ```bash
@@ -98,11 +87,11 @@ docker-compose exec web tail -f log/development.log
 docker-compose exec web tail -f log/solid_queue.log
 ```
 
-## 🌐 本番環境での使用
+## 本番環境での使用
 
 ### 1. 環境変数設定
 ```bash
-# .env.docker.local を本番設定に変更
+# .env を本番設定に変更
 ACTIVITYPUB_DOMAIN=your-domain.com
 ACTIVITYPUB_PROTOCOL=https
 RAILS_ENV=production
@@ -111,10 +100,10 @@ SECRET_KEY_BASE=your_secret_key_here
 # R2オブジェクトストレージ使用時（推奨）
 S3_ENABLED=true
 S3_BUCKET=your-bucket-name
-S3_REGION=auto
-S3_ACCESS_KEY_ID=your_access_key
-S3_SECRET_ACCESS_KEY=your_secret_key
+R2_ACCESS_KEY_ID=your_access_key
+R2_SECRET_ACCESS_KEY=your_secret_key
 S3_ENDPOINT=https://your-account-id.r2.cloudflarestorage.com
+S3_ALIAS_HOST=your-custom-domain.com
 ```
 
 ### 2. リバースプロキシ設定
@@ -138,7 +127,7 @@ server {
 ### 3. HTTPS設定
 Let's Encryptやその他のSSL証明書を設定してください。
 
-## 📊 モニタリング
+## モニタリング
 
 ### ヘルスチェック
 ```bash
@@ -161,7 +150,7 @@ docker-compose exec web df -h
 docker stats
 ```
 
-## 🔍 トラブルシューティング
+## トラブルシューティング
 
 ### よくある問題
 
@@ -174,7 +163,7 @@ docker stats
 #### 2. 権限エラー
 ```bash
 # ディレクトリの権限を修正
-sudo chown -R 1000:1000 db log public/system
+sudo chown -R 1000:1000 storage log
 ```
 
 #### 3. アセットが見つからない
@@ -201,7 +190,7 @@ docker-compose logs web | grep -i error
 docker-compose logs --since="2024-01-01T00:00:00" web
 ```
 
-## 🔄 アップデート
+## アップデート
 
 ### 1. コードを更新
 ```bash

@@ -82,7 +82,7 @@ module Api
           username: actor.username,
           acct: account_acct(actor),
           display_name: actor.display_name || actor.username,
-          locked: false, # Letter では基本的にfalse
+          locked: false, # letter では基本的にfalse
           bot: false,
           discoverable: true,
           group: false,

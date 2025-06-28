@@ -45,6 +45,7 @@ gem 'web-push' # Web Push Protocol implementation
 gem 'aws-sdk-s3', require: false # S3-compatible storage (Cloudflare R2)
 gem 'blurhash'                   # Image placeholder generation
 gem 'foreman'
+gem 'kaminari'                   # Pagination
 gem 'marcel'                     # MIME type detection
 gem 'mini_magick'                # Image processing
 gem 'nanoid'                     # Generate short unique IDs

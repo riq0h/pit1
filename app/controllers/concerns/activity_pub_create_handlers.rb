@@ -41,13 +41,18 @@ module ActivityPubCreateHandlers
   end
 
   def create_new_object(object_data)
+    # Voteオブジェクトは投稿として作成せず、投票処理のみ行う
+    if object_data['type'] == 'Vote'
+      handle_vote_activity_only(object_data)
+      return head :accepted
+    end
+
     object = ActivityPubObject.create!(build_object_attributes(object_data))
 
     handle_media_attachments(object, object_data)
     handle_mentions(object, object_data)
     handle_emojis(object, object_data)
     handle_poll(object, object_data) if object_data['type'] == 'Question' || object_data['oneOf'] || object_data['anyOf']
-    handle_vote(object, object_data) if object_data['type'] == 'Vote'
     handle_direct_message_conversation(object, object_data) if object.visibility == 'direct'
     update_reply_count_if_needed(object)
 
@@ -63,8 +68,8 @@ module ActivityPubCreateHandlers
       ap_id: object_data['id'],
       actor: @sender,
       object_type: object_data['type'] || 'Note',
-      content: object_data['content'],
-      content_plaintext: ActivityPub::HtmlStripper.strip(object_data['content']),
+      content: object_data['content'] || '',
+      content_plaintext: ActivityPub::HtmlStripper.strip(object_data['content'] || ''),
       summary: object_data['summary'],
       url: object_data['url'],
       in_reply_to_ap_id: object_data['inReplyTo'],
@@ -202,7 +207,7 @@ module ActivityPubCreateHandlers
     Rails.logger.error "❌ Failed to create poll: #{e.message}"
   end
 
-  def handle_vote(object, object_data)
+  def handle_vote_activity_only(object_data)
     # 投票オブジェクトは通常、inReplyToで投票対象を指している
     return if object_data['inReplyTo'].blank?
 
@@ -218,11 +223,13 @@ module ActivityPubCreateHandlers
     choice_index = target_object.poll.option_titles.index(choice_name)
     return unless choice_index
 
-    # 投票を記録
-    target_object.poll.vote_for!(object.actor, [choice_index])
+    # 投票の選択肢を更新
+    vote_counts = target_object.poll.vote_counts.dup
+    vote_counts[choice_index] += 1
+    target_object.poll.update!(vote_counts: vote_counts)
 
-    Rails.logger.info "🗳️ Vote recorded: #{object.actor.username} voted '#{choice_name}' on poll #{target_object.poll.id}"
+    Rails.logger.info "🗳️ Vote processed for poll #{target_object.poll.id}: #{choice_name}"
   rescue StandardError => e
-    Rails.logger.error "❌ Failed to process vote: #{e.message}"
+    Rails.logger.error "Failed to process vote: #{e.message}"
   end
 end

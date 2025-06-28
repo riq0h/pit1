@@ -34,16 +34,8 @@ module NotificationCreation
   end
 
   def should_create_notification?
-    return false unless target_actor.local?
-
-    case self.class.name
-    when 'Mention'
-      # 自分への言及は通知しない
-      actor != object.actor
-    when 'Favourite', 'Reblog'
-      # 自分の投稿への自分のアクションは通知しない
-      actor != object.actor
-    end
+    # 自分への言及、自分の投稿への自分のアクションは通知しない
+    actor != object.actor
   end
 
   def target_actor

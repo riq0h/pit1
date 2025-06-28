@@ -200,7 +200,6 @@ select:focus {
   border-color: #6b7280 !important;
 }
 
-
 /* 投稿カード共通スタイル - 最高優先度 */
 .post-card-avatar-container {
   height: 2.5rem !important;
@@ -328,6 +327,20 @@ select:focus {
 .post-card-media-file-name {
   font-size: 0.875rem !important;
   color: #4b5563 !important;
+}
+
+/* 全ての投稿コンテンツ内のリンクスタイル統一 */
+.post-reply-content a,
+.post-card-content-container a,
+.whitespace-pre-wrap a {
+  color: #525252 !important;
+  text-decoration: none !important;
+}
+
+.post-reply-content a:hover,
+.post-card-content-container a:hover,
+.whitespace-pre-wrap a:hover {
+  color: #374151 !important;
 }
 
 /* カスタムチェックボックス */

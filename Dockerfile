@@ -36,11 +36,8 @@ RUN mkdir -p \
     tmp/pids \
     tmp/cache \
     log \
-    db \
-    public/system/accounts/avatars \
-    public/system/accounts/headers \
-    public/system/media_attachments \
-    && chmod -R 755 public/system
+    storage \
+    && chmod -R 755 storage
 
 # エントリーポイントスクリプトをコピー
 COPY docker/entrypoint.sh /usr/bin/entrypoint.sh

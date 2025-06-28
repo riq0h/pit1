@@ -49,9 +49,13 @@ module StatusSerializationHelper
   end
 
   def content_data(status)
+    # 絵文字をショートコードに戻してからURLリンク化
+    content_with_shortcodes = parse_content_links_only(status.content || '')
+    linked_content = auto_link_urls(content_with_shortcodes)
+
     {
       spoiler_text: status.summary || '',
-      content: parse_content_links_only(status.content || ''),
+      content: linked_content,
       account: serialized_account(status.actor),
       reblog: nil,
       quote: build_quote_data(status)
@@ -129,7 +133,7 @@ module StatusSerializationHelper
       created_at: quote_post.quoted_object.published_at&.iso8601,
       uri: quote_post.quoted_object.ap_id,
       url: quote_post.quoted_object.public_url,
-      content: parse_content_links_only(quote_post.quoted_object.content || ''),
+      content: auto_link_urls(parse_content_links_only(quote_post.quoted_object.content || '')),
       account: {
         id: quoted_actor.id.to_s,
         username: quoted_actor.username,

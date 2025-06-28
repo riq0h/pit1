@@ -8,7 +8,7 @@ class Relay < ApplicationRecord
 
   scope :enabled, -> { where(state: 'accepted') }
   scope :pending, -> { where(state: 'pending') }
-  scope :accepted, -> { where(state: 'accepted') }
+  scope :accepted, -> { enabled }
 
   before_validation :normalize_inbox_url
 
@@ -70,6 +70,8 @@ class Relay < ApplicationRecord
 
     self.inbox_url = inbox_url.strip
     # /inbox で終わっていない場合は追加
-    self.inbox_url = "#{inbox_url}/inbox" unless inbox_url.end_with?('/inbox')
+    return if inbox_url.end_with?('/inbox')
+
+    self.inbox_url = "#{inbox_url}/inbox"
   end
 end

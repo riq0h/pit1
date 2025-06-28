@@ -1,0 +1,73 @@
+# frozen_string_literal: true
+
+module FileUploadHandler
+  extend ActiveSupport::Concern
+
+  private
+
+  def process_file_uploads
+    handle_avatar_upload_active_storage if params[:avatar]
+    handle_header_upload_active_storage if params[:header]
+  end
+
+  def handle_avatar_upload_active_storage
+    return unless valid_upload?(params[:avatar])
+
+    current_user.avatar.attach(params[:avatar])
+    Rails.logger.info "Avatar uploaded for #{current_user.username} via Active Storage"
+  end
+
+  def handle_header_upload_active_storage
+    return unless valid_upload?(params[:header])
+
+    current_user.header.attach(params[:header])
+    Rails.logger.info "Header uploaded for #{current_user.username} via Active Storage"
+  end
+
+  def valid_upload?(file)
+    return false unless file.respond_to?(:content_type)
+
+    allowed_types = %w[image/jpeg image/jpg image/png image/gif image/webp]
+    max_size = 5.megabytes
+
+    unless allowed_types.include?(file.content_type)
+      Rails.logger.warn "Invalid file type: #{file.content_type}"
+      return false
+    end
+
+    if file.size > max_size
+      Rails.logger.warn "File too large: #{file.size} bytes"
+      return false
+    end
+
+    true
+  end
+
+  def update_account_attributes
+    update_params = account_params.except(:avatar, :header, :fields_attributes)
+
+    # fields_attributesをfieldsに変換
+    if params.key?(:fields_attributes)
+      mapped_fields = params[:fields_attributes].values.map do |field|
+        {
+          'name' => field[:name].to_s.strip,
+          'value' => field[:value].to_s.strip
+        }
+      end
+      fields = mapped_fields.select { |field| field['name'].present? || field['value'].present? }
+      update_params[:fields] = fields.to_json
+    end
+
+    if current_user.update(update_params)
+      render json: serialized_account(current_user, is_self: true)
+    else
+      render_account_update_errors
+    end
+  end
+
+  def render_account_update_errors
+    errors = current_user.errors.full_messages
+    Rails.logger.error "Account update failed: #{errors}"
+    render_validation_failed_with_details('Update failed', errors)
+  end
+end

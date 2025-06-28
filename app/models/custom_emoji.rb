@@ -18,6 +18,25 @@ class CustomEmoji < ApplicationRecord
   # ファイルアップロード
   has_one_attached :image
 
+  # カスタムアップロードメソッド（フォルダ構造対応）
+  def attach_image_with_folder(io:, filename:, content_type:)
+    if ENV['S3_ENABLED'] == 'true'
+      # S3の場合、キーにemoji/プレフィックスを付ける
+      custom_key = "emoji/#{SecureRandom.hex(16)}"
+      blob = ActiveStorage::Blob.create_and_upload!(
+        io: io,
+        filename: filename,
+        content_type: content_type,
+        service_name: :cloudflare_r2,
+        key: custom_key
+      )
+      image.attach(blob)
+    else
+      # ローカルの場合は通常通り
+      image.attach(io: io, filename: filename, content_type: content_type)
+    end
+  end
+
   # バリデーション
   validate :shortcode_length
   validate :image_presence

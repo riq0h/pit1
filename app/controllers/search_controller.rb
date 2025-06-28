@@ -14,7 +14,7 @@ class SearchController < ApplicationController
   private
 
   def initialize_search_params
-    @query = params[:q]
+    @query = params[:q]&.strip
     @username = params[:username]
     @posts = []
   end

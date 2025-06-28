@@ -57,8 +57,8 @@ class MediaAttachmentCreationService
     media_attachment
   end
 
-  def determine_media_type(content_type, _filename)
-    MediaTypeDetector.determine(content_type, _filename)
+  def determine_media_type(content_type, filename)
+    MediaTypeDetector.determine(content_type, filename)
   end
 
   def detect_content_type(filename)
@@ -91,9 +91,29 @@ class MediaAttachmentCreationService
     {}
   end
 
-  def extract_video_metadata(_file)
-    # ビデオメタデータの抽出は簡略化
+  def extract_video_metadata(file)
+    require 'mini_magick'
+
+    # 一時ファイルに保存
+    temp_file = Tempfile.new(['video', File.extname(file.original_filename)])
+    temp_file.binmode
+    temp_file.write(file.read)
+    temp_file.close
+    file.rewind
+
+    # ImageMagickでビデオの最初のフレーム（[0]）を取得
+    image = MiniMagick::Image.new("#{temp_file.path}[0]")
+
+    {
+      width: image.width,
+      height: image.height,
+      blurhash: generate_blurhash(image)
+    }
+  rescue StandardError => e
+    Rails.logger.warn "Failed to extract video metadata: #{e.message}"
     { width: 0, height: 0, blurhash: nil }
+  ensure
+    temp_file&.unlink
   end
 
   def generate_blurhash(image)

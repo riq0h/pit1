@@ -6,7 +6,7 @@ class RelayFollowService
 
   def call(relay)
     @relay = relay
-    @local_actor = get_local_actor
+    @local_actor = local_actor
 
     return false unless @local_actor && @relay&.idle?
 
@@ -19,9 +19,9 @@ class RelayFollowService
       follow_activity = create_follow_activity(relay_actor_data)
 
       # Follow アクティビティを送信
-      success = deliver_activity(follow_activity, @relay.inbox_url)
+      result = deliver_activity(follow_activity, @relay.inbox_url)
 
-      if success
+      if result && result[:success]
         @relay.update!(
           state: 'pending',
           follow_activity_id: follow_activity['id'],
@@ -30,7 +30,8 @@ class RelayFollowService
         )
         true
       else
-        @relay.update!(last_error: 'Follow アクティビティの送信に失敗しました')
+        error_msg = result ? result[:error] : 'Follow アクティビティの送信に失敗しました'
+        @relay.update!(last_error: error_msg)
         false
       end
     rescue StandardError => e

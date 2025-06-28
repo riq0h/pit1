@@ -4,6 +4,20 @@ letterはRails8およびSQLite、Hotwireで構成されるミニマルなActivit
 
 ・1インスタンス2アカウント制限  
 ・サードパーティクライアントの利用を前提とした軽量な設計  
-・マイクロブログの復権を意識した平易なフロントエンド  
+・RedisやSidekiqを廃し、Solid QueueおよびSolid Cableで構成された低依存のバックエンド  
+・マイクロブログの復権を意識した平易かつ高速なフロントエンド  
+・Rails8のデフォルトに基づき、SQLiteを本番環境で使用
 ・ローカル投稿の全文検索に対応  
 ・Mastodon APIに準拠
+
+## セットアップ
+
+```
+bin/setup
+```
+
+## 便利ツール
+
+```
+bin/letter_manager.rb
+```

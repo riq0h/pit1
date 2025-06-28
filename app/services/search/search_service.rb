@@ -26,12 +26,13 @@ module Search
       accounts = []
       accounts.concat(resolve_remote_accounts) if should_resolve_remote_accounts?
       accounts.concat(search_domain_accounts) if should_search_domain_accounts?
-      accounts.concat(search_local_accounts) if should_search_local_accounts?
+      accounts.concat(search_accounts_by_username) if should_search_local_accounts?
       accounts.uniq(&:id)
     end
 
     def search_statuses
       return [] if search_query.blank?
+      return [] if account_query? || domain_query?
 
       statuses = []
       statuses.concat(resolve_remote_statuses) if should_resolve_remote_statuses?
@@ -50,6 +51,7 @@ module Search
     end
 
     def resolve_remote_accounts
+      return [] if search_query.blank?
       return [] unless resolve_remote? && account_query?
 
       remote_account = remote_resolver.resolve_remote_account(search_query)
@@ -57,28 +59,45 @@ module Search
     end
 
     def search_domain_accounts
+      return [] if search_query.blank?
       return [] unless domain_query?
 
       remote_resolver.search_domain_accounts(search_query)
     end
 
     def resolve_remote_statuses
+      return [] if search_query.blank?
       return [] unless resolve_remote? && url_query?
 
       remote_status = remote_resolver.resolve_remote_status(search_query)
       remote_status ? [remote_status] : []
     end
 
-    def search_local_accounts
+    def search_accounts_by_username
+      return [] if search_query.blank?
       return [] unless should_search_local_accounts?
 
-      Actor.where(local: true)
-           .where('username LIKE ? OR display_name LIKE ?',
-                  "%#{search_query}%", "%#{search_query}%")
-           .limit(account_limit)
+      results = []
+
+      # @username単体での完全一致検索
+      if local_username_query?
+        username = search_query.gsub(/^@/, '')
+        exact_matches = Actor.where(username: username)
+        results.concat(exact_matches)
+      end
+
+      # ローカルアカウントの部分一致検索
+      partial_matches = Actor.where(local: true)
+                             .where('username LIKE ? OR display_name LIKE ?',
+                                    "%#{clean_search_query}%", "%#{clean_search_query}%")
+                             .limit(account_limit)
+
+      results.concat(partial_matches)
+      results.uniq(&:id).take(account_limit)
     end
 
     def search_local_statuses
+      return [] if search_query.blank?
       return [] unless should_search_local_statuses?
 
       search_service = OptimizedSearchService.new(
@@ -88,7 +107,16 @@ module Search
         limit: status_limit,
         offset: params[:offset].to_i
       )
-      search_service.search
+
+      results = search_service.search
+      return [] if results.empty?
+
+      # 文字列IDが返された場合はActivityPubObjectに変換
+      if results.first.is_a?(String)
+        ActivityPubObject.where(id: results).includes(:actor).order('objects.id DESC')
+      else
+        results
+      end
     end
 
     def should_resolve_remote_accounts?
@@ -133,6 +161,14 @@ module Search
 
     def url_query?
       search_query.match?(/^https?:\/\//)
+    end
+
+    def local_username_query?
+      search_query.start_with?('@') && search_query.count('@') == 1
+    end
+
+    def clean_search_query
+      search_query.gsub(/^@/, '')
     end
 
     def account_limit

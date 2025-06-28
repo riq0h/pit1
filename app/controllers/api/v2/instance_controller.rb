@@ -13,7 +13,7 @@ module Api
       def instance_v2_serializer
         {
           domain: Rails.application.config.activitypub.domain,
-          title: load_instance_setting('instance_name') || 'Letter',
+          title: load_instance_setting('instance_name') || 'letter',
           version: '0.1',
           source_url: 'https://github.com/letteractivitypub/letter',
           description: load_instance_setting('instance_description') || 'General Letter Publication System based on ActivityPub',

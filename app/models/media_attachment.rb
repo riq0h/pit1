@@ -34,6 +34,23 @@ class MediaAttachment < ApplicationRecord
   # Active Storage統合
   has_one_attached :file
 
+  # カスタムアップロードメソッド（フォルダ構造対応）
+  def attach_file_with_folder(io:, filename:, content_type:)
+    if ENV['S3_ENABLED'] == 'true'
+      custom_key = "img/#{SecureRandom.hex(16)}"
+      blob = ActiveStorage::Blob.create_and_upload!(
+        io: io,
+        filename: filename,
+        content_type: content_type,
+        service_name: :cloudflare_r2,
+        key: custom_key
+      )
+      file.attach(blob)
+    else
+      file.attach(io: io, filename: filename, content_type: content_type)
+    end
+  end
+
   # === スコープ ===
   scope :images, -> { where(media_type: 'image') }
   scope :videos, -> { where(media_type: 'video') }
@@ -133,6 +150,16 @@ class MediaAttachment < ApplicationRecord
   # ローカルファイルかどうかの判定
   def local_file?
     file.attached?
+  end
+
+  # ローカルストレージのファイルパス（MediaController用）
+  def storage_path
+    return nil unless file.attached?
+
+    # Active Storageのblobキーを使用してファイルパスを生成
+    # ローカルストレージサービス使用時のパス形式: xx/xx/xxxxxxxxxxxxxxxxxxxx
+    blob_key = file.blob.key
+    "#{blob_key[0, 2]}/#{blob_key[2, 2]}/#{blob_key}"
   end
 
   def aspect_ratio

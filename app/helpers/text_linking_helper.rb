@@ -5,7 +5,7 @@ module TextLinkingHelper
   def auto_link_urls(text)
     return ''.html_safe if text.blank?
 
-    if text.include?('<img') && text.include?('custom-emoji')
+    if text.include?('<') && text.include?('>')
       linked_text = apply_url_links_to_html(text)
       mention_linked_text = apply_mention_links_to_html(linked_text)
     else

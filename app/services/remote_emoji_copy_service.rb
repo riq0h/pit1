@@ -129,44 +129,55 @@ class RemoteEmojiCopyService
   end
 
   def attach_image_to_emoji(emoji, image_data, original_url)
-    # ファイル拡張子を推定
-    content_type = Marcel::MimeType.for(StringIO.new(image_data))
-
-    # ファイル拡張子の取得
-    extension = case content_type
-                when 'image/jpeg', 'image/jpg'
-                  '.jpg'
-                when 'image/png'
-                  '.png'
-                when 'image/gif'
-                  '.gif'
-                when 'image/webp'
-                  '.webp'
-                else
-                  # URLから拡張子を推定
-                  uri = begin
-                    URI.parse(original_url)
-                  rescue StandardError
-                    nil
-                  end
-                  if uri&.path
-                    File.extname(uri.path).downcase
-                  else
-                    '.png' # デフォルト
-                  end
-                end
-
+    content_type = detect_content_type(image_data)
+    extension = determine_file_extension(content_type, original_url)
     filename = "#{emoji.shortcode}#{extension}"
 
-    # ActiveStorageに画像を添付
+    attach_image_file(emoji, image_data, filename, content_type)
+  rescue StandardError => e
+    Rails.logger.error "Failed to attach image to emoji: #{e.message}"
+    raise "画像の添付に失敗しました: #{e.message}"
+  end
+
+  def detect_content_type(image_data)
+    Marcel::MimeType.for(StringIO.new(image_data))
+  end
+
+  def determine_file_extension(content_type, original_url)
+    case content_type
+    when 'image/jpeg', 'image/jpg'
+      '.jpg'
+    when 'image/png'
+      '.png'
+    when 'image/gif'
+      '.gif'
+    when 'image/webp'
+      '.webp'
+    else
+      extract_extension_from_url(original_url)
+    end
+  end
+
+  def extract_extension_from_url(url)
+    uri = begin
+      URI.parse(url)
+    rescue StandardError
+      nil
+    end
+
+    if uri&.path
+      File.extname(uri.path).downcase
+    else
+      '.png' # デフォルト
+    end
+  end
+
+  def attach_image_file(emoji, image_data, filename, content_type)
     emoji.image.attach(
       io: StringIO.new(image_data),
       filename: filename,
       content_type: content_type
     )
-  rescue StandardError => e
-    Rails.logger.error "Failed to attach image to emoji: #{e.message}"
-    raise "画像の添付に失敗しました: #{e.message}"
   end
 
   def generate_unique_shortcode(base_shortcode)

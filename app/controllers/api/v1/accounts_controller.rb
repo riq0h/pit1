@@ -7,6 +7,8 @@ module Api
       include ApiPagination
       include ValidationErrorRendering
       include FeaturedTagSerializer
+      include AccountRelationshipActions
+      include FileUploadHandler
 
       before_action :doorkeeper_authorize!, except: [:show]
       after_action :insert_pagination_headers, only: %i[statuses followers following]
@@ -191,7 +193,7 @@ module Api
 
         return render json: [] if query.blank?
 
-        accounts = search_accounts(query, limit, resolve)
+        accounts = search_accounts(query, limit, resolve: resolve)
         render json: accounts.map { |account| serialized_account(account) }
       end
 
@@ -296,23 +298,6 @@ module Api
         end
       end
 
-      def create_new_follow
-        follow_service = FollowService.new(current_user)
-        follow = follow_service.follow!(@account)
-
-        if follow
-          Rails.logger.info "Follow request created for #{@account.ap_id}"
-          render json: serialized_relationship(@account)
-        else
-          render_validation_failed_with_details('Follow failed', ['Could not create follow relationship'])
-        end
-      end
-
-      def render_follow_creation_error(follow)
-        Rails.logger.error "Failed to create follow: #{follow.errors.full_messages}"
-        render_validation_failed_with_details('Follow failed', follow.errors.full_messages)
-      end
-
       def set_account
         @account = Actor.find(params[:id])
       rescue ActiveRecord::RecordNotFound
@@ -322,59 +307,6 @@ module Api
       def account_params
         params.permit(:display_name, :note, :locked, :bot, :discoverable, :avatar, :header,
                       fields_attributes: %i[name value])
-      end
-
-      # Active Storage版の画像アップロード処理
-      def handle_avatar_upload_active_storage
-        return unless valid_upload?(params[:avatar])
-
-        current_user.avatar.attach(params[:avatar])
-        Rails.logger.info "Avatar uploaded for #{current_user.username} via Active Storage"
-      end
-
-      def handle_header_upload_active_storage
-        return unless valid_upload?(params[:header])
-
-        current_user.header.attach(params[:header])
-        Rails.logger.info "Header uploaded for #{current_user.username} via Active Storage"
-      end
-
-      def file_extension(filename)
-        File.extname(filename).downcase.delete('.')
-      end
-
-      def render_unauthorized
-        render_authentication_required
-      end
-
-      def process_file_uploads
-        handle_avatar_upload_active_storage if params[:avatar].present?
-        handle_header_upload_active_storage if params[:header].present?
-      end
-
-      def update_account_attributes
-        update_params = account_params.except(:avatar, :header, :fields_attributes)
-
-        # fields_attributesをfieldsに変換
-        if params.key?(:fields_attributes)
-          fields = params[:fields_attributes].values.map do |field|
-            {
-              'name' => field[:name].to_s.strip,
-              'value' => field[:value].to_s.strip
-            }
-          end.select { |field| field['name'].present? || field['value'].present? }
-          update_params[:fields] = fields.to_json
-        end
-
-        if current_user.update(update_params)
-          render json: serialized_account(current_user, is_self: true)
-        else
-          render_validation_error
-        end
-      end
-
-      def valid_upload?(file)
-        file&.respond_to?(:tempfile)
       end
 
       def serialized_relationship(account)
@@ -443,7 +375,7 @@ module Api
         current_user.blocks.find_or_create_by(target_actor: @account)
       end
 
-      def search_accounts(query, limit, resolve = false)
+      def search_accounts(query, limit, resolve: false)
         # ローカル検索を実行
         local_accounts = Actor.where(
           'username LIKE ? OR display_name LIKE ?',
@@ -485,11 +417,8 @@ module Api
 
       def apply_timeline_pagination(query)
         query = query.where(objects: { id: ...(params[:max_id]) }) if params[:max_id].present?
-
         query = query.where('objects.id > ?', params[:since_id]) if params[:since_id].present?
-
         query = query.where('objects.id > ?', params[:min_id]) if params[:min_id].present?
-
         query
       end
     end

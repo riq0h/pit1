@@ -2,6 +2,8 @@
 
 class ConfigController < ApplicationController
   include BulkEmojiActions
+  include ConfigBuilder
+  include EmojiFiltering
   before_action :authenticate_user!
 
   # GET /config
@@ -96,7 +98,7 @@ class ConfigController < ApplicationController
     action_type = params[:action_type]
 
     if emoji_ids.blank?
-      redirect_to config_custom_emojis_path(tab: params[:tab]), alert: '絵文字を選択してください'
+      redirect_to config_custom_emojis_path(tab: params[:tab]), alert: t('custom_emojis.no_selection')
       return
     end
 
@@ -109,7 +111,7 @@ class ConfigController < ApplicationController
     emoji_ids = params[:emoji_ids]&.reject(&:blank?)
 
     if emoji_ids.blank?
-      redirect_to config_custom_emojis_path(tab: 'remote'), alert: 'コピーする絵文字を選択してください'
+      redirect_to config_custom_emojis_path(tab: 'remote'), alert: t('custom_emojis.copy_no_selection')
       return
     end
 
@@ -137,7 +139,7 @@ class ConfigController < ApplicationController
     else
       # 全ドメインからの発見
       RemoteEmojiDiscoveryJob.perform_later
-      redirect_to config_custom_emojis_path(tab: 'remote'), notice: '接触済みドメインからの絵文字発見を開始しました'
+      redirect_to config_custom_emojis_path(tab: 'remote'), notice: t('custom_emojis.discovery_started')
     end
   end
 
@@ -148,14 +150,14 @@ class ConfigController < ApplicationController
     inbox_url = params[:inbox_url]&.strip
 
     if inbox_url.blank?
-      redirect_to config_relays_path, alert: 'リレーのinbox URLを入力してください'
+      redirect_to config_relays_path, alert: t('relays.url_required')
       return
     end
 
     relay = Relay.new(inbox_url: inbox_url, state: 'idle')
 
     if relay.save
-      redirect_to config_relays_path, notice: 'リレーが追加されました'
+      redirect_to config_relays_path, notice: t('relays.added')
     else
       redirect_to config_relays_path, alert: "リレーの追加に失敗しました: #{relay.errors.full_messages.join(', ')}"
     end
@@ -172,10 +174,10 @@ class ConfigController < ApplicationController
     when 'disable'
       disable_relay(relay)
     else
-      redirect_to config_relays_path, alert: '無効な操作です'
+      redirect_to config_relays_path, alert: t('relays.invalid_action')
     end
   rescue ActiveRecord::RecordNotFound
-    redirect_to config_relays_path, alert: 'リレーが見つかりません'
+    redirect_to config_relays_path, alert: t('relays.not_found')
   end
 
   # DELETE /config/relays/:id
@@ -189,12 +191,12 @@ class ConfigController < ApplicationController
     end
 
     if relay.destroy
-      redirect_to config_relays_path, notice: 'リレーが削除されました'
+      redirect_to config_relays_path, notice: t('relays.deleted')
     else
-      redirect_to config_relays_path, alert: 'リレーの削除に失敗しました'
+      redirect_to config_relays_path, alert: t('relays.delete_failed')
     end
   rescue ActiveRecord::RecordNotFound
-    redirect_to config_relays_path, alert: 'リレーが見つかりません'
+    redirect_to config_relays_path, alert: t('relays.not_found')
   end
 
   private
@@ -230,21 +232,9 @@ class ConfigController < ApplicationController
     false
   end
 
-  def load_stored_config
-    config_file = Rails.root.join('config', 'instance_config.yml')
-    if File.exist?(config_file)
-      YAML.load_file(config_file) || {}
-    else
-      {}
-    end
-  rescue StandardError => e
-    Rails.logger.error "Failed to load config: #{e.message}"
-    {}
-  end
-
   def save_config(new_config)
     config_file = Rails.root.join('config', 'instance_config.yml')
-    current_config = load_stored_config
+    current_config = build_stored_config_hash
 
     updated_config = merge_configs(current_config, new_config)
     write_config_file(config_file, updated_config)
@@ -272,131 +262,11 @@ class ConfigController < ApplicationController
   end
 
   def current_instance_config
-    build_base_config.merge(build_activitypub_config)
-  end
-
-  def build_base_config
-    stored_config = load_stored_config
-    build_instance_config_hash(stored_config)
-  end
-
-  def build_instance_config_hash(stored_config)
-    {
-      instance_name: config_value(stored_config, 'instance_name'),
-      instance_description: config_value(stored_config, 'instance_description'),
-      instance_contact_email: config_value(stored_config, 'instance_contact_email'),
-      instance_maintainer: config_value(stored_config, 'instance_maintainer'),
-      blog_footer: config_value(stored_config, 'blog_footer'),
-      background_color: config_value(stored_config, 'background_color'),
-      user_bio: current_user&.note || ''
-    }
-  end
-
-  def config_value(stored_config, key)
-    case key
-    when 'background_color'
-      stored_config[key] || '#fdfbfb'
-    when 'instance_name'
-      stored_config[key] || 'letter'
-    when 'instance_description'
-      stored_config[key] || 'General Letter Publication System based on ActivityPub'
-    when 'instance_contact_email'
-      stored_config[key] || 'admin@localhost'
-    when 'instance_maintainer'
-      stored_config[key] || 'letter Administrator'
-    when 'blog_footer'
-      stored_config[key] || 'General Letter Publication System based on ActivityPub'
-    else
-      stored_config[key]
-    end
-  end
-
-  def build_activitypub_config
-    build_activitypub_settings.merge(build_r2_settings)
-  end
-
-  def build_activitypub_settings
-    {
-      activitypub_domain: Rails.application.config.activitypub.domain,
-      activitypub_base_url: Rails.application.config.activitypub.base_url
-    }
-  end
-
-  def build_r2_settings
-    {
-      s3_enabled: ENV['S3_ENABLED'] == 'true',
-      s3_endpoint: ENV.fetch('S3_ENDPOINT', nil),
-      s3_bucket: ENV.fetch('S3_BUCKET', nil),
-      r2_access_key_id: ENV.fetch('R2_ACCESS_KEY_ID', nil),
-      r2_secret_access_key: ENV.fetch('R2_SECRET_ACCESS_KEY', nil),
-      s3_alias_host: ENV.fetch('S3_ALIAS_HOST', nil)
-    }
+    build_base_config
   end
 
   def base_emoji_scope
     CustomEmoji.includes(:image_attachment).order(created_at: :desc)
-  end
-
-  def base_emoji_scope_for_tab(tab)
-    scope = CustomEmoji.includes(:image_attachment)
-
-    scope = case tab
-            when 'local'
-              scope.local
-            when 'remote'
-              scope.remote
-            else
-              scope.local # デフォルトはローカル
-            end
-
-    scope.order(created_at: :desc)
-  end
-
-  def apply_emoji_filters(scope)
-    scope = filter_by_category(scope)
-    scope = filter_by_search(scope)
-    scope = filter_by_domain(scope)
-    paginate_emojis(scope)
-  end
-
-  def filter_by_category(scope)
-    return scope if params[:enabled].blank?
-
-    case params[:enabled]
-    when 'true'
-      scope.where(disabled: false)
-    when 'false'
-      scope.where(disabled: true)
-    else
-      scope
-    end
-  end
-
-  def filter_by_search(scope)
-    return scope if params[:q].blank?
-
-    search_term = "%#{params[:q].upcase}%"
-    scope.where('UPPER(shortcode) LIKE ? OR UPPER(domain) LIKE ?', search_term, search_term)
-  end
-
-  def filter_by_domain(scope)
-    return scope if params[:domain].blank?
-
-    scope.where(domain: params[:domain])
-  end
-
-  def paginate_emojis(scope)
-    page = params[:page]&.to_i || 1
-    per_page = 20
-    offset = (page - 1) * per_page
-
-    @current_page = page
-    @total_count = scope.count
-    @total_pages = (@total_count.to_f / per_page).ceil
-    @has_next_page = page < @total_pages
-    @has_prev_page = page > 1
-
-    scope.offset(offset).limit(per_page)
   end
 
   def custom_emoji_params
@@ -410,12 +280,12 @@ class ConfigController < ApplicationController
       success = follow_service.call(relay)
 
       if success
-        redirect_to config_relays_path, notice: 'リレーへの接続を開始しました'
+        redirect_to config_relays_path, notice: t('relays.connection_started')
       else
         redirect_to config_relays_path, alert: "リレーへの接続に失敗しました: #{relay.last_error}"
       end
     else
-      redirect_to config_relays_path, alert: 'このリレーは既に処理中です'
+      redirect_to config_relays_path, alert: t('relays.already_processing')
     end
   end
 
@@ -426,13 +296,13 @@ class ConfigController < ApplicationController
       success = unfollow_service.call(relay)
 
       if success
-        redirect_to config_relays_path, notice: 'リレーから切断しました'
+        redirect_to config_relays_path, notice: t('relays.disconnected')
       else
         redirect_to config_relays_path, alert: "リレーからの切断に失敗しました: #{relay.last_error}"
       end
     else
       relay.update!(state: 'idle')
-      redirect_to config_relays_path, notice: 'リレーの状態をリセットしました'
+      redirect_to config_relays_path, notice: t('relays.reset')
     end
   end
 end

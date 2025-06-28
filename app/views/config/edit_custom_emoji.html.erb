@@ -215,7 +215,7 @@ function updateEmojiPreview() {
   if (shortcodeInput && emojiPreview) {
     const shortcode = shortcodeInput.value || '<%= @custom_emoji.shortcode %>';
     
-    if (imagePreview && imagePreview.src) {
+    if (imagePreview && imagePreview.src && !imagePreview.src.includes('placeholder')) {
       emojiPreview.innerHTML = `<img src="${imagePreview.src}" alt=":${shortcode}:" class="inline-block w-4 h-4 object-contain align-text-bottom" style="margin: 0 2px;">`;
     } else {
       emojiPreview.textContent = `:${shortcode}:`;
@@ -223,20 +223,25 @@ function updateEmojiPreview() {
   }
 }
 
-// ページ読み込み時にプレビューを初期化
-document.addEventListener('DOMContentLoaded', function() {
+// ページ読み込み時にプレビューを初期化（Turbo対応）
+function initializeEmojiPreview() {
   updateEmojiPreview();
   
   const shortcodeInput = document.querySelector('input[name="custom_emoji[shortcode]"]');
   if (shortcodeInput) {
     shortcodeInput.addEventListener('input', updateEmojiPreview);
   }
-});
+}
 
-// ドラッグ&ドロップ対応
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', initializeEmojiPreview);
+document.addEventListener('turbo:load', initializeEmojiPreview);
+
+// ドラッグ&ドロップ対応（Turbo対応）
+function initializeDragDrop() {
   const dropZone = document.querySelector('.border-dashed');
   const fileInput = document.getElementById('emoji_image_input');
+  
+  if (!dropZone || !fileInput) return;
   
   ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
     dropZone.addEventListener(eventName, preventDefaults, false);
@@ -274,5 +279,8 @@ document.addEventListener('DOMContentLoaded', function() {
       previewImage(fileInput);
     }
   }
-});
+}
+
+document.addEventListener('DOMContentLoaded', initializeDragDrop);
+document.addEventListener('turbo:load', initializeDragDrop);
 </script>

@@ -5,56 +5,74 @@
 
 set -e
 
-echo "🚀 Dockerクイックスタート"
+echo "letter - Dockerクイックスタート"
 echo "=================================================="
 echo ""
 
 # Dockerがインストールされているかチェック
 if ! command -v docker &> /dev/null; then
-    echo "❌ Dockerがインストールされていません。まずDockerをインストールしてください。"
-    echo "訪問先: https://docs.docker.com/get-docker/"
+    echo "ERROR: Dockerがインストールされていません。まずDockerをインストールしてください。"
+    echo "参考: https://docs.docker.com/get-docker/"
     exit 1
 fi
 
 # Docker Composeがインストールされているかチェック
 if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Docker Composeがインストールされていません。まずDocker Composeをインストールしてください。"
-    echo "訪問先: https://docs.docker.com/compose/install/"
+    echo "ERROR: Docker Composeがインストールされていません。まずDocker Composeをインストールしてください。"
+    echo "参考: https://docs.docker.com/compose/install/"
     exit 1
 fi
 
-echo "✅ DockerとDocker Composeがインストールされています"
+echo "OK: DockerとDocker Composeがインストールされています"
 echo ""
 
 # 環境ファイルが存在しない場合は作成
-if [ ! -f ".env.docker.local" ]; then
-    echo "📝 環境設定を作成中..."
-    cp .env.docker .env.docker.local
-    
-    echo "⚙️  .env.docker.localで設定を構成してください"
+if [ ! -f ".env" ]; then
+    echo "INFO: 環境設定を作成中..."
+    echo "INFO: .envファイルを作成してください"
     echo "最低限、ACTIVITYPUB_DOMAINを設定してください"
     echo ""
     read -p "ドメインを入力してください (localhost:3000の場合はEnterを押してください): " domain
     
-    if [ -n "$domain" ]; then
-        sed -i "s/ACTIVITYPUB_DOMAIN=localhost:3000/ACTIVITYPUB_DOMAIN=$domain/" .env.docker.local
-        
-        if [[ $domain != *"localhost"* ]]; then
-            sed -i "s/ACTIVITYPUB_PROTOCOL=http/ACTIVITYPUB_PROTOCOL=https/" .env.docker.local
-        fi
+    domain=${domain:-localhost:3000}
+    protocol="http"
+    
+    if [[ $domain != *"localhost"* ]]; then
+        protocol="https"
     fi
     
-    echo "✅ 環境ファイルが作成されました: .env.docker.local"
+    cat > .env << EOF
+# ActivityPub設定
+ACTIVITYPUB_DOMAIN=$domain
+ACTIVITYPUB_PROTOCOL=$protocol
+
+# インスタンス設定
+INSTANCE_NAME=letter
+INSTANCE_DESCRIPTION=General letter Publication System based on ActivityPub
+
+# Cloudflare R2オブジェクトストレージ設定
+S3_ENABLED=false
+S3_ENDPOINT=
+S3_BUCKET=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+S3_ALIAS_HOST=
+
+# Rails設定
+RAILS_ENV=development
+EOF
+    
+    echo "OK: 環境ファイルが作成されました: .env"
 else
-    echo "✅ 環境ファイルが存在します: .env.docker.local"
+    echo "OK: 環境ファイルが存在します: .env"
 fi
 
 echo ""
 
 # 必要なディレクトリを作成
-echo "📁 必要なディレクトリを作成中..."
-mkdir -p db log public/system/accounts/avatars public/system/accounts/headers public/system/media_attachments
-echo "✅ ディレクトリが作成されました"
+echo "INFO: 必要なディレクトリを作成中..."
+mkdir -p storage log
+echo "OK: ディレクトリが作成されました"
 echo ""
 
 # ユーザに何をするか尋ねる
@@ -70,47 +88,46 @@ read -p "選択してください (1-6): " choice
 
 case $choice in
     1)
-        echo "🔨 Building and starting Letter..."
+        echo "INFO: letterをビルドして開始中..."
         docker-compose up --build
         ;;
     2)
-        echo "🔨 Building and starting Letter in background..."
+        echo "INFO: letterをバックグラウンドでビルドして開始中..."
         docker-compose up -d --build
         echo ""
-        echo "✅ Letter is running in background"
-        echo "🌐 Access your instance at: http://localhost:3000"
-        echo "📊 Health check: http://localhost:3000/up"
+        echo "OK: letterがバックグラウンドで実行中です"
+        echo "アクセス: http://localhost:3000"
+        echo "ヘルスチェック: http://localhost:3000/up"
         echo ""
-        echo "📝 Useful commands:"
-        echo "  View logs: docker-compose logs -f"
-        echo "  Stop: docker-compose down"
-        echo "  Restart: docker-compose restart"
+        echo "便利なコマンド:"
+        echo "  ログ表示: docker-compose logs -f"
+        echo "  停止: docker-compose down"
+        echo "  再起動: docker-compose restart"
         ;;
     3)
-        echo "🔨 Building Letter..."
+        echo "INFO: letterをビルド中..."
         docker-compose build
-        echo "✅ Build completed"
+        echo "OK: ビルドが完了しました"
         ;;
     4)
-        echo "📜 Viewing logs..."
+        echo "INFO: ログを表示中..."
         docker-compose logs -f
         ;;
     5)
-        echo "🛑 Stopping Letter..."
+        echo "INFO: letterを停止中..."
         docker-compose down
-        echo "✅ Letter stopped"
+        echo "OK: letterが停止しました"
         ;;
     6)
-        echo "🧹 Cleaning up..."
+        echo "INFO: クリーンアップ中..."
         docker-compose down --rmi all --volumes --remove-orphans
-        echo "✅ Cleanup completed"
+        echo "OK: クリーンアップが完了しました"
         ;;
     *)
-        echo "❌ Invalid choice. Please run the script again."
+        echo "ERROR: 無効な選択です。スクリプトを再実行してください。"
         exit 1
         ;;
 esac
 
 echo ""
-echo "📚 For more information, see DOCKER.md"
-echo "🎉 Happy federating!"
+echo "詳細については DOCKER.md を参照してください"

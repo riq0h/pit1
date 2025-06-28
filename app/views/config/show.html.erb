@@ -148,7 +148,7 @@
               プロフィールリンク
             </label>
             <button type="button" onclick="addProfileLink()" 
-                    class="btn-secondary btn-sm">
+                    class="px-3 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer text-sm">
               追加
             </button>
           </div>
@@ -174,7 +174,7 @@
                     </div>
                     <div>
                       <button type="button" onclick="removeProfileLink(this)" 
-                              class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm <%= 'hidden' if existing_links.length <= 1 %>">
+                              class="delete-button px-3 py-2 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm <%= 'hidden' if existing_links.length <= 1 %>">
                         削除
                       </button>
                     </div>
@@ -199,7 +199,7 @@
                   </div>
                   <div>
                     <button type="button" onclick="removeProfileLink(this)" 
-                            class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm hidden">
+                            class="delete-button px-3 py-2 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm hidden">
                       削除
                     </button>
                   </div>
@@ -224,7 +224,7 @@
                 </div>
                 <div>
                   <button type="button" onclick="removeProfileLink(this)" 
-                          class="delete-button px-3 py-1 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm hidden">
+                          class="delete-button px-3 py-2 border border-red-300 text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-sm hidden">
                     削除
                   </button>
                 </div>
@@ -277,19 +277,19 @@
             ステータス
           </label>
           <div class="flex items-center">
-            <span class="<%= @config[:s3_enabled] ? 'text-green-600' : 'text-gray-500' %> text-sm" class="text-normal">
-              <%= @config[:s3_enabled] ? '✓ 有効' : '無効' %>
+            <span class="<%= @config[:r2][:s3_enabled] ? 'text-green-600' : 'text-gray-500' %> text-sm" class="text-normal">
+              <%= @config[:r2][:s3_enabled] ? '✓ 有効' : '無効' %>
             </span>
           </div>
         </div>
         
-        <% if @config[:s3_enabled] %>
+        <% if @config[:r2][:s3_enabled] %>
           <div>
             <label class="block text-sm text-gray-700 mb-2" class="text-normal">
               エンドポイント
             </label>
             <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm break-all" class="text-normal">
-              <%= @config[:s3_endpoint] || '未設定' %>
+              <%= @config[:r2][:s3_endpoint] || '未設定' %>
             </div>
           </div>
           
@@ -298,7 +298,7 @@
               バケット名
             </label>
             <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" class="text-normal">
-              <%= @config[:s3_bucket] || '未設定' %>
+              <%= @config[:r2][:s3_bucket] || '未設定' %>
             </div>
           </div>
           
@@ -307,7 +307,7 @@
               アクセスキーID
             </label>
             <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm break-all" class="text-normal">
-              <%= @config[:r2_access_key_id] || '未設定' %>
+              <%= @config[:r2][:r2_access_key_id] || '未設定' %>
             </div>
           </div>
           
@@ -316,17 +316,17 @@
               シークレットアクセスキー
             </label>
             <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" class="text-normal">
-              <%= @config[:r2_secret_access_key] ? '••••••••••••••••' : '未設定' %>
+              <%= @config[:r2][:r2_secret_access_key] ? '••••••••••••••••' : '未設定' %>
             </div>
           </div>
           
-          <% if @config[:s3_alias_host].present? %>
+          <% if @config[:r2][:s3_alias_host].present? %>
             <div>
               <label class="block text-sm text-gray-700 mb-2" class="text-normal">
                 カスタムドメイン
               </label>
               <div class="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm" class="text-normal">
-                <%= @config[:s3_alias_host] %>
+                <%= @config[:r2][:s3_alias_host] %>
               </div>
             </div>
           <% end %>

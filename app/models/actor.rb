@@ -32,6 +32,23 @@ class Actor < ApplicationRecord
   has_one_attached :avatar
   has_one_attached :header
 
+  # カスタムアップロードメソッド（フォルダ構造対応）
+  def attach_avatar_with_folder(io:, filename:, content_type:)
+    if ENV['S3_ENABLED'] == 'true'
+      custom_key = "avatar/#{SecureRandom.hex(16)}"
+      blob = ActiveStorage::Blob.create_and_upload!(
+        io: io,
+        filename: filename,
+        content_type: content_type,
+        service_name: :cloudflare_r2,
+        key: custom_key
+      )
+      avatar.attach(blob)
+    else
+      avatar.attach(io: io, filename: filename, content_type: content_type)
+    end
+  end
+
   # フォロー関係
   has_many :following_relationships, class_name: 'Follow', dependent: :destroy, inverse_of: :actor
   has_many :following, through: :following_relationships, source: :target_actor
@@ -54,7 +71,7 @@ class Actor < ApplicationRecord
 
   # アカウントメモ
   has_many :account_notes, dependent: :destroy
-  has_many :account_notes_received, class_name: 'AccountNote', foreign_key: :target_actor_id, dependent: :destroy
+  has_many :account_notes_received, class_name: 'AccountNote', foreign_key: :target_actor_id, dependent: :destroy, inverse_of: :target_actor
 
   # 会話
   has_many :conversation_participants, dependent: :destroy
@@ -98,7 +115,7 @@ class Actor < ApplicationRecord
   before_validation :set_ap_urls, if: :local?, on: :create
   before_validation :generate_key_pair, if: :local?, on: :create
   before_create :set_admin_for_local_users, if: :local?
-  after_update :distribute_profile_update, if: :local_profile_updated?
+  after_update :distribute_profile_update, if: :should_distribute_profile_update?
 
   def setting(key)
     settings[key.to_s]
@@ -597,12 +614,14 @@ class Actor < ApplicationRecord
   private
 
   # プロフィール更新を検知
-  def local_profile_updated?
+  def should_distribute_profile_update?
     return false unless local?
 
     # プロフィールに関連する属性が変更されたかチェック
-    profile_attributes = %w[display_name note fields avatar header]
-    saved_changes.keys.any? { |attr| profile_attributes.include?(attr) }
+    profile_attributes = %w[display_name note fields]
+    saved_changes.keys.any? { |attr| profile_attributes.include?(attr) } ||
+      saved_changes.key?('avatar') ||
+      saved_changes.key?('header')
   end
 
   # プロフィール更新を配信

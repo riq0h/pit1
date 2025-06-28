@@ -21,17 +21,25 @@ module StatusSerializer
   end
 
   def parse_content_for_frontend(content)
-    return content if content.blank?
+    return '' if content.blank?
 
-    # フロントエンド用: 絵文字HTMLタグが既にある場合はそのまま、ない場合は変換
-    # ローカル投稿: 既にHTML形式で保存済み → そのまま表示
-    # 外部投稿: ショートコードの可能性 → 変換が必要
-    if content.include?('<img') && content.include?('custom-emoji')
-      # 既に絵文字がHTMLで変換済み
-      content
+    # 既にHTMLリンクが含まれている場合（外部投稿）は絵文字処理のみ
+    if content.include?('<a ') || content.include?('<p>')
+      # 外部投稿: 既にHTMLでリンク化済み、絵文字のみ処理
+      if content.include?('<img') && content.include?('custom-emoji')
+        content
+      else
+        EmojiParser.new(content).parse
+      end
     else
-      # ショートコードがあれば変換
-      EmojiParser.new(content).parse
+      # ローカル投稿: 絵文字処理 + URLリンク化
+      emoji_processed_content = if content.include?('<img') && content.include?('custom-emoji')
+                                  content
+                                else
+                                  EmojiParser.new(content).parse
+                                end
+
+      auto_link_urls(emoji_processed_content)
     end
   end
 

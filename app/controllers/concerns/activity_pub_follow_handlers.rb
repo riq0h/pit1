@@ -18,6 +18,10 @@ module ActivityPubFollowHandlers
         # 未承認のフォローを自動承認
         Rails.logger.info '🔄 Re-accepting pending follow'
         existing_follow.accept!
+
+        # 再承認時にも通知を作成
+        Notification.create_follow_notification(existing_follow)
+
         Rails.logger.info "✅ Follow re-accepted: #{existing_follow.id}"
       end
       head :accepted

@@ -77,21 +77,35 @@ class MigrateToR2Job < ApplicationJob
   end
 
   def should_migrate_attachment?(attachment)
-    attachment.attached? && attachment.service_name.to_s != 'cloudflare_r2'
+    attachment.attached? && !attachment.service_name.to_s.start_with?('cloudflare_r2')
   end
 
   def perform_migration(attachment, _description)
     file_content = attachment.download
-    r2_blob = create_r2_blob(attachment, file_content)
+    service_name = determine_service_for_attachment(attachment)
+    r2_blob = create_r2_blob(attachment, file_content, service_name)
     attachment.record.send(attachment.name).attach(r2_blob)
   end
 
-  def create_r2_blob(original_attachment, file_content)
+  def determine_service_for_attachment(attachment)
+    case attachment.record
+    when CustomEmoji
+      'cloudflare_r2_emoji'
+    when Actor
+      'cloudflare_r2_avatar'
+    when MediaAttachment
+      'cloudflare_r2_media'
+    else
+      'cloudflare_r2'
+    end
+  end
+
+  def create_r2_blob(original_attachment, file_content, service_name)
     ActiveStorage::Blob.create_and_upload!(
       io: StringIO.new(file_content),
       filename: original_attachment.filename,
       content_type: original_attachment.content_type,
-      service_name: 'cloudflare_r2'
+      service_name: service_name
     )
   end
 end

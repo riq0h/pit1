@@ -162,35 +162,35 @@
     </div>
     
     <!-- ページネーション -->
-    <% if defined?(@total_pages) && @total_pages > 1 %>
+    <% if custom_emojis.respond_to?(:total_pages) && custom_emojis.total_pages > 1 %>
       <div class="border-t border-gray-300 px-6 py-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-2">
-            <% if @has_prev_page %>
-              <%= link_to config_custom_emojis_path(params.to_unsafe_h.merge(page: @current_page - 1)), 
+            <% if custom_emojis.prev_page %>
+              <%= link_to config_custom_emojis_path(params.to_unsafe_h.merge(page: custom_emojis.prev_page)), 
                   class: "btn-secondary btn-sm" do %>
                 ← 前
               <% end %>
             <% else %>
-              <span class="px-3 py-1 border border-gray-200 text-gray-400 text-sm" >← 前</span>
+              <span class="px-3 py-1 border border-gray-200 text-gray-400 text-sm">← 前</span>
             <% end %>
             
-            <span class="px-3 py-1 text-sm text-gray-600" >
-              <%= @current_page %> / <%= @total_pages %>
+            <span class="px-3 py-1 text-sm text-gray-600">
+              <%= custom_emojis.current_page %> / <%= custom_emojis.total_pages %>
             </span>
             
-            <% if @has_next_page %>
-              <%= link_to config_custom_emojis_path(params.to_unsafe_h.merge(page: @current_page + 1)), 
+            <% if custom_emojis.next_page %>
+              <%= link_to config_custom_emojis_path(params.to_unsafe_h.merge(page: custom_emojis.next_page)), 
                   class: "btn-secondary btn-sm" do %>
                 次 →
               <% end %>
             <% else %>
-              <span class="px-3 py-1 border border-gray-200 text-gray-400 text-sm" >次 →</span>
+              <span class="px-3 py-1 border border-gray-200 text-gray-400 text-sm">次 →</span>
             <% end %>
           </div>
           
-          <div class="text-sm text-gray-500" >
-            <%= (@current_page - 1) * 20 + 1 %>-<%= [@current_page * 20, @total_count].min %> 件目 / 全<%= @total_count %>件
+          <div class="text-sm text-gray-500">
+            <%= custom_emojis.offset_value + 1 %>-<%= [custom_emojis.offset_value + custom_emojis.limit_value, custom_emojis.total_count].min %> 件目 / 全<%= custom_emojis.total_count %>件
           </div>
         </div>
       </div>

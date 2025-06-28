@@ -8,7 +8,7 @@ module TimeParsingHelper
     return handle_default(default_on_blank) if timestamp.blank?
 
     Time.zone.parse(timestamp)
-  rescue ArgumentError, StandardError
+  rescue StandardError
     handle_default(default_on_error)
   end
 
