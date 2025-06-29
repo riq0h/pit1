@@ -14,7 +14,7 @@ gem 'jbuilder'
 gem 'ostruct'
 gem 'puma', '>= 5.0'
 gem 'rails', '~> 8.0.0'
-gem 'sassc-rails'
+# gem 'sassc-rails'  # TailwindCSS v4との互換性問題のため無効化
 gem 'sprockets-rails'
 gem 'sqlite3', '>= 2.1'
 gem 'stimulus-rails'
@@ -43,6 +43,7 @@ gem 'solid_queue'
 gem 'web-push'
 
 # ユーティリティ
+gem 'active_model_serializers'
 gem 'aws-sdk-s3', require: false
 gem 'blurhash'
 gem 'foreman'

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'stringio'
+
 module ActivityPubObjectHandlers
   extend ActiveSupport::Concern
   include ActivityPubVisibilityHelper
@@ -23,14 +25,38 @@ module ActivityPubObjectHandlers
   end
 
   def update_actor_profile(object_data)
-    @sender.update!(
+    update_attrs = {
       display_name: object_data['name'],
       note: object_data['summary'],
-      icon_url: object_data.dig('icon', 'url'),
-      header_url: object_data.dig('image', 'url'),
       raw_data: object_data.to_json
-    )
-    Rails.logger.info "👤 Actor updated: #{@sender.username}"
+    }
+
+    # fieldsが存在する場合は更新
+    if object_data['attachment'].is_a?(Array)
+      fields = object_data['attachment'].filter_map do |attachment|
+        next unless attachment['type'] == 'PropertyValue'
+
+        {
+          'name' => attachment['name'],
+          'value' => attachment['value']
+        }
+      end
+      update_attrs[:fields] = fields.to_json unless fields.empty?
+    end
+
+    # discoverable設定
+    update_attrs[:discoverable] = object_data['discoverable'] if object_data.key?('discoverable')
+
+    # manuallyApprovesFollowers設定
+    update_attrs[:manually_approves_followers] = object_data['manuallyApprovesFollowers'] if object_data.key?('manuallyApprovesFollowers')
+
+    @sender.update!(update_attrs)
+
+    # 既存のFollowServiceメソッドを使用してアバター・ヘッダー画像を更新
+    follow_service = FollowService.new(@sender)
+    follow_service.send(:attach_remote_images, @sender, object_data)
+
+    Rails.logger.info "👤 Actor profile updated: #{@sender.username}"
   end
 
   def update_object_content(object_data)

@@ -12,7 +12,7 @@ if Rails.env.development? || Rails.env.production?
       Rails.env,
       'cable',
       adapter: 'sqlite3',
-      database: database_path,
+      database: database_path.to_s,
       pool: ENV.fetch("RAILS_MAX_THREADS") { 20 }.to_i,
       timeout: 30000,
       pragma: {

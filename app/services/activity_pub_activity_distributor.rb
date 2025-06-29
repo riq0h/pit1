@@ -90,10 +90,10 @@ class ActivityPubActivityDistributor
     return unless activity.local?
 
     # フォロワーへの配信
-    DeliverActivityJob.perform_later(activity.id) if should_deliver_to_followers?
+    SendActivityJob.perform_later(activity.id) if should_deliver_to_followers?
 
     # リレーへの配信
-    DeliverToRelaysJob.perform_later(activity.id) if should_distribute_to_relays?
+    SendActivityJob.perform_later(activity.id) if should_distribute_to_relays?
   end
 
   def should_deliver_to_followers?

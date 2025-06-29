@@ -235,7 +235,14 @@ class FollowService
       follow_params[:accepted] = false
     end
 
+    Rails.logger.info "🔄 Creating follow relationship: #{@actor.username} -> #{target_actor.username}@#{target_actor.domain}"
+    Rails.logger.debug { "Follow params: #{follow_params.inspect}" }
+
     Follow.create!(follow_params)
+  rescue StandardError => e
+    Rails.logger.error "❌ Failed to create follow relationship: #{e.message}"
+    Rails.logger.error "Backtrace: #{e.backtrace.first(5).join("\n")}"
+    raise
   end
 
   def generate_follow_ap_id(_target_actor, follow_id)

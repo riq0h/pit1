@@ -11,9 +11,14 @@ pkill -f "rails server" 2>/dev/null || echo "No Rails server running"
 # 2. 既存データベースファイル完全削除
 echo ""
 echo "🗑️ Removing all database files..."
+RAILS_ENV=${RAILS_ENV:-development}
+echo "Environment: $RAILS_ENV"
 rm -f storage/development.sqlite3*
 rm -f storage/test.sqlite3*
 rm -f storage/production.sqlite3*
+rm -f storage/cable_*.sqlite3*
+rm -f storage/cache.sqlite3*
+rm -f storage/queue.sqlite3*
 rm -f db/schema.rb
 rm -f db/structure.sql
 

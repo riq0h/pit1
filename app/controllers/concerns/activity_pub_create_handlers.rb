@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require_relative '../../services/html_stripper'
-
 module ActivityPubCreateHandlers
   extend ActiveSupport::Concern
   include ActivityPubVisibilityHelper

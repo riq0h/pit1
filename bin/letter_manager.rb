@@ -53,13 +53,14 @@ def show_menu
   puts ""
   puts "アカウント管理:"
   puts "  e) アカウント作成・管理"
-  puts "  f) アカウント削除"
-  puts "  g) OAuthトークン生成"
+  puts "  f) パスワード変更"
+  puts "  g) アカウント削除"
+  puts "  h) OAuthトークン生成"
   puts ""
   puts "システム管理:"
-  puts "  h) VAPIDキー生成"
-  puts "  i) Cloudflare R2 移行"
-  puts "  j) リモート画像キャッシュ管理"
+  puts "  i) VAPIDキー手動生成"
+  puts "  j) ローカルの画像をR2に移行する"
+  puts "  k) リモート画像キャッシュ管理"
   puts ""
   puts "  x) 終了"
   puts ""
@@ -79,20 +80,52 @@ def load_env_vars
   env_vars
 end
 
-# Rails runner実行ヘルパー
 def run_rails_command(code)
   env_vars = load_env_vars
+  rails_env = ENV['RAILS_ENV'] || 'development'
   env_string = env_vars.map { |k, v| "#{k}=#{v}" }.join(" ")
   
   temp_file = "/tmp/rails_temp_#{Random.rand(10000)}.rb"
   File.write(temp_file, code)
   
-  result = `#{env_string} bin/rails runner "#{temp_file}" 2>/dev/null`
+  result = `RAILS_ENV=#{rails_env} #{env_string} bin/rails runner "#{temp_file}" 2>&1`
   File.delete(temp_file) if File.exist?(temp_file)
+  
+  # ActivityPub メッセージをフィルタリング
+  filtered_lines = result.strip.lines.reject { |line| 
+    line.strip.start_with?("ActivityPub configured") || 
+    line.strip.empty? 
+  }
+  filtered_lines.join.strip
+ensure
+  File.delete(temp_file) if File.exist?(temp_file)
+end
+
+def run_rails_command_with_params(code, params = {})
+  env_vars = load_env_vars
+  rails_env = ENV['RAILS_ENV'] || 'development'
+  env_string = env_vars.map { |k, v| "#{k}=#{v}" }.join(" ")
+  
+  temp_file = "/tmp/rails_temp_#{Random.rand(10000)}.rb"
+  params_file = "/tmp/rails_params_#{Random.rand(10000)}.json"
+  
+  File.write(params_file, JSON.dump(params))
+  
+  full_code = <<~RUBY
+    require 'json'
+    PARAMS = JSON.parse(File.read('#{params_file}'))
+    #{code}
+  RUBY
+  
+  File.write(temp_file, full_code)
+  
+  result = `RAILS_ENV=#{rails_env} #{env_string} bin/rails runner "#{temp_file}" 2>/dev/null`
+  
+  [temp_file, params_file].each { |f| File.delete(f) if File.exist?(f) }
   
   result
 ensure
-  File.delete(temp_file) if File.exist?(temp_file)
+  [temp_file, params_file].each { |f| File.delete(f) if File.exist?(f) }
 end
 
 # a. セットアップ
@@ -205,12 +238,14 @@ def setup_new_installation
   # データベースの確認と準備
   print_info "3. データベースの確認と準備..."
   
-  if File.exist?("db/development.sqlite3")
+  rails_env = ENV['RAILS_ENV'] || 'development'
+  db_file = "storage/#{rails_env}.sqlite3"
+  if File.exist?(db_file)
     print_success "データベースファイルが存在します"
   else
     print_warning "データベースファイルが見つかりません。作成します..."
     begin
-      system! "bin/rails db:create"
+      system! "RAILS_ENV=#{rails_env} bin/rails db:create"
       print_success "データベースを作成しました"
     rescue => e
       print_error "データベース作成に失敗しました: #{e.message}"
@@ -221,7 +256,7 @@ def setup_new_installation
   # マイグレーションの実行
   print_info "マイグレーションの確認..."
   
-  migrate_output = `bin/rails db:migrate:status 2>&1`
+  migrate_output = `RAILS_ENV=#{rails_env} bin/rails db:migrate:status 2>&1`
   if $?.success?
     pending_migrations = migrate_output.lines.select { |line| line.include?("down") }
     
@@ -230,7 +265,7 @@ def setup_new_installation
     else
       print_info "#{pending_migrations.count}個の未実行マイグレーションがあります"
       
-      if system("bin/rails db:migrate 2>/dev/null")
+      if system("RAILS_ENV=#{rails_env} bin/rails db:migrate 2>/dev/null")
         print_success "マイグレーションを実行しました"
       else
         print_warning "マイグレーションでエラーが発生しましたが、続行します"
@@ -242,7 +277,7 @@ def setup_new_installation
 
   # ログとテンポラリファイルのクリーンアップ
   print_info "4. ログとテンポラリファイルのクリーンアップ..."
-  system! "bin/rails log:clear tmp:clear"
+  system! "RAILS_ENV=#{rails_env} bin/rails log:clear tmp:clear"
   print_success "クリーンアップが完了しました"
 
   # 既存プロセスの確認と停止
@@ -285,10 +320,11 @@ def setup_new_installation
   # サーバの起動
   print_info "7. サーバの起動..."
   
-  system!("RAILS_ENV=development rails server -b 0.0.0.0 -p 3000 -d")
+  rails_env = ENV['RAILS_ENV'] || 'development'
+  system!("RAILS_ENV=#{rails_env} rails server -b 0.0.0.0 -p 3000 -d")
   print_success "Railsサーバを起動しました"
 
-  system("RAILS_ENV=development nohup bin/jobs > log/solid_queue.log 2>&1 &")
+  system("RAILS_ENV=#{rails_env} nohup bin/jobs > log/solid_queue.log 2>&1 &")
   print_success "Solid Queueワーカーを起動しました"
 
   # 起動確認
@@ -316,6 +352,14 @@ def setup_new_installation
     print_success "Solid Cacheが正常に動作しています"
   else
     print_warning "Solid Cacheの動作確認に失敗しました"
+  end
+
+  # Solid Cable確認
+  cable_ok = check_solid_cable_status
+  if cable_ok
+    print_success "Solid Cableが正常に動作しています"
+  else
+    print_warning "Solid Cableの動作確認に失敗しました"
   end
 
   # 最終結果表示
@@ -350,6 +394,8 @@ def cleanup_and_start
 
   # 環境変数読み込み
   env_vars = load_env_vars
+  rails_env = env_vars['RAILS_ENV'] || ENV['RAILS_ENV'] || 'development'
+  
   unless env_vars['ACTIVITYPUB_DOMAIN']
     print_error ".envファイルが見つからないか、ACTIVITYPUB_DOMAINが設定されていません"
     return
@@ -358,6 +404,7 @@ def cleanup_and_start
   print_success "環境変数を読み込みました"
   print_info "ACTIVITYPUB_DOMAIN: #{env_vars['ACTIVITYPUB_DOMAIN']}"
   print_info "ACTIVITYPUB_PROTOCOL: #{env_vars['ACTIVITYPUB_PROTOCOL']}"
+  print_info "RAILS_ENV: #{rails_env}"
 
   # PIDファイルクリーンアップ
   print_info "3. PIDファイルのクリーンアップ..."
@@ -367,7 +414,7 @@ def cleanup_and_start
 
   # データベースメンテナンス
   print_info "4. データベースのメンテナンス..."
-  system("bin/rails db:migrate 2>/dev/null || true")
+  system("RAILS_ENV=#{rails_env} bin/rails db:migrate 2>/dev/null || true")
 
   # Rails サーバ起動
   print_info "5. Railsサーバを起動中..."
@@ -375,7 +422,7 @@ def cleanup_and_start
   protocol = env_vars['ACTIVITYPUB_PROTOCOL'] || 'http'
   
   begin
-    system!("RAILS_ENV=development ACTIVITYPUB_DOMAIN='#{domain}' ACTIVITYPUB_PROTOCOL='#{protocol}' rails server -b 0.0.0.0 -p 3000 -d")
+    system!("RAILS_ENV=#{rails_env} ACTIVITYPUB_DOMAIN='#{domain}' ACTIVITYPUB_PROTOCOL='#{protocol}' rails server -b 0.0.0.0 -p 3000 -d")
     print_success "Railsサーバをデーモンモードで起動しました"
   rescue => e
     print_error "Railsサーバ起動に失敗しました: #{e.message}"
@@ -384,7 +431,7 @@ def cleanup_and_start
 
   # Solid Queue 起動
   print_info "6. Solid Queueワーカーを起動中..."
-  if system("RAILS_ENV=development ACTIVITYPUB_DOMAIN='#{domain}' ACTIVITYPUB_PROTOCOL='#{protocol}' nohup bin/jobs > log/solid_queue.log 2>&1 &")
+  if system("RAILS_ENV=#{rails_env} ACTIVITYPUB_DOMAIN='#{domain}' ACTIVITYPUB_PROTOCOL='#{protocol}' nohup bin/jobs > log/solid_queue.log 2>&1 &")
     print_success "Solid Queueワーカーを起動しました"
   else
     print_warning "Solid Queueワーカーの起動に失敗しました"
@@ -414,6 +461,14 @@ def cleanup_and_start
     print_success "Solid Cacheが正常に動作しています"
   else
     print_warning "Solid Cacheの動作確認に失敗しました"
+  end
+
+  # Solid Cable確認
+  cable_ok = check_solid_cable_status
+  if cable_ok
+    print_success "Solid Cableが正常に動作しています"
+  else
+    print_warning "Solid Cableの動作確認に失敗しました"
   end
 
   puts ""
@@ -470,16 +525,24 @@ def check_domain_config
     cache_ok = check_solid_cache_status
     puts "  Solid Cache: #{cache_ok ? '正常' : 'エラー'}"
     
-    # ローカルユーザー表示
+    # Solid Cable確認
+    cable_ok = check_solid_cable_status
+    puts "  Solid Cable: #{cable_ok ? '正常' : 'エラー'}"
+    
+    # ローカルユーザ表示
     puts ""
     print_info "ローカルユーザ:"
     begin
       users_code = "Actor.where(local: true).pluck(:username).each { |u| puts u }"
-      local_users = run_rails_command(users_code).strip
-      if local_users.empty?
+      result = run_rails_command(users_code)
+      filtered_users = result.strip.lines.reject { |line| 
+        line.strip.start_with?("ActivityPub configured") || 
+        line.strip.empty? 
+      }
+      if filtered_users.empty?
         puts "  ローカルユーザが見つかりません"
       else
-        local_users.lines.each { |user| puts "  - #{user.strip}" }
+        filtered_users.each { |user| puts "  - #{user.strip}" }
       end
     rescue
       puts "  データベースアクセスエラー"
@@ -574,7 +637,8 @@ def switch_domain
   RUBY
   
   env_string = "ACTIVITYPUB_DOMAIN='#{new_domain}' ACTIVITYPUB_PROTOCOL='#{new_protocol}'"
-  result = `#{env_string} bin/rails runner -e "#{update_code}" 2>/dev/null`
+  rails_env = ENV['RAILS_ENV'] || 'development'
+  result = `RAILS_ENV=#{rails_env} #{env_string} bin/rails runner "#{update_code}" 2>&1`
   puts result unless result.empty?
   
   print_success "データベースのURLを更新しました"
@@ -603,7 +667,13 @@ def manage_accounts
   # 現在のアカウント数を取得
   begin
     account_count_code = "puts Actor.where(local: true).count"
-    account_count = run_rails_command(account_count_code).strip.to_i
+    result = run_rails_command(account_count_code)
+    # ActivityPubメッセージなどの不要な行をフィルタリングして数値を取得
+    filtered_lines = result.strip.lines.reject { |line| 
+      line.strip.start_with?("ActivityPub configured") || 
+      line.strip.empty? 
+    }
+    account_count = filtered_lines[0]&.strip&.to_i || 0
   rescue
     print_error "データベースアクセスエラー"
     return
@@ -681,7 +751,11 @@ def list_accounts_detailed
   RUBY
   
   result = run_rails_command(list_code)
-  puts result unless result.strip.empty?
+  filtered_lines = result.strip.lines.reject { |line| 
+    line.strip.start_with?("ActivityPub configured") || 
+    line.strip.empty? 
+  }
+  puts filtered_lines.join unless filtered_lines.empty?
 end
 
 def create_account
@@ -711,7 +785,12 @@ def create_account
     
     # ユーザ名重複チェック
     check_code = "puts Actor.exists?(username: '#{username}', local: true) ? 'exists' : 'available'"
-    existing_check = run_rails_command(check_code).strip
+    result = run_rails_command(check_code)
+    filtered_lines = result.strip.lines.reject { |line| 
+      line.strip.start_with?("ActivityPub configured") || 
+      line.strip.empty? 
+    }
+    existing_check = filtered_lines[0]&.strip
     
     if existing_check == "exists"
       print_error "ユーザ名 '#{username}' は既に存在します"
@@ -770,10 +849,10 @@ def create_account
   creation_code = <<~RUBY
     begin
       actor = Actor.new(
-        username: '#{@username}',
-        password: '#{@password}',
-        display_name: '#{@display_name}',
-        note: '#{@note}',
+        username: PARAMS['username'],
+        password: PARAMS['password'],
+        display_name: PARAMS['display_name'],
+        note: PARAMS['note'],
         local: true,
         discoverable: true,
         manually_approves_followers: false
@@ -792,10 +871,19 @@ def create_account
     end
   RUBY
   
-  result = run_rails_command(creation_code)
-  lines = result.strip.lines
-  status = lines[0]&.strip
-  detail = lines[1]&.strip
+  result = run_rails_command_with_params(creation_code, {
+    'username' => @username,
+    'password' => @password,
+    'display_name' => @display_name,
+    'note' => @note
+  })
+  # ActivityPubメッセージなどの不要な行をフィルタリング
+  filtered_lines = result.strip.lines.reject { |line| 
+    line.strip.start_with?("ActivityPub configured") || 
+    line.strip.empty? 
+  }
+  status = filtered_lines[0]&.strip
+  detail = filtered_lines[1]&.strip
   
   if status == "success"
     env_vars = load_env_vars
@@ -811,7 +899,105 @@ def create_account
   end
 end
 
-# f. アカウント削除
+# f. パスワード変更
+def manage_password
+  change_password
+end
+
+def change_password
+  puts ""
+  print_header "パスワード変更"
+  
+  username = safe_gets("ユーザ名を入力してください: ")
+  
+  return unless username && !username.empty?
+  
+  # ユーザ存在チェック
+  check_code = "puts Actor.exists?(username: '#{username}', local: true) ? 'exists' : 'not_found'"
+  result = run_rails_command(check_code)
+  filtered_lines = result.strip.lines.reject { |line| 
+    line.strip.start_with?("ActivityPub configured") || 
+    line.strip.empty? 
+  }
+  check_result = filtered_lines[0]&.strip
+  
+  if check_result != "exists"
+    print_error "ユーザ '#{username}' が見つかりません"
+    return
+  end
+  
+  # 新しいパスワードを取得
+  loop do
+    new_password = safe_gets("新しいパスワード (6文字以上): ")
+    
+    return unless new_password
+    
+    if new_password.length < 6
+      print_error "パスワードは6文字以上である必要があります"
+      next
+    end
+    
+    password_confirm = safe_gets("パスワードを再入力: ")
+    
+    return unless password_confirm
+    
+    if new_password != password_confirm
+      print_error "パスワードが一致しません"
+      next
+    end
+    
+    # パスワード変更実行
+    puts ""
+    print_info "パスワードを変更中..."
+    
+    change_code = <<~RUBY
+      begin
+        actor = Actor.find_by(username: PARAMS['username'], local: true)
+        unless actor
+          puts 'not_found'
+          exit
+        end
+        
+        actor.password = PARAMS['password']
+        
+        if actor.save
+          puts 'success'
+          puts "パスワードが正常に変更されました"
+        else
+          puts 'error'
+          puts actor.errors.full_messages.join(', ')
+        end
+      rescue => e
+        puts 'exception'
+        puts e.message
+      end
+    RUBY
+    
+    result = run_rails_command_with_params(change_code, {'username' => username, 'password' => new_password})
+    lines = result.strip.lines.reject { |line| 
+      line.strip.start_with?("ActivityPub configured") || 
+      line.strip.empty? 
+    }
+    
+    status = lines[0]&.strip
+    detail = lines[1]&.strip
+    
+    case status
+    when "success"
+      print_success detail
+    when "not_found"
+      print_error "ユーザが見つかりません"
+    when "error"
+      print_error "パスワード変更に失敗しました: #{detail}"
+    when "exception"
+      print_error "エラーが発生しました: #{detail}"
+    end
+    
+    return
+  end
+end
+
+# g. アカウント削除
 def delete_account
   puts ""
   print_header "アカウント削除"
@@ -848,13 +1034,16 @@ def delete_account_by_number(account_number)
   RUBY
   
   result = run_rails_command(account_info_code)
-  lines = result.strip.lines
+  filtered_lines = result.strip.lines.reject { |line| 
+    line.strip.start_with?("ActivityPub configured") || 
+    line.strip.empty? 
+  }
   
-  return false if lines[0]&.strip == 'invalid'
+  return false if filtered_lines[0]&.strip == 'invalid'
   
-  username = lines[0]&.strip
-  display_name = lines[1]&.strip
-  account_id = lines[2]&.strip
+  username = filtered_lines[0]&.strip
+  display_name = filtered_lines[1]&.strip
+  account_id = filtered_lines[2]&.strip
   
   puts ""
   print_warning "削除対象のアカウント:"
@@ -872,7 +1061,87 @@ def delete_account_by_number(account_number)
   puts ""
   print_info "アカウントを削除中..."
   
-  delete_account_by_identifier(account_id)
+  # 直接削除処理を実行（確認は既に完了）
+  perform_account_deletion(account_id)
+end
+
+def perform_account_deletion(identifier)
+  deletion_code = <<~RUBY
+    begin
+      # IDまたはユーザ名でアクターを検索
+      if '#{identifier}'.match?(/^\\d+$/)
+        actor = Actor.find_by(id: '#{identifier}')
+      else
+        actor = Actor.find_by(username: '#{identifier}', local: true)
+      end
+      
+      unless actor
+        puts 'not_found'
+        exit
+      end
+      
+      actor_id = actor.id
+      username = actor.username
+      
+      # 直接SQL削除で依存レコードを削除
+      ActiveRecord::Base.connection.execute("DELETE FROM web_push_subscriptions WHERE actor_id = \#{actor_id}")
+      ActiveRecord::Base.connection.execute("DELETE FROM notifications WHERE account_id = \#{actor_id}")
+      ActiveRecord::Base.connection.execute("DELETE FROM notifications WHERE from_account_id = \#{actor_id}")
+      ActiveRecord::Base.connection.execute("DELETE FROM bookmarks WHERE actor_id = \#{actor_id}")
+      ActiveRecord::Base.connection.execute("DELETE FROM favourites WHERE actor_id = \#{actor_id}")
+      ActiveRecord::Base.connection.execute("DELETE FROM reblogs WHERE actor_id = \#{actor_id}")
+      ActiveRecord::Base.connection.execute("DELETE FROM mentions WHERE actor_id = \#{actor_id}")
+      ActiveRecord::Base.connection.execute("DELETE FROM media_attachments WHERE actor_id = \#{actor_id}")
+      ActiveRecord::Base.connection.execute("DELETE FROM follows WHERE actor_id = \#{actor_id}")
+      ActiveRecord::Base.connection.execute("DELETE FROM follows WHERE target_actor_id = \#{actor_id}")
+      ActiveRecord::Base.connection.execute("DELETE FROM objects WHERE actor_id = \#{actor_id}")
+      ActiveRecord::Base.connection.execute("DELETE FROM activities WHERE actor_id = \#{actor_id}")
+      
+      # OAuthトークンも削除
+      begin
+        Doorkeeper::AccessToken.where(resource_owner_id: actor_id).delete_all
+        Doorkeeper::AccessGrant.where(resource_owner_id: actor_id).delete_all
+      rescue
+        # Doorkeeperテーブルがない場合はスキップ
+      end
+      
+      # 最後にアカウント削除
+      ActiveRecord::Base.connection.execute("DELETE FROM actors WHERE id = \#{actor_id}")
+      
+      puts 'success'
+      puts "アカウント '\#{username}' とすべての関連レコードが正常に削除されました"
+      
+    rescue => e
+      puts 'error'
+      puts e.message
+    end
+  RUBY
+  
+  result = run_rails_command(deletion_code)
+  filtered_lines = result.strip.lines.reject { |line| 
+    line.strip.start_with?("ActivityPub configured") || 
+    line.strip.empty? 
+  }
+  result_status = filtered_lines[0]&.strip
+  
+  if result_status == "success"
+    print_success filtered_lines[1]&.strip
+    
+    # 残りアカウント数表示
+    remaining_code = "puts Actor.where(local: true).count"
+    remaining_result = run_rails_command(remaining_code)
+    remaining_lines = remaining_result.strip.lines.reject { |line| 
+      line.strip.start_with?("ActivityPub configured") || 
+      line.strip.empty? 
+    }
+    remaining_count = remaining_lines[0]&.strip
+    print_info "残りのローカルアカウント数: #{remaining_count}"
+    return true
+  else
+    detail = filtered_lines[1..-1]&.join("\n")
+    print_error "削除に失敗しました: #{detail}"
+    return false
+  end
 end
 
 def delete_account_by_identifier(identifier)
@@ -914,7 +1183,10 @@ def delete_account_by_identifier(identifier)
   RUBY
   
   info_result = run_rails_command(account_info_code)
-  info_lines = info_result.strip.lines
+  info_lines = info_result.strip.lines.reject { |line| 
+    line.strip.start_with?("ActivityPub configured") || 
+    line.strip.empty? 
+  }
   status = info_lines[0]&.strip
   
   case status
@@ -933,7 +1205,11 @@ def delete_account_by_identifier(identifier)
     RUBY
     
     local_users = run_rails_command(list_code)
-    puts local_users
+    filtered_list = local_users.strip.lines.reject { |line| 
+      line.strip.start_with?("ActivityPub configured") || 
+      line.strip.empty? 
+    }
+    puts filtered_list.join unless filtered_list.empty?
     return false
   when "found"
     puts ""
@@ -984,7 +1260,7 @@ def delete_account_by_identifier(identifier)
         actor_id = actor.id
         username = actor.username
         
-        # 直接SQL削除で全ての依存レコードを削除
+        # 直接SQL削除で依存レコードを削除
         ActiveRecord::Base.connection.execute("DELETE FROM web_push_subscriptions WHERE actor_id = \#{actor_id}")
         ActiveRecord::Base.connection.execute("DELETE FROM notifications WHERE account_id = \#{actor_id}")
         ActiveRecord::Base.connection.execute("DELETE FROM notifications WHERE from_account_id = \#{actor_id}")
@@ -1047,7 +1323,7 @@ def delete_account_by_identifier(identifier)
   end
 end
 
-# g. OAuthトークン生成
+# i. OAuthトークン生成
 def create_oauth_token
   puts ""
   print_header "OAuth トークン生成"
@@ -1241,7 +1517,7 @@ def create_oauth_token
   end
 end
 
-# h. VAPIDキー生成
+# j. VAPIDキー生成
 def generate_vapid_keys
   puts ""
   print_header "VAPID キーペア生成"
@@ -1350,7 +1626,7 @@ def generate_vapid_keys
   end
 end
 
-# i. Cloudflare R2 移行
+# k. Cloudflare R2 移行
 def migrate_to_r2
   puts ""
   print_header "Cloudflare R2 移行"
@@ -1469,7 +1745,7 @@ def migrate_to_r2
   print_header "Cloudflare R2 移行完了"
 end
 
-# j. リモート画像キャッシュ管理
+# l. リモート画像キャッシュ管理
 def manage_remote_image_cache
   puts ""
   print_header "リモート画像キャッシュ管理"
@@ -1808,6 +2084,53 @@ def check_solid_cache_status
   end
 end
 
+def check_solid_cable_status
+  begin
+    # Solid Cableの動作確認
+    test_channel = "health_check_#{Time.now.to_i}"
+    
+    cable_check_code = <<~RUBY
+      begin
+        # Solid Cableアダプタの確認
+        adapter = ActionCable.server.config.cable&.[](:adapter) || 'unknown'
+        
+        if adapter.to_s == 'solid_cable'
+          # テーブル存在確認
+          ActiveRecord::Base.establish_connection(:cable)
+          if ActiveRecord::Base.connection.table_exists?('solid_cable_messages')
+            puts 'cable_ok'
+          else
+            puts 'cable_failed|Table not found'
+          end
+          ActiveRecord::Base.establish_connection(:primary)
+        else
+          puts 'cable_unused|Adapter not solid_cable'
+        end
+      rescue => e
+        puts "cable_error|\#{e.message}"
+      end
+    RUBY
+    
+    result = run_rails_command(cable_check_code)
+    
+    if result.strip == 'cable_ok'
+      true
+    elsif result.include?('cable_unused')
+      true  # 未使用でも正常とみなす
+    else
+      error_line = result.lines.find { |l| l.include?('|') }
+      if error_line
+        _, error_msg = error_line.strip.split('|', 2)
+        Rails.logger.warn "Solid Cable check failed: #{error_msg}" if defined?(Rails)
+      end
+      false
+    end
+  rescue => e
+    Rails.logger.warn "Solid Cable check error: #{e.message}" if defined?(Rails)
+    false
+  end
+end
+
 def safe_gets(prompt = "")
   print prompt unless prompt.empty?
   input = gets
@@ -1832,7 +2155,7 @@ def main_loop
       show_logo
       show_menu
       
-      choice = safe_gets("選択してください (a-j, x): ")
+      choice = safe_gets("選択してください (a-k, x): ")
       
       # 入力が中断された場合の処理
       if choice.nil?
@@ -1853,22 +2176,24 @@ def main_loop
       when "e"
         manage_accounts
       when "f"
-        delete_account
+        manage_password
       when "g"
-        create_oauth_token
+        delete_account
       when "h"
-        generate_vapid_keys
+        create_oauth_token
       when "i"
-        migrate_to_r2
+        generate_vapid_keys
       when "j"
+        migrate_to_r2
+      when "k"
         manage_remote_image_cache
       when "x"
         puts ""
-        print_success "letter管理スクリプトを終了します"
+        print_success "letter管理ツールを終了します"
         break
       else
         puts ""
-        print_error "無効な選択です。a-j, xを入力してください。"
+        print_error "無効な選択です。a-k, xを入力してください。"
         puts ""
         countdown_return(2)
         next
@@ -1877,12 +2202,8 @@ def main_loop
       unless choice == "x"
         puts ""
         puts ""
-        # OAuthトークン生成とドメイン設定確認の場合は手動復帰、その他は自動復帰
-        if choice == "g" || choice == "c"
-          safe_gets("Enterキーを押してメニューに戻ります...")
-        else
-          countdown_return(3, "操作が完了しました。メニューに戻ります")
-        end
+        # Enterキーでメニューに戻る
+        safe_gets("Enterキーを押してメニューに戻ります...")
       end
     end
   end

@@ -2,6 +2,7 @@
 
 class ActorSerializer
   include UrlBuildable
+  include TextLinkingHelper
 
   def initialize(actor)
     @actor = actor
@@ -38,7 +39,7 @@ class ActorSerializer
       'id' => actor_url,
       'preferredUsername' => actor.username,
       'name' => convert_emoji_html_to_shortcode(actor.display_name),
-      'summary' => convert_emoji_html_to_shortcode(actor.note),
+      'summary' => convert_emoji_html_to_shortcode(auto_link_urls(actor.note || '')),
       'url' => actor_url,
       'discoverable' => actor.discoverable,
       'manuallyApprovesFollowers' => actor.manually_approves_followers

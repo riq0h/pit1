@@ -30,7 +30,7 @@ module StatusEditHandler
       account: serialized_account(@status.actor),
       content: @status.content || '',
       created_at: @status.published_at.iso8601,
-      emojis: [], # TODO: カスタム絵文字対応
+      emojis: extract_emojis_from_status(@status),
       media_attachments: @status.media_attachments.map { |media| serialized_media_attachment(media) },
       poll: @status.poll ? serialized_poll(@status.poll) : nil,
       sensitive: @status.sensitive || false,
@@ -99,5 +99,14 @@ module StatusEditHandler
       acct: mention_data['acct'],
       url: mention_data['url']
     }
+  end
+
+  def extract_emojis_from_status(status)
+    # コンテンツと概要からカスタム絵文字を抽出
+    text_content = [status.content, status.summary].compact.join(' ')
+    emojis = EmojiParser.extract_emojis(text_content)
+    emojis.map(&:to_activitypub)
+  rescue StandardError
+    []
   end
 end

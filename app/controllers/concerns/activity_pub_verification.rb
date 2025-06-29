@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative '../../lib/exceptions'
+require_relative '../../../lib/activity_pub'
 
 module ActivityPubVerification
   extend ActiveSupport::Concern

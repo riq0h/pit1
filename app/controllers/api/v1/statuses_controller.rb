@@ -243,7 +243,7 @@ module Api
 
         edit_params = build_edit_params
 
-        if @status.apply_edit!(edit_params)
+        if @status.perform_edit!(edit_params)
           # メンションやタグの再処理
           process_mentions_and_tags_for_edit if edit_params[:content]
 

@@ -11,7 +11,7 @@
   </header>
 
   <!-- 設定フォーム -->
-  <%= form_with url: config_path, method: :patch, local: true, class: "space-y-8", onsubmit: "return true" do |form| %>
+  <%= form_with url: config_path, method: :patch, local: true, multipart: true, class: "space-y-8", onsubmit: "return true" do |form| %>
     
     <!-- インスタンス情報セクション -->
     <section class="border border-gray-300 p-6">
@@ -93,9 +93,9 @@
             <label for="avatar_image_input" class="cursor-pointer">
               <div id="avatar_image_preview_container" class="<%= 'hidden' unless current_user&.avatar&.attached? %>">
                 <% if current_user&.avatar&.attached? %>
-                  <img id="avatar_image_preview" src="<%= current_user.avatar_url %>" class="mx-auto max-w-16 max-h-16 object-contain mb-2 rounded">
+                  <img id="avatar_image_preview" src="<%= current_user.avatar_url %>" class="mx-auto max-w-16 max-h-16 object-contain mb-2">
                 <% else %>
-                  <img id="avatar_image_preview" class="mx-auto max-w-16 max-h-16 object-contain mb-2 rounded">
+                  <img id="avatar_image_preview" class="mx-auto max-w-16 max-h-16 object-contain mb-2">
                 <% end %>
                 <p class="text-sm text-gray-600" class="text-normal">
                   クリックして変更
@@ -110,6 +110,42 @@
                 </p>
                 <p class="text-xs text-gray-500" class="page-heading">
                   PNG, JPG, GIF, WebP対応
+                </p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <%= form.label "actor[header]", "ヘッダー画像", 
+              class: "form-label" %>
+          
+          <div class="border border-gray-300 border-dashed p-6 text-center hover:border-gray-400 transition-colors">
+            <%= form.file_field "actor[header]", 
+                accept: "image/*",
+                class: "hidden",
+                id: "header_image_input",
+                onchange: "previewHeaderImage(this)" %>
+            <label for="header_image_input" class="cursor-pointer">
+              <div id="header_image_preview_container" class="<%= 'hidden' unless current_user&.header&.attached? %>">
+                <% if current_user&.header&.attached? %>
+                  <img id="header_image_preview" src="<%= current_user.header_image_url %>" class="mx-auto max-w-32 max-h-16 object-contain mb-2">
+                <% else %>
+                  <img id="header_image_preview" class="mx-auto max-w-32 max-h-16 object-contain mb-2">
+                <% end %>
+                <p class="text-sm text-gray-600" class="text-normal">
+                  クリックして変更
+                </p>
+              </div>
+              <div id="header_upload_placeholder" class="<%= 'hidden' if current_user&.header&.attached? %>">
+                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <p class="mt-2 text-sm text-gray-600" class="text-normal">
+                  <span class="font-medium">クリックしてファイルを選択</span> またはドラッグ&ドロップ
+                </p>
+                <p class="text-xs text-gray-500" class="page-heading">
+                  PNG, JPG, GIF, WebP対応（横長画像推奨）
                 </p>
               </div>
             </label>
@@ -488,9 +524,30 @@ function setupDragAndDrop(dropZoneSelector, fileInputId, previewFunction) {
   }
 }
 
+// ヘッダー画像専用のプレビュー関数
+function previewHeaderImage(input) {
+  const file = input.files[0];
+  const preview = document.getElementById('header_image_preview');
+  const previewContainer = document.getElementById('header_image_preview_container');
+  const placeholder = document.getElementById('header_upload_placeholder');
+  
+  if (file) {
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+      preview.src = e.target.result;
+      previewContainer.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+    };
+    
+    reader.readAsDataURL(file);
+  }
+}
+
 // プロフィール画像のドラッグ&ドロップ設定
 document.addEventListener('DOMContentLoaded', function() {
-  setupDragAndDrop('.border-dashed', 'avatar_image_input', previewAvatarImage);
+  setupDragAndDrop('[for="avatar_image_input"]', 'avatar_image_input', previewAvatarImage);
+  setupDragAndDrop('[for="header_image_input"]', 'header_image_input', previewHeaderImage);
 });
 
 // プロフィールリンクの追加

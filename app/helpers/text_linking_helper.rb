@@ -44,8 +44,18 @@ module TextLinkingHelper
   end
 
   def apply_url_links_to_html(html_text)
-    # 既存のリンクがある場合は何もしない（ActivityPub投稿など）
-    return html_text if html_text.include?('<a ') && html_text.include?('href=')
+    # 完全にHTMLリンク化済みコンテンツ（すべてのURLがリンク済み）の場合はスキップ
+    # ただし、プレーンテキストURLがある場合は処理を続行
+    urls_in_text = html_text.scan(/(https?:\/\/[^\s<>"']+)/)
+    return html_text if urls_in_text.empty?
+
+    # すべてのURLが既にリンク化されているかチェック
+    all_urls_linked = urls_in_text.all? do |url_match|
+      url = url_match[0]
+      html_text.include?("<a href=\"#{url}\"") || html_text.include?("<a href='#{url}'")
+    end
+
+    return html_text if all_urls_linked
 
     # HTMLタグの外側にあるURLのみをリンク化する
     # 既存のaタグ、imgタグなどを壊さないように注意深く処理

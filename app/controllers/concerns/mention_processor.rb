@@ -93,7 +93,7 @@ module MentionProcessor
         profile_url = "#{Rails.application.config.activitypub.base_url}/@#{username}"
         %(<a href="#{profile_url}" class="mention" data-user-id="#{mentioned_user.id}">@#{username}</a>)
       else
-        match # ユーザーが見つからない場合は元のテキストを保持
+        match # ユーザが見つからない場合は元のテキストを保持
       end
     end
   end

@@ -54,6 +54,9 @@ module Letter
     config.blog_footer = "General Letter Publication System based on ActivityPub"
     
     # カスタムエラーページを使用
-    config.exceptions_app = self.routes
+    # config.exceptions_app = self.routes
+    
+    # アプリケーション名を設定
+    config.application_name = "letter"
   end
 end

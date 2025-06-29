@@ -26,7 +26,7 @@ class ActivityPubBroadcaster
       }
     )
 
-    # ユーザータイムラインからも削除通知
+    # ユーザタイムラインからも削除通知
     object.actor.followers.find_each do |follower|
       ActionCable.server.broadcast(
         "timeline:#{follower.id}",

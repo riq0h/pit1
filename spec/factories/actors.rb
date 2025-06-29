@@ -10,7 +10,7 @@ FactoryBot.define do
     discoverable { true }
     manually_approves_followers { false }
 
-    # ローカルユーザーの場合の必須フィールド
+    # ローカルユーザの場合の必須フィールド
     before(:create) do |actor|
       if actor.local?
         actor.private_key = OpenSSL::PKey::RSA.new(2048).to_pem

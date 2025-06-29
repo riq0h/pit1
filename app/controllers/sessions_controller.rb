@@ -10,11 +10,22 @@ class SessionsController < ApplicationController
 
   # POST /login
   def create
+    Rails.logger.info "🔍 Login attempt for username: #{params[:username]}"
     actor = find_local_actor
 
-    if actor&.authenticate(params[:password])
-      login_success(actor)
+    if actor
+      Rails.logger.info "🔍 Found actor: #{actor.username}"
+      auth_result = actor.authenticate(params[:password])
+      Rails.logger.info "🔍 Authentication result: #{auth_result.inspect}"
+
+      if auth_result
+        login_success(actor)
+      else
+        Rails.logger.info "🔍 Authentication failed for #{actor.username}"
+        login_failure
+      end
     else
+      Rails.logger.info "🔍 Actor not found for username: #{params[:username]}"
       login_failure
     end
   end

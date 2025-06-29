@@ -25,6 +25,8 @@ module StatusContextBuilder
     end
 
     ancestors
+  rescue StandardError
+    []
   end
 
   def build_descendants(status)
@@ -42,6 +44,8 @@ module StatusContextBuilder
     end
 
     descendants
+  rescue StandardError
+    []
   end
 
   def build_descendants_recursive(status, current_depth, max_depth)
@@ -58,5 +62,7 @@ module StatusContextBuilder
     end
 
     descendants
+  rescue StandardError
+    []
   end
 end

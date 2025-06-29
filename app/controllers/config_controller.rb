@@ -215,7 +215,7 @@ class ConfigController < ApplicationController
   def update_user_profile
     return true if params[:actor].blank?
 
-    actor_params = params.expect(actor: [:note, :avatar, :display_name, { fields: %i[name value] }])
+    actor_params = params.expect(actor: [:note, :avatar, :header, :display_name, { fields: %i[name value] }])
 
     # fieldsパラメータの再構成（配列形式からハッシュの配列へ）
     if params[:actor][:fields].present?
@@ -225,11 +225,38 @@ class ConfigController < ApplicationController
       end
       actor_params[:fields] = fields_array.to_json if fields_array.any?
     end
+    
+    # アバター画像の処理
+    if actor_params[:avatar].present?
+      process_avatar_upload(actor_params[:avatar])
+      actor_params.delete(:avatar)
+    end
+    
+    # ヘッダー画像の処理（通常のアップロード）
+    if actor_params[:header].present?
+      header_file = actor_params.delete(:header)
+    end
 
-    current_user.update(actor_params)
+    result = current_user.update(actor_params)
+    
+    # ヘッダー画像を通常通りアップロード
+    if header_file.present?
+      current_user.header.attach(header_file)
+    end
+    
+    result
   rescue StandardError => e
     Rails.logger.error "User profile update failed: #{e.message}"
     false
+  end
+  
+  def process_avatar_upload(uploaded_file)
+    processor = ActorImageProcessor.new(current_user)
+    processor.attach_avatar_with_folder(
+      io: uploaded_file,
+      filename: uploaded_file.original_filename,
+      content_type: uploaded_file.content_type
+    )
   end
 
   def save_config(new_config)

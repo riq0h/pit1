@@ -59,6 +59,9 @@ FileUtils.chdir APP_ROOT do
     # ActivityPubではHTTPSでなければ通信できません（ローカル開発時は空欄可）
     ACTIVITYPUB_PROTOCOL=
 
+    # Rails環境設定（development/production）
+    RAILS_ENV=production
+
     # ========================================
     # オブジェクトストレージ設定
     # ========================================
@@ -110,42 +113,179 @@ FileUtils.chdir APP_ROOT do
   # 3. データベースの確認と準備
   print_info "3. データベースの確認と準備..."
   
-  # データベースファイルの存在確認（SQLite用）
-  if File.exist?("db/development.sqlite3")
-    print_success "データベースファイルが存在します"
+  # 環境変数設定
+  rails_env = ENV['RAILS_ENV'] || 'development'
+  secret_key = ENV['SECRET_KEY_BASE'] || `bundle exec rails secret`.strip
+  env_cmd = "RAILS_ENV=#{rails_env} SECRET_KEY_BASE=\"#{secret_key}\""
+  
+  # メインデータベースの確認と作成
+  db_file = "storage/#{rails_env}.sqlite3"
+  if File.exist?(db_file)
+    print_success "メインデータベースファイルが存在します (#{rails_env}環境)"
   else
-    print_warning "データベースファイルが見つかりません。作成します..."
+    print_warning "メインデータベースファイルが見つかりません。作成します..."
     begin
-      system! "bin/rails db:create"
-      print_success "データベースを作成しました"
+      system! "#{env_cmd} bin/rails db:create"
+      print_success "メインデータベースを作成しました"
+      
+      # 初回マイグレーションを実行
+      print_info "初回マイグレーションを実行中..."
+      system! "#{env_cmd} bin/rails db:migrate"
+      print_success "初回マイグレーションを実行しました"
     rescue => e
-      print_error "データベース作成に失敗しました: #{e.message}"
+      print_error "メインデータベース作成またはマイグレーションに失敗しました: #{e.message}"
       exit 1
     end
+  end
+
+  # Solid関連データベースの確認と作成
+  print_info "Solid関連データベースの確認と作成..."
+  
+  # データベースファイル確認・作成
+  cache_db_file = "storage/cache_#{rails_env}.sqlite3"
+  queue_db_file = "storage/queue_#{rails_env}.sqlite3"
+  cable_db_file = "storage/cable_#{rails_env}.sqlite3"
+
+  # データベースファイル作成
+  [
+    ["Cache", cache_db_file, "cache"],
+    ["Queue", queue_db_file, "queue"], 
+    ["Cable", cable_db_file, "cable"]
+  ].each do |name, db_file, db_type|
+    unless File.exist?(db_file)
+      print_warning "#{name}データベースファイルが見つかりません。作成します..."
+      if system("#{env_cmd} bin/rails db:create:#{db_type} 2>/dev/null")
+        print_success "#{name}データベースを作成しました"
+      else
+        print_warning "#{name}データベース作成をスキップしました"
+      end
+    else
+      print_success "#{name}データベースファイルが存在します"
+    end
+  end
+
+  # Solid関連の設定ファイルとスキーマを一括インストール
+  print_info "Solid関連コンポーネントのインストール..."
+  system("#{env_cmd} bin/rails solid_cache:install 2>/dev/null")
+  system("#{env_cmd} bin/rails solid_queue:install 2>/dev/null") 
+  system("#{env_cmd} bin/rails solid_cable:install 2>/dev/null")
+
+  # スキーマファイルを使用してテーブルを確実に作成
+  print_info "データベーススキーマの適用..."
+  
+  # Cache
+  if File.exist?("db/cache_schema.rb") && File.exist?(cache_db_file)
+    cache_tables = `sqlite3 "#{cache_db_file}" ".tables" 2>/dev/null`.strip
+    unless cache_tables.include?("solid_cache_entries")
+      print_info "Solid Cacheテーブルを作成中..."
+      system("#{env_cmd} bin/rails runner \"
+        ActiveRecord::Base.establish_connection(:cache)
+        ActiveRecord::Base.connection.execute('CREATE TABLE solid_cache_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, key BLOB NOT NULL, value BLOB NOT NULL, created_at DATETIME NOT NULL, key_hash INTEGER NOT NULL, byte_size INTEGER NOT NULL)')
+        ActiveRecord::Base.connection.execute('CREATE UNIQUE INDEX index_solid_cache_entries_on_key_hash ON solid_cache_entries (key_hash)')
+        ActiveRecord::Base.connection.execute('CREATE INDEX index_solid_cache_entries_on_byte_size ON solid_cache_entries (byte_size)')
+        ActiveRecord::Base.connection.execute('CREATE INDEX index_solid_cache_entries_on_key_hash_and_byte_size ON solid_cache_entries (key_hash, byte_size)')
+      \" 2>/dev/null")
+      print_success "Solid Cacheテーブルを作成しました"
+    else
+      print_success "Solid Cacheテーブルが存在します"
+    end
+  end
+
+  # Queue
+  if File.exist?("db/queue_schema.rb") && File.exist?(queue_db_file)
+    queue_tables = `sqlite3 "#{queue_db_file}" ".tables" 2>/dev/null`.strip
+    unless queue_tables.include?("solid_queue_jobs")
+      print_info "Solid Queueテーブルを作成中..."
+      system("#{env_cmd} bin/rails runner \"
+        ActiveRecord::Base.establish_connection(:queue)
+        conn = ActiveRecord::Base.connection
+        conn.execute('CREATE TABLE solid_queue_jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, queue_name VARCHAR NOT NULL, class_name VARCHAR NOT NULL, arguments TEXT, priority INTEGER DEFAULT 0 NOT NULL, active_job_id VARCHAR, scheduled_at DATETIME, finished_at DATETIME, concurrency_key VARCHAR, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL)')
+        conn.execute('CREATE TABLE solid_queue_processes (id INTEGER PRIMARY KEY AUTOINCREMENT, kind VARCHAR NOT NULL, last_heartbeat_at DATETIME NOT NULL, supervisor_id INTEGER, pid INTEGER NOT NULL, hostname VARCHAR, metadata TEXT, created_at DATETIME NOT NULL, name VARCHAR NOT NULL)')
+        conn.execute('CREATE TABLE solid_queue_ready_executions (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER NOT NULL, queue_name VARCHAR NOT NULL, priority INTEGER DEFAULT 0 NOT NULL, created_at DATETIME NOT NULL)')
+        conn.execute('CREATE TABLE solid_queue_claimed_executions (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER NOT NULL, process_id INTEGER, created_at DATETIME NOT NULL)')
+        conn.execute('CREATE TABLE solid_queue_blocked_executions (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER NOT NULL, queue_name VARCHAR NOT NULL, priority INTEGER DEFAULT 0 NOT NULL, concurrency_key VARCHAR NOT NULL, expires_at DATETIME NOT NULL, created_at DATETIME NOT NULL)')
+        conn.execute('CREATE TABLE solid_queue_failed_executions (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER NOT NULL, error TEXT, created_at DATETIME NOT NULL)')
+        conn.execute('CREATE TABLE solid_queue_scheduled_executions (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER NOT NULL, queue_name VARCHAR NOT NULL, priority INTEGER DEFAULT 0 NOT NULL, scheduled_at DATETIME NOT NULL, created_at DATETIME NOT NULL)')
+        conn.execute('CREATE TABLE solid_queue_pauses (id INTEGER PRIMARY KEY AUTOINCREMENT, queue_name VARCHAR NOT NULL, created_at DATETIME NOT NULL)')
+        conn.execute('CREATE TABLE solid_queue_recurring_executions (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER NOT NULL, task_key VARCHAR NOT NULL, run_at DATETIME NOT NULL, created_at DATETIME NOT NULL)')
+        conn.execute('CREATE TABLE solid_queue_recurring_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, key VARCHAR NOT NULL, schedule VARCHAR NOT NULL, command VARCHAR, class_name VARCHAR, arguments TEXT, queue_name VARCHAR, priority INTEGER DEFAULT 0, static BOOLEAN DEFAULT 1 NOT NULL, description TEXT, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL)')
+        conn.execute('CREATE TABLE solid_queue_semaphores (id INTEGER PRIMARY KEY AUTOINCREMENT, key VARCHAR NOT NULL, value INTEGER DEFAULT 1 NOT NULL, expires_at DATETIME NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL)')
+      \" 2>/dev/null")
+      print_success "Solid Queueテーブルを作成しました"
+    else
+      print_success "Solid Queueテーブルが存在します"
+    end
+  end
+
+  # Cable  
+  if File.exist?("db/cable_structure.sql") && File.exist?(cable_db_file)
+    cable_tables = `sqlite3 "#{cable_db_file}" ".tables" 2>/dev/null`.strip
+    unless cable_tables.include?("solid_cable_messages")
+      print_info "Solid Cableテーブルを作成中..."
+      system("#{env_cmd} bin/rails runner \"
+        ActiveRecord::Base.establish_connection(:cable)
+        ActiveRecord::Base.connection.execute('CREATE TABLE solid_cable_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, channel VARCHAR NOT NULL, payload TEXT NOT NULL, created_at DATETIME NOT NULL)')
+        ActiveRecord::Base.connection.execute('CREATE INDEX index_solid_cable_messages_on_channel ON solid_cable_messages (channel)')
+        ActiveRecord::Base.connection.execute('CREATE INDEX index_solid_cable_messages_on_created_at ON solid_cable_messages (created_at)')
+      \" 2>/dev/null")
+      print_success "Solid Cableテーブルを作成しました"
+    else
+      print_success "Solid Cableテーブルが存在します"
+    end
+  end
+
+  # 最終確認
+  print_info "Solid関連テーブルの最終確認..."
+  cache_ok = `sqlite3 "#{cache_db_file}" ".tables" 2>/dev/null`.include?("solid_cache_entries")
+  queue_ok = `sqlite3 "#{queue_db_file}" ".tables" 2>/dev/null`.include?("solid_queue_jobs")
+  cable_ok = `sqlite3 "#{cable_db_file}" ".tables" 2>/dev/null`.include?("solid_cable_messages")
+  
+  if cache_ok && queue_ok && cable_ok
+    print_success "すべてのSolid関連データベースが正常にセットアップされました"
+  else
+    print_warning "一部のSolid関連データベースに問題があります (Cache:#{cache_ok} Queue:#{queue_ok} Cable:#{cable_ok})"
+  end
+
+  # production環境の場合はSECRET_KEY_BASEをチェック
+  if rails_env == 'production' && ENV['SECRET_KEY_BASE'].nil?
+    print_info "production環境用のSECRET_KEY_BASEを生成中..."
+    secret_key = `bundle exec rails secret`.strip
+    ENV['SECRET_KEY_BASE'] = secret_key
+    print_success "SECRET_KEY_BASEを生成しました"
   end
 
   # マイグレーションの実行
   print_info "マイグレーションの確認..."
   
-  # まずマイグレーション状態を確認
-  migrate_output = `bin/rails db:migrate:status 2>&1`
-  if $?.success?
-    pending_migrations = migrate_output.lines.select { |line| line.include?("down") }
-    
-    if pending_migrations.empty?
-      print_success "すべてのマイグレーションが完了しています"
-    else
-      print_info "#{pending_migrations.count}個の未実行マイグレーションがあります"
+  # マイグレーション状態を確認
+  begin
+    migrate_output = `SECRET_KEY_BASE="$(bundle exec rails secret)" RAILS_ENV=#{rails_env} bin/rails db:migrate:status 2>/dev/null`
+    # "Schema migrations table does not exist yet" が含まれていない場合のみ成功とみなす
+    if $?.success? && !migrate_output.include?("does not exist yet")
+      pending_migrations = migrate_output.lines.select { |line| line.include?("down") }
       
-      # 通常のマイグレーションを試行
-      if system("bin/rails db:migrate 2>/dev/null")
-        print_success "マイグレーションを実行しました"
+      if pending_migrations.empty?
+        print_success "すべてのマイグレーションが完了しています"
       else
-        print_warning "マイグレーションでエラーが発生しましたが、続行します"
+        print_info "#{pending_migrations.count}個の未実行マイグレーションがあります"
+        
+        # 通常のマイグレーションを試行
+        if system("SECRET_KEY_BASE=\"$(bundle exec rails secret)\" RAILS_ENV=#{rails_env} bin/rails db:migrate")
+          print_success "マイグレーションを実行しました"
+        else
+          print_warning "マイグレーションでエラーが発生しましたが、続行します"
+        end
+      end
+    else
+      # schema_migrationsテーブルが存在しない場合、マイグレーション実行
+      print_info "データベーススキーマを初期化中..."
+      if system("SECRET_KEY_BASE=\"$(bundle exec rails secret)\" RAILS_ENV=#{rails_env} bin/rails db:migrate")
+        print_success "データベーススキーマを初期化しました"
+      else
+        print_warning "データベーススキーマ初期化でエラーが発生しましたが、続行します"
       end
     end
-  else
-    # マイグレーション状態確認に失敗した場合
+  rescue => e
     print_warning "マイグレーション状態の確認に失敗しました。スキップします"
   end
 
@@ -203,12 +343,12 @@ FileUtils.chdir APP_ROOT do
     
     # Railsサーバを起動（デーモンモード）
     print_info "Railsサーバを起動中..."
-    system!("RAILS_ENV=development rails server -b 0.0.0.0 -p 3000 -d")
+    system!("RAILS_ENV=#{rails_env} rails server -b 0.0.0.0 -p 3000 -d")
     print_success "Railsサーバを起動しました"
 
     # Solid Queueを起動
     print_info "Solid Queueワーカーを起動中..."
-    system("RAILS_ENV=development nohup bin/jobs > log/solid_queue.log 2>&1 &")
+    system("RAILS_ENV=#{rails_env} nohup bin/jobs > log/solid_queue.log 2>&1 &")
     print_success "Solid Queueワーカーを起動しました"
 
     # 8. 起動確認
@@ -242,6 +382,51 @@ FileUtils.chdir APP_ROOT do
     else
       print_error "Solid Queueワーカーが起動していません。手動で再起動してください:"
       print_info "  bin/jobs &"
+    end
+
+    # Solid Cacheの動作確認
+    print_info "Solid Cacheの動作確認中..."
+    begin
+      cache_check = `timeout 5 bin/rails runner "
+        adapter = Rails.cache.class.name
+        puts 'adapter:' + adapter
+        
+        if adapter.include?('SolidCache')
+          begin
+            Rails.cache.write('setup_test', 'test_value')
+            result = Rails.cache.read('setup_test')
+            if result == 'test_value'
+              puts 'status:ok'
+            else
+              puts 'status:read_failed'
+            end
+          rescue => e
+            puts 'status:error:' + e.message
+          end
+        else
+          puts 'status:unused'
+        end
+      " 2>/dev/null`.strip
+
+      cache_lines = cache_check.split("\n")
+      adapter = cache_lines.find { |l| l.start_with?("adapter:") }&.sub("adapter:", "")
+      status = cache_lines.find { |l| l.start_with?("status:") }&.sub("status:", "")
+      
+      case status
+      when "ok"
+        print_success "Solid Cache が正常動作中"
+      when "read_failed"
+        print_warning "Solid Cache 読み取りテスト失敗"
+      when /^error:/
+        error_msg = status.sub("error:", "")
+        print_warning "Solid Cache 接続エラー: #{error_msg}"
+      when "unused"
+        print_info "Solid Cache は未使用 (adapter: #{adapter})"
+      else
+        print_warning "Solid Cache 確認結果が不明です"
+      end
+    rescue
+      print_warning "Solid Cache確認がタイムアウトしました"
     end
 
     # Solid Cableの動作確認
@@ -306,12 +491,15 @@ FileUtils.chdir APP_ROOT do
     puts "  公開URL: #{protocol}://#{domain}" if domain != 'localhost'
     puts ""
     print_info "監視コマンド:"
-    puts "  tail -f log/development.log"
+    puts "  tail -f log/#{rails_env}.log"
     puts "  tail -f log/solid_queue.log"
     puts "  ps aux | grep -E 'rails|solid'"
     puts ""
     print_info "停止コマンド:"
     puts "  pkill -f 'rails server|solid.*queue'"
+    puts ""
+    print_info "管理ツール:"
+    puts "  bin/letter_manager.rb - アカウントの作成や削除、システムの再起動"
   else
     print_success "サーバの起動をスキップしました (--skip-server)"
   end

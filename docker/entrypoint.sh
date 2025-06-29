@@ -6,10 +6,10 @@ set -e
 
 echo "=== アプリケーション開始 ==="
 
-# 依存関係の待機関数（将来必要に応じて使用）
+# 依存関係の待機関数
 wait_for_dependencies() {
     echo "依存関係をチェック中..."
-    # 将来: 必要に応じてデータベース接続チェックを追加
+    # 必要に応じてデータベース接続チェックを追加
     echo "OK: 依存関係準備完了"
 }
 
@@ -37,8 +37,10 @@ validate_environment() {
 setup_database() {
     echo "データベースをセットアップ中..."
     
-    # データベースが存在するかチェック
-    if [ ! -f "storage/development.sqlite3" ]; then
+    # データベースが存在するかチェック  
+    RAILS_ENV=${RAILS_ENV:-development}
+    DB_FILE="storage/${RAILS_ENV}.sqlite3"
+    if [ ! -f "$DB_FILE" ]; then
         echo "データベースを作成中..."
         bundle exec rails db:create
         bundle exec rails db:migrate

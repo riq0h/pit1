@@ -13,7 +13,7 @@ letterはRails8およびSQLite、Hotwireで構成されるミニマルなActivit
 ## セットアップ
 
 ```
-bin/setup
+RAILS_ENV=production bin/setup
 ```
 
 ## 管理ツール

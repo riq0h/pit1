@@ -2,6 +2,7 @@ default: &default
   adapter: sqlite3
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 20 } %>
   timeout: 30000
+  application_name: letter
   pragma:
     journal_mode: :wal
     synchronous: :normal
@@ -11,22 +12,71 @@ default: &default
     mmap_size: 268435456
 
 development:
-  <<: *default
-  database: storage/development.sqlite3
+  primary:
+    <<: *default
+    database: storage/development.sqlite3
+  
+  cache:
+    <<: *default
+    database: storage/cache_development.sqlite3
+    migrations_paths: db/cache_migrate
 
 test:
-  <<: *default
-  database: storage/test.sqlite3
-  pragma:
-    foreign_keys: :on
+  primary:
+    <<: *default
+    database: storage/test.sqlite3
+    pragma:
+      foreign_keys: :on
+  
+  cache:
+    <<: *default
+    database: storage/cache_test.sqlite3
+    migrations_paths: db/cache_migrate
 
 production:
-  <<: *default
-  database: storage/production.sqlite3
-  pragma:
-    journal_mode: :wal
-    synchronous: :normal
-    cache_size: 50000
-    foreign_keys: :on
-    temp_store: :memory
-    mmap_size: 536870912
+  primary:
+    <<: *default
+    database: storage/production.sqlite3
+    pragma:
+      journal_mode: :wal
+      synchronous: :normal
+      cache_size: 50000
+      foreign_keys: :on
+      temp_store: :memory
+      mmap_size: 536870912
+  
+  queue:
+    <<: *default
+    database: storage/queue_production.sqlite3
+    migrations_paths: db/queue_migrate
+    pragma:
+      journal_mode: :wal
+      synchronous: :normal
+      cache_size: 10000
+      foreign_keys: :on
+      temp_store: :memory
+      mmap_size: 268435456
+  
+  cable:
+    <<: *default
+    database: storage/cable_production.sqlite3
+    migrations_paths: db/cable_migrate
+    pragma:
+      journal_mode: :wal
+      synchronous: :normal
+      cache_size: 10000
+      foreign_keys: :on
+      temp_store: :memory
+      mmap_size: 268435456
+  
+  cache:
+    <<: *default
+    database: storage/cache_production.sqlite3
+    migrations_paths: db/cache_migrate
+    pragma:
+      journal_mode: :wal
+      synchronous: :normal
+      cache_size: 10000
+      foreign_keys: :on
+      temp_store: :memory
+      mmap_size: 268435456

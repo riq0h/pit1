@@ -1,23 +1,30 @@
 # frozen_string_literal: true
 
+require 'image_processing/mini_magick'
+
 class ActorImageProcessor
+  AVATAR_SIZE = 400
+  AVATAR_THUMBNAIL_SIZE = 48
+  
   def initialize(actor)
     @actor = actor
   end
 
   def attach_avatar_with_folder(io:, filename:, content_type:)
+    processed_io = process_avatar_image(io)
+    
     if ENV['S3_ENABLED'] == 'true'
       custom_key = "img/#{SecureRandom.hex(16)}"
       blob = ActiveStorage::Blob.create_and_upload!(
-        io: io,
+        io: processed_io,
         filename: filename,
-        content_type: content_type,
+        content_type: 'image/png',
         service_name: :cloudflare_r2,
         key: custom_key
       )
       actor.avatar.attach(blob)
     else
-      actor.avatar.attach(io: io, filename: filename, content_type: content_type)
+      actor.avatar.attach(io: processed_io, filename: filename, content_type: 'image/png')
     end
   end
 
@@ -65,9 +72,24 @@ class ActorImageProcessor
       # 外部ユーザの場合はraw_dataから取得
       actor.extract_remote_image_url('image')
     end
+  rescue StandardError
+    nil
   end
 
   private
 
   attr_reader :actor
+  
+  def process_avatar_image(io)
+    io.rewind
+    
+    pipeline = ImageProcessing::MiniMagick.source(io)
+    
+    processed = pipeline
+      .resize_to_fill(AVATAR_SIZE, AVATAR_SIZE)
+      .convert('png')
+      .call
+    
+    File.open(processed.path, 'rb')
+  end
 end

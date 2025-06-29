@@ -15,19 +15,6 @@ html {
   border-radius: 0 !important;
 }
 
-/* ActivityPub固有のスタイル */
-.activity-stream {
-  @apply space-y-4;
-}
-
-.user-profile {
-  @apply bg-white rounded-lg shadow p-6;
-}
-
-.post-content {
-  @apply prose prose-sm max-w-none;
-}
-
 /* カスタム絵文字スタイル */
 .custom-emoji {
   display: inline-block !important;
@@ -65,35 +52,6 @@ html {
   height: 1.5em !important;
   max-width: 1.5em !important;
   max-height: 1.5em !important;
-}
-
-.emoji-picker {
-  @apply bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-h-64 overflow-y-auto;
-}
-
-.emoji-category {
-  @apply mb-4;
-}
-
-.emoji-category-title {
-  @apply text-sm font-medium text-gray-700 mb-2;
-}
-
-.emoji-grid {
-  @apply grid grid-cols-8 gap-2;
-}
-
-.emoji-button {
-  @apply w-8 h-8 flex items-center justify-center rounded cursor-pointer;
-  transition: filter 0.2s ease !important;
-}
-
-.emoji-button:hover {
-  filter: brightness(0.97) !important;
-}
-
-.emoji-button img {
-  @apply w-6 h-6 object-contain;
 }
 
 button:not([disabled]),
@@ -148,11 +106,6 @@ a {
 /* invisibleクラスでプロトコル部分を非表示 */
 .invisible {
   display: none !important;
-}
-
-/* ellipsisクラスでURL中間部分を表示 */
-.ellipsis {
-  display: inline !important;
 }
 
 /* 行数制限クラス */

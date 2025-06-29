@@ -12,11 +12,10 @@ module StatusSerializationHelper
   private
 
   def serialized_status(status)
-    base_status_data(status).merge(
-      interaction_data(status),
-      content_data(status),
-      metadata_data(status)
-    )
+    base_status_data(status)
+      .merge(interaction_data(status))
+      .merge(content_data(status))
+      .merge(metadata_data(status))
   end
 
   def base_status_data(status)
@@ -25,7 +24,7 @@ module StatusSerializationHelper
       created_at: status.published_at&.iso8601 || status.created_at.iso8601,
       edited_at: status.edited_at&.iso8601,
       uri: status.ap_id,
-      url: status.url || status.ap_id,
+      url: status.public_url || status.ap_id,
       visibility: status.visibility || 'public',
       language: status.language,
       sensitive: status.sensitive?

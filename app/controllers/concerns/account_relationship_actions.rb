@@ -87,14 +87,21 @@ module AccountRelationshipActions
   end
 
   def create_new_follow
+    Rails.logger.info "🔗 Creating follow from #{current_user.username} to #{@account.username}@#{@account.domain}"
+
     follow_service = FollowService.new(current_user)
     follow = follow_service.follow!(@account)
 
     if follow
-      Rails.logger.info "Follow request created for #{@account.ap_id}"
+      Rails.logger.info "✅ Follow request created for #{@account.ap_id}"
       render json: serialized_relationship(@account)
     else
+      Rails.logger.error '❌ Failed to create follow relationship'
       render_validation_failed_with_details('Follow failed', ['Could not create follow relationship'])
     end
+  rescue StandardError => e
+    Rails.logger.error "💥 Exception in create_new_follow: #{e.class}: #{e.message}"
+    Rails.logger.error "Backtrace: #{e.backtrace.first(10).join("\n")}"
+    render json: { error: 'Internal Server Error', message: e.message }, status: :internal_server_error
   end
 end
