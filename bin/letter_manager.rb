@@ -43,24 +43,25 @@ def show_logo
 end
 
 def show_menu
-  print_header "letter 統合管理メニュー"
+  print_header "統合管理メニュー"
   puts ""
   puts "サーバ管理:"
-  puts "  1) 完全セットアップ (新規インストール)"
-  puts "  2) サーバ起動・再起動 (クリーンアップ付き)"
-  puts "  3) ドメイン設定確認"
-  puts "  4) ドメイン切り替え"
+  puts "  a) セットアップ (新規インストール)"
+  puts "  b) サーバ起動・再起動 (クリーンアップ付き)"
+  puts "  c) ドメイン設定確認"
+  puts "  d) ドメイン切り替え"
   puts ""
   puts "アカウント管理:"
-  puts "  5) アカウント作成・管理"
-  puts "  6) アカウント削除"
-  puts "  7) OAuthトークン生成"
+  puts "  e) アカウント作成・管理"
+  puts "  f) アカウント削除"
+  puts "  g) OAuthトークン生成"
   puts ""
   puts "システム管理:"
-  puts "  8) VAPIDキー生成"
-  puts "  9) Cloudflare R2 移行"
+  puts "  h) VAPIDキー生成"
+  puts "  i) Cloudflare R2 移行"
+  puts "  j) リモート画像キャッシュ管理"
   puts ""
-  puts "  0) 終了"
+  puts "  x) 終了"
   puts ""
 end
 
@@ -94,10 +95,10 @@ ensure
   File.delete(temp_file) if File.exist?(temp_file)
 end
 
-# 1. 完全セットアップ
+# a. セットアップ
 def setup_new_installation
   puts ""
-  print_header "letter セットアップスクリプト"
+  print_header "セットアップスクリプト"
   print_info "実行時刻: #{Time.now}"
   puts ""
 
@@ -144,19 +145,55 @@ def setup_new_installation
     
     if missing_keys.any?
       print_warning "以下の必須設定が不足しています: #{missing_keys.join(', ')}"
-      print_info "サンプル設定を .env.template として作成します"
-      File.write(".env.template", env_template)
+      
+      # VAPIDキーが不足している場合は自動生成
+      vapid_missing = missing_keys.any? { |key| key.include?('VAPID') }
+      
+      if vapid_missing
+        puts ""
+        print_info "VAPIDキーが不足しています。自動生成します..."
+        generate_vapid_keys
+        print_success "VAPIDキーを自動生成しました"
+        
+        # .envファイルを再読み込みして再チェック
+        env_content = File.read(".env")
+        missing_keys = []
+        %w[ACTIVITYPUB_DOMAIN VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY].each do |key|
+          unless env_content.match?(/^#{key}=.+/)
+            missing_keys << key
+          end
+        end
+      end
+      
+      if missing_keys.any?
+        print_warning "まだ不足している設定があります: #{missing_keys.join(', ')}"
+        print_info "サンプル設定を .env.template として作成します"
+        File.write(".env.template", env_template)
+        puts ""
+        print_error "設定完了後、再度このスクリプトを実行してください"
+        return
+      else
+        print_success "すべての必須設定が完了しました"
+      end
     else
       print_success "必須の環境変数が設定されています"
     end
   else
     print_warning ".envファイルが見つかりません。テンプレートを作成します"
     File.write(".env", env_template)
-    print_info ".envファイルを作成しました。設定を編集してください:"
-    print_info "  - ACTIVITYPUB_DOMAIN: あなたのドメイン"
-    print_info "  - VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY: WebPush用キー"
+    print_info ".envファイルを作成しました"
+    
+    # VAPIDキーを自動生成
     puts ""
-    print_error "設定完了後、再度このスクリプトを実行してください"
+    print_info "VAPIDキーを自動生成します..."
+    generate_vapid_keys
+    print_success "VAPIDキーを自動生成しました"
+    
+    puts ""
+    print_info "残りの設定を編集してください:"
+    print_info "  - ACTIVITYPUB_DOMAIN: あなたのドメイン"
+    puts ""
+    print_error "ドメイン設定完了後、再度このスクリプトを実行してください"
     return
   end
 
@@ -265,6 +302,22 @@ def setup_new_installation
     print_warning "Railsサーバの応答確認に失敗しました"
   end
 
+  # Solid Queue確認
+  queue_ok = system("pgrep -f 'solid.*queue' > /dev/null 2>&1")
+  if queue_ok
+    print_success "Solid Queueワーカーが動作中です"
+  else
+    print_warning "Solid Queueワーカーが動作していません"
+  end
+
+  # Solid Cache確認
+  cache_ok = check_solid_cache_status
+  if cache_ok
+    print_success "Solid Cacheが正常に動作しています"
+  else
+    print_warning "Solid Cacheの動作確認に失敗しました"
+  end
+
   # 最終結果表示
   puts ""
   print_header "セットアップ完了"
@@ -280,10 +333,10 @@ def setup_new_installation
   print_success "セットアップが正常に完了しました！"
 end
 
-# 2. サーバ起動・再起動
+# b. サーバ起動・再起動
 def cleanup_and_start
   puts ""
-  print_header "letter 完全クリーンアップ＆再起動"
+  print_header "クリーンアップ＆再起動"
   print_info "実行時刻: #{Time.now}"
 
   # プロセス終了
@@ -347,6 +400,22 @@ def cleanup_and_start
     print_error "Railsサーバが応答していません"
   end
 
+  # Solid Queue確認
+  queue_ok = system("pgrep -f 'solid.*queue' > /dev/null 2>&1")
+  if queue_ok
+    print_success "Solid Queueワーカーが動作中です"
+  else
+    print_warning "Solid Queueワーカーが動作していません"
+  end
+
+  # Solid Cache確認
+  cache_ok = check_solid_cache_status
+  if cache_ok
+    print_success "Solid Cacheが正常に動作しています"
+  else
+    print_warning "Solid Cacheの動作確認に失敗しました"
+  end
+
   puts ""
   print_header "起動完了"
   print_success "letter が正常に起動しました"
@@ -358,10 +427,10 @@ def cleanup_and_start
   print_success "サーバの起動が正常に完了しました！"
 end
 
-# 3. ドメイン設定確認
+# c. ドメイン設定確認
 def check_domain_config
   puts ""
-  print_header "letter ドメイン設定確認"
+  print_header "ドメイン設定確認"
 
   # 環境変数確認
   env_vars = load_env_vars
@@ -393,6 +462,14 @@ def check_domain_config
     local_response = `curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "http://localhost:3000" 2>/dev/null`.strip
     puts "  ローカル応答: #{local_response}"
     
+    # Solid Queue確認
+    queue_ok = system("pgrep -f 'solid.*queue' > /dev/null 2>&1")
+    puts "  Solid Queue: #{queue_ok ? '動作中' : '停止中'}"
+    
+    # Solid Cache確認
+    cache_ok = check_solid_cache_status
+    puts "  Solid Cache: #{cache_ok ? '正常' : 'エラー'}"
+    
     # ローカルユーザー表示
     puts ""
     print_info "ローカルユーザ:"
@@ -412,10 +489,10 @@ def check_domain_config
   end
 end
 
-# 4. ドメイン切り替え
+# d. ドメイン切り替え
 def switch_domain
   puts ""
-  print_header "letter ドメイン切り替え"
+  print_header "ドメイン切り替え"
   
   print "新しいドメインを入力してください: "
   new_domain = gets.chomp
@@ -515,10 +592,10 @@ def switch_domain
   puts "  プロトコル: #{new_protocol}"
 end
 
-# 5. アカウント作成・管理
+# e. アカウント作成・管理
 def manage_accounts
   puts ""
-  print_header "letter アカウント管理"
+  print_header "アカウント管理"
   
   print_info "このインスタンスは最大2個のローカルアカウントまで作成できます"
   puts ""
@@ -734,7 +811,7 @@ def create_account
   end
 end
 
-# 6. アカウント削除
+# f. アカウント削除
 def delete_account
   puts ""
   print_header "アカウント削除"
@@ -970,10 +1047,10 @@ def delete_account_by_identifier(identifier)
   end
 end
 
-# 7. OAuthトークン生成
+# g. OAuthトークン生成
 def create_oauth_token
   puts ""
-  print_header "letter OAuth トークン生成"
+  print_header "OAuth トークン生成"
   puts ""
   
   print_info "このスクリプトはAPIアクセス用のOAuthトークンを生成します"
@@ -1164,10 +1241,10 @@ def create_oauth_token
   end
 end
 
-# 8. VAPIDキー生成
+# h. VAPIDキー生成
 def generate_vapid_keys
   puts ""
-  print_header "VAPID キーペア生成スクリプト"
+  print_header "VAPID キーペア生成"
   puts ""
   
   begin
@@ -1273,10 +1350,10 @@ def generate_vapid_keys
   end
 end
 
-# 9. Cloudflare R2 移行
+# i. Cloudflare R2 移行
 def migrate_to_r2
   puts ""
-  print_header "letter - Cloudflare R2 移行"
+  print_header "Cloudflare R2 移行"
   puts ""
   
   env_vars = load_env_vars
@@ -1392,6 +1469,345 @@ def migrate_to_r2
   print_header "Cloudflare R2 移行完了"
 end
 
+# j. リモート画像キャッシュ管理
+def manage_remote_image_cache
+  puts ""
+  print_header "リモート画像キャッシュ管理"
+  puts ""
+  
+  # 現在の統計を取得
+  print_info "キャッシュ統計を取得中..."
+  
+  stats_code = <<~RUBY
+    # リモート画像の統計
+    total_remote = MediaAttachment.joins(:actor)
+                                 .where(actors: { local: false })
+                                 .where.not(remote_url: nil)
+                                 .count
+    
+    cached_remote = MediaAttachment.joins(:actor)
+                                  .where(actors: { local: false })
+                                  .joins('INNER JOIN active_storage_attachments asa ON asa.record_id = media_attachments.id')
+                                  .count
+    
+    # Solid Cacheエントリ数
+    cache_entries = Rails.cache.instance_variable_get(:@data)&.keys&.count { |k| k.to_s.start_with?('remote_image:') } rescue 0
+    
+    # Active Storage統計
+    total_blobs = ActiveStorage::Blob.where('key LIKE ?', 'img/%').count
+    total_blob_size = ActiveStorage::Blob.where('key LIKE ?', 'img/%').sum(:byte_size)
+    
+    puts "total_remote|\#{total_remote}"
+    puts "cached_remote|\#{cached_remote}"
+    puts "cache_entries|\#{cache_entries}"
+    puts "total_blobs|\#{total_blobs}"
+    puts "total_blob_size|\#{total_blob_size}"
+  RUBY
+  
+  result = run_rails_command(stats_code)
+  
+  total_remote = result.lines.find { |l| l.start_with?('total_remote|') }&.split('|', 2)&.last&.strip&.to_i || 0
+  cached_remote = result.lines.find { |l| l.start_with?('cached_remote|') }&.split('|', 2)&.last&.strip&.to_i || 0
+  cache_entries = result.lines.find { |l| l.start_with?('cache_entries|') }&.split('|', 2)&.last&.strip&.to_i || 0
+  total_blobs = result.lines.find { |l| l.start_with?('total_blobs|') }&.split('|', 2)&.last&.strip&.to_i || 0
+  total_blob_size = result.lines.find { |l| l.start_with?('total_blob_size|') }&.split('|', 2)&.last&.strip&.to_i || 0
+  
+  puts ""
+  print_info "リモート画像キャッシュ統計:"
+  puts "  リモート画像合計: #{total_remote}"
+  puts "  キャッシュ済み: #{cached_remote} (#{cached_remote > 0 ? ((cached_remote.to_f / total_remote) * 100).round(1) : 0}%)"
+  puts "  キャッシュエントリ: #{cache_entries}"
+  puts "  ストレージ使用量: #{(total_blob_size / 1024.0 / 1024.0).round(2)} MB (#{total_blobs}ファイル)"
+  puts ""
+  
+  puts "選択してください:"
+  puts "1) 最近のリモート画像をキャッシュ (バッチ処理)"
+  puts "2) 特定期間の画像をキャッシュ"
+  puts "3) キャッシュクリーンアップを実行"
+  puts "4) キャッシュ統計の詳細表示"
+  puts "5) 戻る"
+  puts ""
+  
+  choice = safe_gets("選択 (1-5): ")
+  
+  case choice
+  when "1"
+    batch_cache_recent_images
+  when "2"
+    batch_cache_period_images
+  when "3"
+    run_cache_cleanup
+  when "4"
+    show_cache_details
+  when "5"
+    return
+  else
+    print_error "無効な選択です"
+  end
+end
+
+def batch_cache_recent_images
+  puts ""
+  print_info "最近のリモート画像をキャッシュします"
+  
+  days = safe_gets("過去何日分をキャッシュしますか？ (デフォルト: 7): ")
+  days = days.empty? ? 7 : days.to_i
+  
+  batch_size = safe_gets("バッチサイズ (10-100, デフォルト: 50): ")
+  batch_size = batch_size.empty? ? 50 : batch_size.to_i
+  
+  if batch_size < 10 || batch_size > 100
+    print_error "バッチサイズは10から100の間で指定してください"
+    return
+  end
+  
+  puts ""
+  print_info "#{days}日以内のリモート画像を#{batch_size}件ずつキャッシュします..."
+  
+  cache_code = <<~RUBY
+    require 'time'
+    
+    target_date = #{days}.days.ago
+    
+    # キャッシュ対象の画像を検索
+    images_to_cache = MediaAttachment.joins(:actor)
+                                    .where(actors: { local: false })
+                                    .where.not(remote_url: nil)
+                                    .where('media_attachments.created_at >= ?', target_date)
+                                    .where.not(id: MediaAttachment.joins('INNER JOIN active_storage_attachments asa ON asa.record_id = media_attachments.id').select(:id))
+    
+    total_count = images_to_cache.count
+    puts "対象画像: \#{total_count}件"
+    
+    if total_count == 0
+      puts "キャッシュ対象の画像がありません"
+      exit
+    end
+    
+    cached_count = 0
+    failed_count = 0
+    
+    images_to_cache.find_each(batch_size: #{batch_size}) do |media|
+      begin
+        RemoteImageCacheJob.perform_later(media.id)
+        cached_count += 1
+        
+        if cached_count % 10 == 0
+          puts "進捗: \#{cached_count}/\#{total_count} 件をキューに追加"
+        end
+      rescue => e
+        failed_count += 1
+        puts "エラー: Media \#{media.id} - \#{e.message}"
+      end
+    end
+    
+    puts "success|\#{cached_count}件のキャッシュジョブをキューに追加しました"
+    puts "failed|\#{failed_count}"
+  RUBY
+  
+  result = run_rails_command(cache_code)
+  puts result
+  
+  status_line = result.lines.find { |l| l.start_with?('success|') }
+  if status_line
+    message = status_line.split('|', 2).last.strip
+    print_success message
+    print_info "バックグラウンドでキャッシュ処理が実行されます"
+  else
+    print_error "キャッシュジョブの開始に失敗しました"
+  end
+end
+
+def batch_cache_period_images
+  puts ""
+  print_info "特定期間のリモート画像をキャッシュします"
+  
+  start_date = safe_gets("開始日 (YYYY-MM-DD): ")
+  end_date = safe_gets("終了日 (YYYY-MM-DD, 省略時は今日): ")
+  end_date = Date.current.to_s if end_date.empty?
+  
+  begin
+    start_date = Date.parse(start_date)
+    end_date = Date.parse(end_date)
+  rescue ArgumentError
+    print_error "無効な日付形式です"
+    return
+  end
+  
+  batch_size = safe_gets("バッチサイズ (10-100, デフォルト: 50): ")
+  batch_size = batch_size.empty? ? 50 : batch_size.to_i
+  
+  puts ""
+  print_info "#{start_date} から #{end_date} までのリモート画像をキャッシュします..."
+  
+  # 同様のキャッシュ処理（日付範囲指定版）
+  cache_code = <<~RUBY
+    start_date = Date.parse('#{start_date}')
+    end_date = Date.parse('#{end_date}')
+    
+    images_to_cache = MediaAttachment.joins(:actor)
+                                    .where(actors: { local: false })
+                                    .where.not(remote_url: nil)
+                                    .where('media_attachments.created_at >= ? AND media_attachments.created_at <= ?', start_date, end_date.end_of_day)
+                                    .where.not(id: MediaAttachment.joins('INNER JOIN active_storage_attachments asa ON asa.record_id = media_attachments.id').select(:id))
+    
+    total_count = images_to_cache.count
+    puts "対象画像: \#{total_count}件"
+    
+    cached_count = 0
+    images_to_cache.find_each(batch_size: #{batch_size}) do |media|
+      RemoteImageCacheJob.perform_later(media.id)
+      cached_count += 1
+      
+      if cached_count % 10 == 0
+        puts "進捗: \#{cached_count}/\#{total_count} 件をキューに追加"
+      end
+    end
+    
+    puts "success|\#{cached_count}件のキャッシュジョブをキューに追加しました"
+  RUBY
+  
+  result = run_rails_command(cache_code)
+  puts result
+  
+  status_line = result.lines.find { |l| l.start_with?('success|') }
+  if status_line
+    message = status_line.split('|', 2).last.strip
+    print_success message
+  end
+end
+
+def run_cache_cleanup
+  puts ""
+  print_warning "期限切れキャッシュとファイルをクリーンアップします"
+  puts ""
+  
+  answer = safe_gets("クリーンアップを実行しますか？ (y/N): ")
+  return unless answer&.downcase == 'y'
+  
+  print_info "キャッシュクリーンアップを実行中..."
+  
+  cleanup_code = <<~RUBY
+    begin
+      CacheCleanupJob.perform_now
+      puts "success|キャッシュクリーンアップが完了しました"
+    rescue => e
+      puts "error|クリーンアップに失敗しました: \#{e.message}"
+    end
+  RUBY
+  
+  result = run_rails_command(cleanup_code)
+  status_line = result.lines.find { |l| l.include?('|') }
+  
+  if status_line
+    status, message = status_line.strip.split('|', 2)
+    if status == "success"
+      print_success message
+    else
+      print_error message
+    end
+  end
+end
+
+def show_cache_details
+  puts ""
+  print_header "キャッシュ詳細統計"
+  
+  details_code = <<~RUBY
+    # 詳細統計を取得
+    puts "=== リモート画像統計 ==="
+    
+    # 日付別統計
+    recent_stats = MediaAttachment.joins(:actor)
+                                 .where(actors: { local: false })
+                                 .where.not(remote_url: nil)
+                                 .where('media_attachments.created_at >= ?', 30.days.ago)
+                                 .group('DATE(media_attachments.created_at)')
+                                 .count
+    
+    puts "過去30日の日別リモート画像数:"
+    recent_stats.sort.last(7).each do |date, count|
+      puts "  \#{date}: \#{count}件"
+    end
+    
+    puts ""
+    puts "=== キャッシュ統計 ==="
+    
+    # ドメイン別統計
+    domain_stats = MediaAttachment.joins(:actor)
+                                 .joins('INNER JOIN active_storage_attachments asa ON asa.record_id = media_attachments.id')
+                                 .where(actors: { local: false })
+                                 .group('actors.domain')
+                                 .count
+    
+    puts "ドメイン別キャッシュ数 (上位10):"
+    domain_stats.sort_by { |_, count| -count }.first(10).each do |domain, count|
+      puts "  \#{domain}: \#{count}件"
+    end
+    
+    puts ""
+    puts "=== ストレージ使用量 ==="
+    
+    size_stats = ActiveStorage::Blob.where('key LIKE ?', 'img/%')
+                                   .group('DATE(created_at)')
+                                   .sum(:byte_size)
+    
+    puts "日別ストレージ使用量 (過去7日):"
+    size_stats.sort.last(7).each do |date, size|
+      puts "  \#{date}: \#{(size / 1024.0 / 1024.0).round(2)} MB"
+    end
+  RUBY
+  
+  result = run_rails_command(details_code)
+  puts result
+end
+
+def check_solid_cache_status
+  begin
+    # Solid Cacheの動作確認
+    test_key = "health_check_#{Time.now.to_i}"
+    test_value = "ok"
+    
+    cache_check_code = <<~RUBY
+      begin
+        # Solid Cacheに書き込みテスト
+        Rails.cache.write('#{test_key}', '#{test_value}', expires_in: 10.seconds)
+        
+        # 読み込みテスト
+        result = Rails.cache.read('#{test_key}')
+        
+        if result == '#{test_value}'
+          puts 'cache_ok'
+        else
+          puts 'cache_failed|Read test failed'
+        end
+        
+        # クリーンアップ
+        Rails.cache.delete('#{test_key}')
+        
+      rescue => e
+        puts "cache_error|\#{e.message}"
+      end
+    RUBY
+    
+    result = run_rails_command(cache_check_code)
+    
+    if result.strip == 'cache_ok'
+      true
+    else
+      error_line = result.lines.find { |l| l.include?('|') }
+      if error_line
+        _, error_msg = error_line.strip.split('|', 2)
+        Rails.logger.warn "Solid Cache check failed: #{error_msg}" if defined?(Rails)
+      end
+      false
+    end
+  rescue => e
+    Rails.logger.warn "Solid Cache check error: #{e.message}" if defined?(Rails)
+    false
+  end
+end
+
 def safe_gets(prompt = "")
   print prompt unless prompt.empty?
   input = gets
@@ -1416,7 +1832,7 @@ def main_loop
       show_logo
       show_menu
       
-      choice = safe_gets("選択してください (0-9): ")
+      choice = safe_gets("選択してください (a-j, x): ")
       
       # 入力が中断された場合の処理
       if choice.nil?
@@ -1426,41 +1842,43 @@ def main_loop
       end
       
       case choice
-      when "1"
+      when "a"
         setup_new_installation
-      when "2"
+      when "b"
         cleanup_and_start
-      when "3"
+      when "c"
         check_domain_config
-      when "4"
+      when "d"
         switch_domain
-      when "5"
+      when "e"
         manage_accounts
-      when "6"
+      when "f"
         delete_account
-      when "7"
+      when "g"
         create_oauth_token
-      when "8"
+      when "h"
         generate_vapid_keys
-      when "9"
+      when "i"
         migrate_to_r2
-      when "0"
+      when "j"
+        manage_remote_image_cache
+      when "x"
         puts ""
         print_success "letter管理スクリプトを終了します"
         break
       else
         puts ""
-        print_error "無効な選択です。0-9の数字を入力してください。"
+        print_error "無効な選択です。a-j, xを入力してください。"
         puts ""
         countdown_return(2)
         next
       end
       
-      unless choice == "0"
+      unless choice == "x"
         puts ""
         puts ""
         # OAuthトークン生成とドメイン設定確認の場合は手動復帰、その他は自動復帰
-        if choice == "7" || choice == "3"
+        if choice == "g" || choice == "c"
           safe_gets("Enterキーを押してメニューに戻ります...")
         else
           countdown_return(3, "操作が完了しました。メニューに戻ります")

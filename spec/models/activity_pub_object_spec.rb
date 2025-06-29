@@ -248,24 +248,24 @@ RSpec.describe ActivityPubObject, type: :model do
     end
   end
 
-  describe '#perform_edit!' do
+  describe '#apply_edit!' do
     let(:object) { create(:activity_pub_object, content: 'Original content') }
 
     it 'creates edit snapshot before updating' do
       expect do
-        object.perform_edit!(content: 'Updated content')
+        object.apply_edit!(content: 'Updated content')
       end.to change(StatusEdit, :count).by(1)
     end
 
     it 'updates content and sets edited_at' do
-      object.perform_edit!(content: 'Updated content')
+      object.apply_edit!(content: 'Updated content')
 
       expect(object.reload.content).to eq('Updated content')
       expect(object.edited_at).to be_present
     end
 
     it 'returns true on successful edit' do
-      result = object.perform_edit!(content: 'Updated content')
+      result = object.apply_edit!(content: 'Updated content')
       expect(result).to be true
     end
   end

@@ -147,6 +147,22 @@ class MediaAttachment < ApplicationRecord
     end
   end
 
+  # キャッシュされたリモート画像のURLを取得（キャッシュが有効な場合）
+  def cached_url
+    return url if file.attached? || remote_url.blank?
+
+    # リモート画像のキャッシュされたURLを取得
+    RemoteImageCacheService.get_cached_image_url(remote_url)
+  end
+
+  # リモート画像をキャッシュに保存
+  def cache_remote_image
+    return false if file.attached? || remote_url.blank?
+
+    cached_url = RemoteImageCacheService.cache_remote_image(remote_url, self)
+    cached_url != remote_url # キャッシュに成功した場合はtrue
+  end
+
   # ローカルファイルかどうかの判定
   def local_file?
     file.attached?

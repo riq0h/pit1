@@ -150,6 +150,11 @@ a {
   display: none !important;
 }
 
+/* ellipsisクラスでURL中間部分を表示 */
+.ellipsis {
+  display: inline !important;
+}
+
 /* 行数制限クラス */
 .line-clamp-2 {
   display: -webkit-box !important;

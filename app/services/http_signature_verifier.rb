@@ -36,7 +36,7 @@ class HttpSignatureVerifier
     Rails.logger.info "🔐 Signature verification #{result ? 'successful' : 'failed'} for #{actor_uri}"
 
     # 失敗時のフォールバック: アクターキーリフレッシュ
-    if !result && should_refresh_actor_key(actor_uri)
+    if !result && actor_key_needs_refresh?(actor_uri)
       Rails.logger.info "🔐 Refreshing public key for #{actor_uri}"
       public_key = fetch_actor_public_key(actor_uri, refresh: true)
       result = verify_signature(
@@ -52,7 +52,7 @@ class HttpSignatureVerifier
     false
   end
 
-  def should_refresh_actor_key(actor_uri)
+  def actor_key_needs_refresh?(actor_uri)
     actor = Actor.find_by(ap_id: actor_uri)
     return false unless actor
 

@@ -5,7 +5,7 @@ source 'https://rubygems.org'
 
 ruby '3.4.1'
 
-# Rails 8 Core
+# Rails 8
 gem 'bootsnap', require: false
 gem 'dotenv-rails', groups: %i[development test]
 gem 'image_processing', '~> 1.2'
@@ -21,34 +21,35 @@ gem 'stimulus-rails'
 gem 'tailwindcss-rails'
 gem 'turbo-rails'
 
-# ActivityPub & Federation
-gem 'addressable' # URI handling
-gem 'httparty' # HTTP requests for federation
-gem 'json-ld'                    # JSON-LD processing
-gem 'nokogiri'                   # HTML/XML processing
-gem 'rsa'                        # RSA key generation for HTTP signatures
+# ActivityPub & 連合機能
+gem 'addressable'
+gem 'httparty'
+gem 'json-ld'
+gem 'nokogiri'
+gem 'rsa'
 
-# Authentication & Security
-gem 'bcrypt', '~> 3.1.7' # Password hashing
-gem 'doorkeeper', '~> 5.7'       # OAuth 2.0 server
-gem 'jwt'                        # JWT tokens for OAuth
-gem 'rack-cors'                  # CORS handling
+# 認証
+gem 'bcrypt', '~> 3.1.7'
+gem 'doorkeeper', '~> 5.7'
+gem 'jwt'
+gem 'rack-cors'
 
-# Background Jobs & Cable
-gem 'solid_cable' # Rails 8 solid cable for Action Cable
-gem 'solid_queue' # Rails 8 solid queue for background jobs
+# Solid
+gem 'solid_cable'
+gem 'solid_cache'
+gem 'solid_queue'
 
-# Push Notifications
-gem 'web-push' # Web Push Protocol implementation
+# プッシュ通知
+gem 'web-push'
 
-# Utilities
-gem 'aws-sdk-s3', require: false # S3-compatible storage (Cloudflare R2)
-gem 'blurhash'                   # Image placeholder generation
+# ユーティリティ
+gem 'aws-sdk-s3', require: false
+gem 'blurhash'
 gem 'foreman'
-gem 'kaminari'                   # Pagination
-gem 'marcel'                     # MIME type detection
-gem 'mini_magick'                # Image processing
-gem 'nanoid'                     # Generate short unique IDs
+gem 'kaminari'
+gem 'marcel'
+gem 'mini_magick'
+gem 'nanoid'
 
 group :development, :test do
   gem 'brakeman'
@@ -65,8 +66,8 @@ group :development, :test do
 end
 
 group :development do
-  gem 'annotate'                 # Model annotations
-  gem 'bullet'                   # N+1 query detection
+  gem 'annotate'
+  gem 'bullet'
   gem 'listen', '~> 3.3'
   gem 'spring'
   gem 'web-console'

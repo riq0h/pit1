@@ -102,3 +102,10 @@ RSpec/MultipleExpectations:
 
 RSpec/NestedGroups:
   Max: 3
+
+Naming/PredicateName:
+  Exclude:
+    - 'app/controllers/api/base_controller.rb'
+    - 'app/models/activity_pub_object.rb' 
+    - 'app/models/media_attachment.rb'
+    - 'app/services/follow_service.rb'

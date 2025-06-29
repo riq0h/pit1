@@ -128,7 +128,7 @@ class OptimizedSearchService
 
     sql = <<~SQL.squish
       SELECT fts.object_id
-      FROM letter_post_search_fts5 fts
+      FROM post_search_fts fts
       INNER JOIN objects o ON fts.object_id = o.id
       INNER JOIN actors a ON o.actor_id = a.id
       WHERE fts.content_plaintext MATCH ?
@@ -150,7 +150,7 @@ class OptimizedSearchService
   def try_like_search
     sql = <<~SQL.squish
       SELECT lps.object_id
-      FROM letter_post_search lps
+      FROM post_search lps
       INNER JOIN objects o ON lps.object_id = o.id
       INNER JOIN actors a ON o.actor_id = a.id
       WHERE lps.content_plaintext LIKE ?
@@ -222,7 +222,7 @@ class OptimizedSearchService
 
   def fts5_table?
     result = ActiveRecord::Base.connection.execute(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='letter_post_search_fts5'"
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='post_search_fts'"
     )
     result.any?
   rescue StandardError

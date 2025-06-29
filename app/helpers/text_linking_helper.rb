@@ -44,6 +44,9 @@ module TextLinkingHelper
   end
 
   def apply_url_links_to_html(html_text)
+    # 既存のリンクがある場合は何もしない（ActivityPub投稿など）
+    return html_text if html_text.include?('<a ') && html_text.include?('href=')
+
     # HTMLタグの外側にあるURLのみをリンク化する
     # 既存のaタグ、imgタグなどを壊さないように注意深く処理
 
@@ -52,7 +55,7 @@ module TextLinkingHelper
     html_text.scan(/<[^>]+>/) { |match| tags << { content: match, start: $LAST_MATCH_INFO.begin(0), end: $LAST_MATCH_INFO.end(0) } }
 
     # URLパターンを探してリンク化（ただし、既存のタグ内は除外）
-    url_pattern = /(https?:\/\/[^\s<>]+)/
+    url_pattern = /(https?:\/\/[^\s<>"']+)/
     result = html_text.dup
     offset = 0
 

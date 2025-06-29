@@ -197,7 +197,7 @@ class ActivityPubObject < ApplicationRecord
   end
 
   # 編集を実行
-  def perform_edit!(params)
+  def apply_edit!(params)
     # 編集前の状態を保存
     create_edit_snapshot!
 

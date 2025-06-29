@@ -47,7 +47,7 @@ Rails.application.routes.draw do
   # ホームページ
   root 'home#index'
 
-  # RSS/Atom feeds（プロフィールルートより先に定義）
+  # RSS/Atom feeds
   get '/@:username.rss', to: 'feeds#user', format: :rss
   get '/local.atom', to: 'feeds#local', format: :atom
 
@@ -143,7 +143,7 @@ Rails.application.routes.draw do
         end
       end
       
-      # Timelines
+      # タイムライン
       get '/timelines/home', to: 'timelines#home'
       get '/timelines/public', to: 'timelines#public'
       get '/timelines/tag/:hashtag', to: 'timelines#tag'
@@ -154,14 +154,14 @@ Rails.application.routes.draw do
       # メディア
       resources :media, only: [:create, :show, :update]
 
-      # Conversations (Direct Messages)
+      # ダイレクトメッセージ
       resources :conversations, only: [:index, :show, :destroy] do
         member do
           post :read
         end
       end
 
-      # Notifications
+      # 通知
       resources :notifications, only: [:index, :show] do
         collection do
           post :clear
@@ -171,15 +171,15 @@ Rails.application.routes.draw do
         end
       end
 
-      # Streaming (WebSocket)
+      # ストリーミング
       get '/streaming', to: 'streaming#index'
       
-      # Server-Sent Events
+      # サーバ通知イベント
       namespace :streaming do
         get '/stream', to: 'sse#stream'
       end
 
-      # Domain blocks
+      # ドメインブロック
       get '/domain_blocks', to: 'domain_blocks#index'
       post '/domain_blocks', to: 'domain_blocks#create'
       delete '/domain_blocks', to: 'domain_blocks#destroy'
@@ -267,7 +267,7 @@ Rails.application.routes.draw do
         delete '/subscription', to: 'subscription#destroy'
       end
 
-      # Admin APIs
+      # Admin API
       namespace :admin do
         get '/dashboard', to: 'dashboard#show'
         
@@ -293,21 +293,21 @@ Rails.application.routes.draw do
       # 検索機能
       get '/search', to: 'search#index'
       
-      # Instance (v2)
+      # インスタンス (v2)
       get '/instance', to: 'instance#show'
       
-      # Suggestions (v2)
+      # サジェスト (v2)
       get '/suggestions', to: 'suggestions#index'
       
-      # Trends (v2)
+      # トレンド (v2)
       get '/trends/tags', to: 'trends#tags'
       get '/trends/statuses', to: 'trends#statuses'
       get '/trends/links', to: 'trends#links'
       
-      # Filters (v2)
+      # フィルター (v2)
       resources :filters
       
-      # Media (v2)
+      # メディア (v2)
       resources :media, only: [:create]
     end
   end
@@ -346,6 +346,9 @@ Rails.application.routes.draw do
   # エラーページ
   get '/404', to: 'errors#not_found'
   get '/500', to: 'errors#internal_server_error'
+  
+  # 開発環境でのテスト用
+  get '/test_500', to: 'errors#test_internal_server_error' if Rails.env.development?
   
   # 404エラー用のキャッチオールルート（最後に置く、Active Storageパスは除外）
   match '*path', to: 'errors#not_found', via: :all, constraints: ->(req) { 
