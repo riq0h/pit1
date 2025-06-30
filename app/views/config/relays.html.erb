@@ -29,9 +29,9 @@
         <div class="space-y-3 mb-3">
           <% @relays.each do |relay| %>
             <div>
-              <div class="flex items-center space-x-2">
+              <div class="flex items-stretch space-x-2">
                 <!-- リレー情報の枠 -->
-                <div class="flex-1 border border-gray-200 px-3 py-2">
+                <div class="flex-1 border border-gray-200 px-3 py-2 flex items-center">
                   <div class="flex items-center space-x-2">
                     <span class="text-sm text-gray-900 text-normal">
                       <%= relay.domain %>
@@ -53,18 +53,18 @@
                     <%= form_with url: config_relay_path(relay), method: :patch, local: true, class: "inline" do |f| %>
                       <%= f.hidden_field :action_type, value: 'enable' %>
                       <%= f.submit "接続", 
-                          class: "btn-secondary btn-sm" %>
+                          class: "btn-secondary btn-sm h-10" %>
                     <% end %>
                   <% elsif relay.accepted? %>
                     <%= form_with url: config_relay_path(relay), method: :patch, local: true, class: "inline" do |f| %>
                       <%= f.hidden_field :action_type, value: 'disable' %>
                       <%= f.submit "切断", 
-                          class: "btn-secondary btn-sm" %>
+                          class: "btn-secondary btn-sm h-10" %>
                     <% end %>
                   <% end %>
                   <%= form_with url: config_relay_path(relay), method: :delete, local: true, class: "inline", data: { confirm: "本当に削除しますか？" } do |f| %>
                     <%= f.submit "削除", 
-                        class: "btn-secondary btn-sm" %>
+                        class: "btn-secondary btn-sm h-10" %>
                   <% end %>
                 </div>
               </div>
