@@ -11,8 +11,6 @@ class SendActivityJob < ApplicationJob
   def perform(activity_id, target_inboxes)
     @activity = Activity.find(activity_id)
 
-    Rails.logger.info "📤 Sending #{@activity.activity_type} activity #{@activity.id} to #{target_inboxes.count} inboxes"
-
     target_inboxes.each do |inbox_url|
       send_to_inbox(inbox_url)
     end
@@ -61,8 +59,6 @@ class SendActivityJob < ApplicationJob
   end
 
   def build_update_activity_data(activity)
-    Rails.logger.info "🔄 Building Update activity data for #{activity.id}"
-
     unless activity.object
       Rails.logger.warn "⚠️ Update activity #{activity.id} has no object"
       return ActivityBuilders::SimpleActivityBuilder.new(activity).build
@@ -80,13 +76,7 @@ class SendActivityJob < ApplicationJob
     }
   end
 
-  def log_delivery_result(success, inbox_url)
-    if success
-      Rails.logger.info "✅ Successfully sent to #{inbox_url}"
-    else
-      Rails.logger.warn "❌ Failed to send to #{inbox_url}"
-    end
-  end
+  def log_delivery_result(success, inbox_url); end
 
   def handle_job_error(error, activity_id)
     log_error_details(error, activity_id)

@@ -22,8 +22,6 @@ module StatusCreationHandler
   def attach_media_to_status
     return unless @media_ids&.any?
 
-    Rails.logger.debug { "Attaching #{@media_ids.count} media files to status" }
-
     media_attachments = MediaAttachment.where(id: @media_ids, account: current_user)
 
     if media_attachments.count != @media_ids.count
@@ -41,7 +39,6 @@ module StatusCreationHandler
     return render_validation_failed("添付できるファイル数を超えています（最大#{max_attachments}個）") if media_attachments.count > max_attachments
 
     @status.media_attachments = media_attachments
-    Rails.logger.debug { "Successfully attached #{media_attachments.count} media files" }
     true
   end
 

@@ -7,8 +7,6 @@ class SendAcceptJob < ApplicationJob
   queue_as :default
 
   def perform(follow)
-    Rails.logger.info "✅ Sending Accept activity for follow #{follow.id}"
-
     # 対応するActivity recordを取得
     activity_record = find_accept_activity(follow)
 
@@ -58,7 +56,6 @@ class SendAcceptJob < ApplicationJob
     if response[:success]
       follow.update!(accepted: true)
       update_activity_delivery_status(activity_record, true, response)
-      Rails.logger.info "✅ Accept sent successfully for follow #{follow.id}"
     else
       update_activity_delivery_status(activity_record, false, response)
       handle_failure(follow, activity_record, response)

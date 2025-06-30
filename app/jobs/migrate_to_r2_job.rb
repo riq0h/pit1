@@ -7,13 +7,9 @@ class MigrateToR2Job < ApplicationJob
   def perform(batch_size: 50)
     return unless r2_enabled?
 
-    Rails.logger.info 'Starting migration of local files to Cloudflare R2'
-
     migrate_media_attachments(batch_size)
     migrate_custom_emojis(batch_size)
     migrate_actor_images(batch_size)
-
-    Rails.logger.info 'Completed migration to Cloudflare R2'
   end
 
   private
@@ -23,8 +19,6 @@ class MigrateToR2Job < ApplicationJob
   end
 
   def migrate_media_attachments(batch_size)
-    Rails.logger.info 'Migrating MediaAttachment files...'
-
     MediaAttachment.includes(file_attachment: :blob)
                    .where(active_storage_attachments: { name: 'file' })
                    .find_in_batches(batch_size: batch_size) do |batch|
@@ -37,8 +31,6 @@ class MigrateToR2Job < ApplicationJob
   end
 
   def migrate_custom_emojis(batch_size)
-    Rails.logger.info 'Migrating CustomEmoji files...'
-
     CustomEmoji.includes(image_attachment: :blob)
                .where(active_storage_attachments: { name: 'image' })
                .find_in_batches(batch_size: batch_size) do |batch|
@@ -51,8 +43,6 @@ class MigrateToR2Job < ApplicationJob
   end
 
   def migrate_actor_images(batch_size)
-    Rails.logger.info 'Migrating Actor avatar and header files...'
-
     Actor.includes(avatar_attachment: :blob, header_attachment: :blob)
          .find_in_batches(batch_size: batch_size) do |batch|
       batch.each do |actor|
@@ -66,11 +56,8 @@ class MigrateToR2Job < ApplicationJob
   def migrate_attachment(attachment, description)
     return unless should_migrate_attachment?(attachment)
 
-    Rails.logger.info "Migrating #{description}: #{attachment.filename}"
-
     begin
       perform_migration(attachment, description)
-      Rails.logger.info "Successfully migrated #{description}"
     rescue StandardError => e
       Rails.logger.error "Failed to migrate #{description}: #{e.message}"
     end

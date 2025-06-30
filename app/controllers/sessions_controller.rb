@@ -10,22 +10,17 @@ class SessionsController < ApplicationController
 
   # POST /login
   def create
-    Rails.logger.info "🔍 Login attempt for username: #{params[:username]}"
     actor = find_local_actor
 
     if actor
-      Rails.logger.info "🔍 Found actor: #{actor.username}"
       auth_result = actor.authenticate(params[:password])
-      Rails.logger.info "🔍 Authentication result: #{auth_result.inspect}"
 
       if auth_result
         login_success(actor)
       else
-        Rails.logger.info "🔍 Authentication failed for #{actor.username}"
         login_failure
       end
     else
-      Rails.logger.info "🔍 Actor not found for username: #{params[:username]}"
       login_failure
     end
   end
@@ -58,14 +53,11 @@ class SessionsController < ApplicationController
   def login_user(actor)
     session[:current_user_id] = actor.id
     session[:logged_in_at] = Time.current
-    Rails.logger.info "🔐 User #{actor.username} logged in"
   end
 
   def logout_user
-    user_id = session[:current_user_id]
     session.delete(:current_user_id)
     session.delete(:logged_in_at)
-    Rails.logger.info "🔓 User #{user_id} logged out"
   end
 
   def redirect_to_after_login

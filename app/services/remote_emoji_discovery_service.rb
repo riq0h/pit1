@@ -132,10 +132,7 @@ class RemoteEmojiDiscoveryService
 
     if existing_emoji
       # URLが変更されている場合は更新
-      if existing_emoji.image_url != url
-        existing_emoji.update!(image_url: url, uri: metadata['id'])
-        Rails.logger.debug { "Updated remote emoji: :#{shortcode}: from #{domain}" }
-      end
+      existing_emoji.update!(image_url: url, uri: metadata['id']) if existing_emoji.image_url != url
     else
       # 新しいリモート絵文字を作成
       emoji = CustomEmoji.new(

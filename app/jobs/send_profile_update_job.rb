@@ -18,8 +18,6 @@ class SendProfileUpdateJob < ApplicationJob
     inboxes.each do |inbox_url|
       send_update_activity(update_activity, inbox_url, actor)
     end
-
-    Rails.logger.info "Distributed profile update for @#{actor.username} to #{inboxes.size} inboxes"
   end
 
   private
@@ -74,9 +72,7 @@ class SendProfileUpdateJob < ApplicationJob
 
     success = result.is_a?(Hash) ? result[:success] : result
 
-    if success
-      Rails.logger.info "✅ Profile update sent successfully to #{inbox_url}"
-    else
+    unless success
       error_msg = result.is_a?(Hash) ? result[:error] : 'Unknown error'
       Rails.logger.warn "❌ Failed to send profile update to #{inbox_url}: #{error_msg}"
     end

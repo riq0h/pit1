@@ -18,12 +18,6 @@ class RemoteImageCacheJob < ApplicationJob
     return if media_attachment.remote_url.blank?
 
     # 画像をキャッシュ
-    success = media_attachment.cache_remote_image!
-
-    if success
-      Rails.logger.info "Successfully cached remote image: #{media_attachment.remote_url}"
-    else
-      Rails.logger.warn "Failed to cache remote image: #{media_attachment.remote_url}"
-    end
+    media_attachment.cache_remote_image!
   end
 end

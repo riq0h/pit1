@@ -13,8 +13,6 @@ class ActorFetcher
   end
 
   def fetch_and_create(actor_uri)
-    Rails.logger.info "🌐 Fetching actor: #{actor_uri}"
-
     # 重複チェック
     existing_actor = Actor.find_by(ap_id: actor_uri)
     return existing_actor if existing_actor
@@ -54,7 +52,6 @@ class ActorFetcher
     # Featured Collection（ピン留め投稿）を取得
     fetch_featured_collection_async(actor)
 
-    Rails.logger.info "👤 Remote actor created: #{username}@#{domain}"
     actor
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "💾 Actor creation failed: #{e.message}"
@@ -151,8 +148,6 @@ class ActorFetcher
         visible_in_picker: false,
         disabled: false
       )
-
-      Rails.logger.info "🎭 Actor emoji created: :#{shortcode}: from #{actor.domain}"
     end
   rescue StandardError => e
     Rails.logger.error "❌ Failed to process actor emojis: #{e.message}"

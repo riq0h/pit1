@@ -16,8 +16,6 @@ class RelayAnnounceProcessorJob < ApplicationJob
     @announce_activity = announce_activity
     @object_id = announce_activity['object']
 
-    Rails.logger.info "🔄 Processing relay announce from #{@relay.domain}: #{@object_id}"
-
     # 元のオブジェクトを取得
     object_data = fetch_activitypub_object(@object_id)
     return unless object_data
@@ -110,8 +108,6 @@ class RelayAnnounceProcessorJob < ApplicationJob
       # リレー経由であることを明示
       relay_id: @relay.id
     )
-
-    Rails.logger.info "Created relay post from #{actor.display_name || actor.username}@#{actor.domain}"
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "Failed to create ActivityPub object from relay: #{e.message}"
   end

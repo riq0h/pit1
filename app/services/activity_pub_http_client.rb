@@ -12,8 +12,6 @@ class ActivityPubHttpClient
   end
 
   def fetch_object(uri, timeout: DEFAULT_TIMEOUT)
-    Rails.logger.debug { "🌐 Fetching ActivityPub object: #{uri}" }
-
     response = HTTParty.get(
       uri,
       headers: {

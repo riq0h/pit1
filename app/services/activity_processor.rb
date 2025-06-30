@@ -56,13 +56,10 @@ class ActivityProcessor
     return unless target_obj
 
     # Favouriteレコードを作成（通知とカウント更新は自動実行される）
-    favourite = Favourite.find_or_create_by!(
+    Favourite.find_or_create_by!(
       actor: activity.actor,
       object: target_obj
     )
-
-    Rails.logger.info "❤️ Like created: Activity #{activity.id}, Favourite #{favourite.id}, " \
-                      "favourites_count updated to #{target_obj.reload.favourites_count}"
   end
 
   def process_announce_activity
@@ -70,12 +67,10 @@ class ActivityProcessor
     return unless target_obj
 
     # Reblogレコードを作成（通知とカウント更新は自動実行される）
-    reblog = Reblog.find_or_create_by!(
+    Reblog.find_or_create_by!(
       actor: activity.actor,
       object: target_obj
     )
-
-    Rails.logger.info "📢 Reblog created: Activity #{activity.id}, Reblog #{reblog.id}, reblogs_count updated to #{target_obj.reload.reblogs_count}"
   end
 
   def process_delete_activity

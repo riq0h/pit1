@@ -33,11 +33,8 @@ class HttpSignatureVerifier
       public_key: public_key
     )
 
-    Rails.logger.info "🔐 Signature verification #{result ? 'successful' : 'failed'} for #{actor_uri}"
-
     # 失敗時のフォールバック: アクターキーリフレッシュ
     if !result && actor_key_needs_refresh?(actor_uri)
-      Rails.logger.info "🔐 Refreshing public key for #{actor_uri}"
       public_key = fetch_actor_public_key(actor_uri, refresh: true)
       result = verify_signature(
         signature: signature_params['signature'],
@@ -156,7 +153,6 @@ class HttpSignatureVerifier
     # Featured Collection（ピン留め投稿）を取得
     fetch_featured_collection_async(actor)
 
-    Rails.logger.info "👤 Remote actor created: #{username}@#{domain}"
     actor
   end
 
@@ -270,8 +266,7 @@ class HttpSignatureVerifier
     end
 
     result
-  rescue StandardError => e
-    Rails.logger.debug { "Signature verification error: #{e.message}" }
+  rescue StandardError
     false
   end
 end

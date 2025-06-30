@@ -235,9 +235,6 @@ class FollowService
       follow_params[:accepted] = false
     end
 
-    Rails.logger.info "🔄 Creating follow relationship: #{@actor.username} -> #{target_actor.username}@#{target_actor.domain}"
-    Rails.logger.debug { "Follow params: #{follow_params.inspect}" }
-
     Follow.create!(follow_params)
   rescue StandardError => e
     Rails.logger.error "❌ Failed to create follow relationship: #{e.message}"
@@ -250,7 +247,6 @@ class FollowService
   end
 
   def send_follow_activity(follow)
-    Rails.logger.info "📤 Sending Follow activity for #{@actor.username} -> #{follow.target_actor.username}@#{follow.target_actor.domain}"
     SendFollowJob.perform_later(follow)
   end
 end

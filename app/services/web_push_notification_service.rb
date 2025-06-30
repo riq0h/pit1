@@ -15,8 +15,6 @@ class WebPushNotificationService
     return false unless vapid_keys_configured?
 
     payload = subscription.push_payload(notification_type, title, body, options)
-    Rails.logger.info "📱 Sending push notification for #{subscription.actor.username}: #{payload.to_json}"
-
     send_push_notification(subscription, payload)
   end
 
@@ -33,7 +31,6 @@ class WebPushNotificationService
 
     def send_push_notification(subscription, payload)
       WebPush.payload_send(build_push_options(subscription, payload))
-      Rails.logger.info "✅ Push notification sent successfully to #{subscription.endpoint[0..50]}..."
       true
     rescue WebPush::InvalidSubscription, WebPush::ExpiredSubscription => e
       handle_invalid_subscription(subscription, e)

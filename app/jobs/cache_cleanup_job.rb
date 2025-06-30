@@ -33,8 +33,6 @@ class CacheCleanupJob < ApplicationJob
         expired_count += 1
       end
     end
-
-    Rails.logger.info "Cache cleanup completed: #{expired_count} expired blobs processed"
   end
 
   def cleanup_orphaned_blobs
@@ -45,9 +43,7 @@ class CacheCleanupJob < ApplicationJob
                      .left_joins(:attachments)
                      .where(active_storage_attachments: { id: nil })
 
-    orphaned_count = orphaned_blobs.count
+    orphaned_blobs.count
     orphaned_blobs.find_each(&:purge)
-
-    Rails.logger.info "Orphaned blob cleanup completed: #{orphaned_count} blobs removed"
   end
 end

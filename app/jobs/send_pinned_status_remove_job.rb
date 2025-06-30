@@ -40,19 +40,11 @@ class SendPinnedStatusRemoveJob < ApplicationJob
   def send_activity_to_inbox(activity, inbox_url, actor)
     activity_sender = ActivitySender.new
 
-    success = activity_sender.send_activity(
+    activity_sender.send_activity(
       activity: activity,
       target_inbox: inbox_url,
       signing_actor: actor
     )
-
-    if success
-      Rails.logger.info "✅ Remove activity sent successfully to #{inbox_url}"
-    else
-      Rails.logger.warn "❌ Failed to send Remove activity to #{inbox_url}"
-    end
-
-    success
   rescue StandardError => e
     Rails.logger.error "💥 Error sending Remove activity to #{inbox_url}: #{e.message}"
     false

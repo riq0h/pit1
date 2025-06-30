@@ -4,8 +4,6 @@ class SendFollowJob < ApplicationJob
   queue_as :default
 
   def perform(follow)
-    Rails.logger.info "📤 Sending Follow activity for follow #{follow.id}"
-
     follow_activity = build_follow_activity(follow)
     success = send_follow_activity(follow_activity, follow)
 
@@ -38,7 +36,6 @@ class SendFollowJob < ApplicationJob
 
   def handle_response(success, follow)
     if success
-      Rails.logger.info "✅ Follow activity sent successfully for follow #{follow.id}"
       # フォローリクエストは送信済みだが、承認待ち状態を維持
     else
       handle_failure(follow)

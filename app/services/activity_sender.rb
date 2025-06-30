@@ -8,8 +8,6 @@ class ActivitySender
   end
 
   def send_activity(activity:, target_inbox:, signing_actor:)
-    Rails.logger.info "📤 Sending #{activity['type']} to #{target_inbox}"
-
     body = activity.to_json
     headers = build_headers(target_inbox, body, signing_actor)
     response = perform_request(target_inbox, body, headers)
@@ -56,7 +54,6 @@ class ActivitySender
 
   def handle_response(response, activity_type)
     if response.success?
-      Rails.logger.info "✅ #{activity_type} sent successfully (#{response.code})"
       { success: true, code: response.code }
     else
       error_msg = "#{response.code} - #{response.body.to_s[0..200]}"

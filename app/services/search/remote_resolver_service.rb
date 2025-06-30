@@ -229,8 +229,7 @@ module Search
 
           create_actor_from_directory_data(account_data, domain)
         end
-      rescue StandardError => e
-        Rails.logger.debug { "ディレクトリ取得失敗 (#{domain}): #{e.message}" }
+      rescue StandardError
         []
       end
     end
@@ -271,8 +270,7 @@ module Search
         return nil unless actor_data
 
         create_actor_from_data(actor_data)
-      rescue StandardError => e
-        Rails.logger.debug { "アカウント解決失敗 (#{acct}): #{e.message}" }
+      rescue StandardError
         nil
       end
     end
