@@ -37,8 +37,31 @@ if Rails.env.development? || Rails.env.production?
       # テーブルが存在しない場合のみ作成
       unless ActiveRecord::Base.connection.table_exists?('solid_cable_messages')
         Rails.logger.info "📡 Creating Solid Cable tables"
-        load Rails.root.join('db/cable_schema.rb')
-        Rails.logger.info "✅ Solid Cable database initialized"
+        
+        cable_schema_path = Rails.root.join('db/cable_schema.rb')
+        if File.exist?(cable_schema_path)
+          load cable_schema_path
+          Rails.logger.info "✅ Solid Cable database initialized from schema"
+        else
+          # スキーマファイルがない場合は手動でテーブル作成
+          ActiveRecord::Base.connection.execute(<<~SQL)
+            CREATE TABLE IF NOT EXISTS solid_cable_messages (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              channel VARCHAR NOT NULL,
+              payload TEXT NOT NULL,
+              created_at DATETIME NOT NULL
+            )
+          SQL
+          ActiveRecord::Base.connection.execute(<<~SQL)
+            CREATE INDEX IF NOT EXISTS index_solid_cable_messages_on_channel 
+            ON solid_cable_messages (channel)
+          SQL
+          ActiveRecord::Base.connection.execute(<<~SQL)
+            CREATE INDEX IF NOT EXISTS index_solid_cable_messages_on_created_at 
+            ON solid_cable_messages (created_at)
+          SQL
+          Rails.logger.info "✅ Solid Cable database initialized manually"
+        end
       end
       
     rescue ActiveRecord::NoDatabaseError
@@ -48,8 +71,31 @@ if Rails.env.development? || Rails.env.production?
       
       # テーブル作成
       ActiveRecord::Base.establish_connection(:cable)
-      load Rails.root.join('db/cable_schema.rb')
-      Rails.logger.info "✅ Solid Cable database created and initialized"
+      
+      cable_schema_path = Rails.root.join('db/cable_schema.rb')
+      if File.exist?(cable_schema_path)
+        load cable_schema_path
+        Rails.logger.info "✅ Solid Cable database created and initialized from schema"
+      else
+        # スキーマファイルがない場合は手動でテーブル作成
+        ActiveRecord::Base.connection.execute(<<~SQL)
+          CREATE TABLE IF NOT EXISTS solid_cable_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel VARCHAR NOT NULL,
+            payload TEXT NOT NULL,
+            created_at DATETIME NOT NULL
+          )
+        SQL
+        ActiveRecord::Base.connection.execute(<<~SQL)
+          CREATE INDEX IF NOT EXISTS index_solid_cable_messages_on_channel 
+          ON solid_cable_messages (channel)
+        SQL
+        ActiveRecord::Base.connection.execute(<<~SQL)
+          CREATE INDEX IF NOT EXISTS index_solid_cable_messages_on_created_at 
+          ON solid_cable_messages (created_at)
+        SQL
+        Rails.logger.info "✅ Solid Cable database created and initialized manually"
+      end
       
     rescue => e
       Rails.logger.warn "⚠️  Solid Cable setup failed: #{e.message}"

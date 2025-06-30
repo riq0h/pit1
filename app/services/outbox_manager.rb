@@ -95,7 +95,7 @@ class OutboxManager
 
   def generate_activity_id(activity_type)
     timestamp = Time.current.to_i
-    random_id = SecureRandom.hex(8)
+    random_id = SecureRandom.hex(16)
     "#{actor.ap_id}##{activity_type.downcase}-#{timestamp}-#{random_id}"
   end
 

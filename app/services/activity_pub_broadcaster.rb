@@ -78,7 +78,7 @@ class ActivityPubBroadcaster
         {
           event: 'notification',
           payload: {
-            id: SecureRandom.uuid,
+            id: SecureRandom.hex(8),
             type: 'mention',
             created_at: object.published_at.iso8601,
             account: simple_account_data(object.actor),

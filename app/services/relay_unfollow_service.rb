@@ -43,7 +43,7 @@ class RelayUnfollowService
   private
 
   def create_undo_activity(_relay_actor_data)
-    undo_id = "#{@local_actor.ap_id}#follows/relay/undo/#{SecureRandom.uuid}"
+    undo_id = "#{@local_actor.ap_id}#follows/relay/undo/#{SecureRandom.hex(16)}"
 
     # 元のFollow アクティビティを再構築
     original_follow = {

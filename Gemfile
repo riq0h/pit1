@@ -7,7 +7,7 @@ ruby '3.4.1'
 
 # Rails 8
 gem 'bootsnap', require: false
-gem 'dotenv-rails', groups: %i[development test]
+gem 'dotenv-rails'
 gem 'image_processing', '~> 1.2'
 gem 'importmap-rails'
 gem 'ostruct'

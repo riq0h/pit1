@@ -4,7 +4,7 @@ FactoryBot.define do
   factory :mute do
     actor { association :actor }
     target_actor { association :actor }
-    ap_id { "https://example.com/mutes/#{SecureRandom.uuid}" }
+    ap_id { "https://example.com/mutes/#{SecureRandom.hex(8)}" }
     notifications { true }
 
     trait :without_notifications do

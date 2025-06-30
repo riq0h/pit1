@@ -7,7 +7,7 @@ FactoryBot.define do
     actor { association :actor }
     shallow_quote { false }
     quote_text { 'This is a quote with additional text' }
-    ap_id { "https://example.com/quotes/#{SecureRandom.uuid}" }
+    ap_id { "https://example.com/quotes/#{SecureRandom.hex(8)}" }
     visibility { 'public' }
 
     trait :shallow do

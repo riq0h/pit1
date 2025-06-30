@@ -2208,7 +2208,7 @@ def check_solid_queue_in_puma_status
           ActiveRecord::Base.establish_connection(:queue)
           if ActiveRecord::Base.connection.table_exists?('solid_queue_jobs')
             # テストジョブエンキュー
-            test_job_id = SecureRandom.uuid
+            test_job_id = SecureRandom.hex(8)
             ActiveJob::Base.connection.exec_query(
               "INSERT INTO solid_queue_jobs (queue_name, class_name, arguments, active_job_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
               "Test Job Insert",

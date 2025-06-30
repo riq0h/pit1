@@ -1,5 +1,9 @@
 # letter : General Letter Publication System based on ActivityPub / 一般書簡公衆化システム
 
+<div align="center">
+  <img src="/public/icon.png" alt="letter icon">
+</div>
+
 letterはRails8およびSQLite、Hotwireで構成されるミニマルなActivityPub実装であり、一般的に作成された電子書簡を速やかに公衆送信することができます。この実装系は以下の特徴を備えています。
 
 ・1インスタンス2アカウント制限  
@@ -20,3 +24,13 @@ RAILS_ENV=production bin/setup
 ```
 bin/letter_manager.rb
 ```
+
+## スクリーンショット
+
+<div align="center">
+  <img src="/public/post.png" alt="post screenshot">
+</div>
+
+<div align="center">
+  <img src="/public/config.png" alt="config screenshot">
+</div>

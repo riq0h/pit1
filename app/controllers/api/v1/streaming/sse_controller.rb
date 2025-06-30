@@ -108,7 +108,7 @@ module Api
 
         def subscribe_to_channel(channel)
           # Solid CableのメッセージテーブルにサブスクリプションIDを生成
-          subscription_id = SecureRandom.uuid
+          subscription_id = SecureRandom.hex(8)
 
           # サブスクリプション情報を保存（メモリまたはDBに）
           Rails.cache.write(

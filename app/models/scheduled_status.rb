@@ -114,7 +114,7 @@ class ScheduledStatus < ApplicationRecord
 
   def generate_ap_id
     base_url = Rails.application.config.activitypub.base_url
-    "#{base_url}/users/#{actor.username}/statuses/#{SecureRandom.uuid}"
+    "#{base_url}/users/#{actor.username}/statuses/#{SecureRandom.hex(8)}"
   end
 
   def attach_media_to_status(status)

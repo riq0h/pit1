@@ -54,7 +54,7 @@ class RelayDistributionService
 
   def create_announce_activity(activity_pub_object, relay)
     local_actor_instance = local_actor
-    activity_id = "#{local_actor_instance.ap_id}#announces/relay/#{SecureRandom.uuid}"
+    activity_id = "#{local_actor_instance.ap_id}#announces/relay/#{SecureRandom.hex(16)}"
 
     {
       '@context' => 'https://www.w3.org/ns/activitystreams',

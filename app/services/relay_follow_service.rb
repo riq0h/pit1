@@ -44,7 +44,7 @@ class RelayFollowService
   private
 
   def create_follow_activity(_relay_actor_data)
-    activity_id = "#{@local_actor.ap_id}#follows/relay/#{SecureRandom.uuid}"
+    activity_id = "#{@local_actor.ap_id}#follows/relay/#{SecureRandom.hex(16)}"
 
     {
       '@context' => 'https://www.w3.org/ns/activitystreams',

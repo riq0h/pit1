@@ -109,3 +109,4 @@ Naming/PredicateName:
     - 'app/models/activity_pub_object.rb' 
     - 'app/models/media_attachment.rb'
     - 'app/services/follow_service.rb'
+    - 'app/services/web_push_notification_service.rb'
