@@ -63,6 +63,15 @@ FileUtils.chdir APP_ROOT do
     RAILS_ENV=production
 
     # ========================================
+    # 開発環境設定
+    # ========================================
+
+    # Solid QueueワーカーをPuma内で起動するか（development推奨、production環境では要検討）
+    # true: Puma内でワーカー起動（単一プロセス、開発環境向け）
+    # false: 独立プロセスでワーカー起動（本格運用向け）
+    SOLID_QUEUE_IN_PUMA=false
+
+    # ========================================
     # オブジェクトストレージ設定
     # ========================================
 
@@ -297,11 +306,19 @@ FileUtils.chdir APP_ROOT do
   # 5. 既存プロセスの確認と停止
   print_info "5. 既存プロセスの確認..."
   rails_running = system("pgrep -f 'rails server' > /dev/null 2>&1")
-  queue_running = system("pgrep -f 'solid.*queue' > /dev/null 2>&1")
+  
+  # SOLID_QUEUE_IN_PUMAを考慮したプロセス確認
+  if ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+    queue_running = false  # Puma内で動作するため独立プロセスなし
+  else
+    queue_running = system("pgrep -f 'solid.*queue' > /dev/null 2>&1")
+  end
 
   if rails_running || queue_running
     print_warning "既存のプロセスが動作中です。停止します..."
-    system("pkill -f 'solid.*queue' 2>/dev/null || true")
+    unless ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+      system("pkill -f 'solid.*queue' 2>/dev/null || true")
+    end
     system("pkill -f 'rails server' 2>/dev/null || true")
     system("pkill -f 'puma.*pit1' 2>/dev/null || true")
     sleep 3
@@ -311,7 +328,9 @@ FileUtils.chdir APP_ROOT do
   # PIDファイルのクリーンアップ
   print_info "PIDファイルのクリーンアップ..."
   FileUtils.rm_f("tmp/pids/server.pid")
-  Dir.glob("tmp/pids/solid_queue*.pid").each { |f| FileUtils.rm_f(f) }
+  unless ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+    Dir.glob("tmp/pids/solid_queue*.pid").each { |f| FileUtils.rm_f(f) }
+  end
 
   unless ARGV.include?("--skip-server")
     # 6. 環境変数の読み込み
@@ -346,10 +365,14 @@ FileUtils.chdir APP_ROOT do
     system!("RAILS_ENV=#{rails_env} rails server -b 0.0.0.0 -p 3000 -d")
     print_success "Railsサーバを起動しました"
 
-    # Solid Queueを起動
-    print_info "Solid Queueワーカーを起動中..."
-    system("RAILS_ENV=#{rails_env} nohup bin/jobs > log/solid_queue.log 2>&1 &")
-    print_success "Solid Queueワーカーを起動しました"
+    # Solid Queue起動（SOLID_QUEUE_IN_PUMAを考慮）
+    if ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+      print_success "Solid Queue（Puma内）が設定されています"
+    else
+      print_info "Solid Queueワーカーを起動中..."
+      system("RAILS_ENV=#{rails_env} nohup bin/jobs > log/solid_queue.log 2>&1 &")
+      print_success "Solid Queueワーカーを起動しました"
+    end
 
     # 8. 起動確認
     print_info "8. 起動確認中..."
@@ -365,23 +388,47 @@ FileUtils.chdir APP_ROOT do
 
     # プロセス数の確認
     rails_procs = `ps aux | grep -c '[r]ails server'`.to_i
-    queue_procs = `ps aux | grep -c '[s]olid.*queue'`.to_i
-
     print_info "Railsプロセス数: #{rails_procs}"
-    print_info "Solid Queueプロセス数: #{queue_procs}"
 
-    # Solid Queueの動作確認
-    if queue_procs > 0
-      print_success "Solid Queueワーカーが動作中です"
+    # Solid Queue確認（SOLID_QUEUE_IN_PUMAを考慮）
+    if ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+      # Puma内でSolid Queueが動作している場合の確認
+      print_info "Solid Queue（Puma内）の動作確認中..."
       begin
-        pending_jobs = `timeout 5 bin/rails runner "puts SolidQueue::Job.where(finished_at: nil).count" 2>/dev/null`.strip.to_i
-        print_info "待機中ジョブ数: #{pending_jobs}"
+        queue_check = `timeout 5 bin/rails runner "
+          adapter = ActiveJob::Base.queue_adapter
+          if adapter.is_a?(ActiveJob::QueueAdapters::SolidQueueAdapter)
+            puts 'ok'
+          else
+            puts 'not_configured'
+          end
+        " 2>/dev/null`.strip
+        
+        if queue_check == 'ok'
+          print_success "Solid Queue（Puma内）が正常に設定されています"
+        else
+          print_warning "Solid Queue（Puma内）の設定に問題があります"
+        end
       rescue
-        print_warning "ジョブ状況確認がタイムアウトしました"
+        print_warning "Solid Queue確認がタイムアウトしました"
       end
     else
-      print_error "Solid Queueワーカーが起動していません。手動で再起動してください:"
-      print_info "  bin/jobs &"
+      # 独立プロセスとしてのSolid Queue確認
+      queue_procs = `ps aux | grep -c '[s]olid.*queue'`.to_i
+      print_info "Solid Queueプロセス数: #{queue_procs}"
+      
+      if queue_procs > 0
+        print_success "Solid Queueワーカーが動作中です"
+        begin
+          pending_jobs = `timeout 5 bin/rails runner "puts SolidQueue::Job.where(finished_at: nil).count" 2>/dev/null`.strip.to_i
+          print_info "待機中ジョブ数: #{pending_jobs}"
+        rescue
+          print_warning "ジョブ状況確認がタイムアウトしました"
+        end
+      else
+        print_error "Solid Queueワーカーが起動していません。手動で再起動してください:"
+        print_info "  bin/jobs &"
+      end
     end
 
     # Solid Cacheの動作確認

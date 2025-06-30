@@ -13,15 +13,26 @@ module FileUploadHandler
   def handle_avatar_upload_active_storage
     return unless valid_upload?(params[:avatar])
 
-    current_user.avatar.attach(params[:avatar])
-    Rails.logger.info "Avatar uploaded for #{current_user.username} via Active Storage"
+    # ActorImageProcessorを使用して画像処理とプロフィール更新通知を実行
+    current_user.attach_avatar_with_folder(
+      io: params[:avatar].tempfile,
+      filename: params[:avatar].original_filename,
+      content_type: params[:avatar].content_type
+    )
+    Rails.logger.info "Avatar uploaded for #{current_user.username} via ActorImageProcessor"
   end
 
   def handle_header_upload_active_storage
     return unless valid_upload?(params[:header])
 
-    current_user.header.attach(params[:header])
-    Rails.logger.info "Header uploaded for #{current_user.username} via Active Storage"
+    # ActorImageProcessorのheader版メソッドを使用して画像処理とプロフィール更新通知を実行
+    processor = ActorImageProcessor.new(current_user)
+    processor.attach_header_with_folder(
+      io: params[:header].tempfile,
+      filename: params[:header].original_filename,
+      content_type: params[:header].content_type
+    )
+    Rails.logger.info "Header uploaded for #{current_user.username} via ActorImageProcessor"
   end
 
   def valid_upload?(file)

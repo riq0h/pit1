@@ -90,6 +90,23 @@ class Follow < ApplicationRecord
     accept_activity_ap_id
   end
 
+  def create_accept_activity
+    activity = Activity.create!(
+      ap_id: generate_accept_activity_id,
+      activity_type: 'Accept',
+      actor: target_actor,
+      target_ap_id: follow_activity_ap_id,
+      published_at: Time.current,
+      local: true,
+      processed: true
+    )
+
+    # Accept アクティビティを外部に送信
+    SendAcceptJob.perform_later(self)
+
+    activity
+  end
+
   private
 
   def set_defaults
@@ -157,23 +174,6 @@ class Follow < ApplicationRecord
     target_actor_record.update_followers_count!
   rescue StandardError => e
     Rails.logger.error "Failed to sync follower counts: #{e.message}"
-  end
-
-  def create_accept_activity
-    activity = Activity.create!(
-      ap_id: generate_accept_activity_id,
-      activity_type: 'Accept',
-      actor: target_actor,
-      target_ap_id: follow_activity_ap_id,
-      published_at: Time.current,
-      local: true,
-      processed: true
-    )
-
-    # Accept アクティビティを外部に送信
-    SendAcceptJob.perform_later(self)
-
-    activity
   end
 
   def create_reject_activity

@@ -93,7 +93,7 @@ module Api
             note: account.note || '',
             url: account.public_url,
             avatar: account.avatar_url,
-            header: account.header_image_url,
+            header: account.header_url,
             followers_count: account.followers_count || 0,
             following_count: account.following_count || 0,
             statuses_count: account.posts_count || 0,

@@ -22,7 +22,7 @@ class ActorActivityDistributor
 
   def should_distribute_profile_update?
     return false unless actor.local?
-    return false unless actor.saved_changes.keys.intersect?(%w[display_name note avatar header discoverable manually_approves_followers])
+    return false unless actor.saved_changes.keys.intersect?(%w[display_name note discoverable manually_approves_followers])
 
     true
   end
@@ -31,6 +31,14 @@ class ActorActivityDistributor
     return unless should_distribute_profile_update?
 
     Rails.logger.info "👤 Distributing profile update for #{actor.username}"
+    SendProfileUpdateJob.perform_later(actor.id)
+  end
+
+  # 画像変更時に直接呼び出すメソッド
+  def distribute_profile_update_for_image_change
+    return unless actor.local?
+
+    Rails.logger.info "👤 Distributing profile update for image change for #{actor.username}"
     SendProfileUpdateJob.perform_later(actor.id)
   end
 

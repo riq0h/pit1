@@ -8,7 +8,7 @@ module Api
 
       # GET /api/v1/preferences
       def show
-        @preferences = mastodon_preferences
+        render json: mastodon_preferences
       end
 
       private

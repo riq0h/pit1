@@ -33,6 +33,7 @@ def print_info(message)
 end
 
 def show_logo
+  puts ""
   puts " ██╗      ███████╗ ████████╗ ████████╗ ███████╗ ██████╗"
   puts " ██║      ██╔════╝ ╚══██╔══╝ ╚══██╔══╝ ██╔════╝ ██╔══██╗"
   puts " ██║      █████╗      ██║       ██║    █████╗   ██████╔╝"
@@ -151,6 +152,15 @@ def setup_new_installation
 
     # ActivityPubではHTTPSでなければ通信できません（ローカル開発時は空欄可）
     ACTIVITYPUB_PROTOCOL=
+
+    # ========================================
+    # 開発環境設定
+    # ========================================
+
+    # Solid QueueワーカーをPuma内で起動するか
+    # development: true推奨（単一プロセス、開発が簡単）
+    # production: false推奨（独立プロセス、スケーラブル）
+    SOLID_QUEUE_IN_PUMA=true
 
     # ========================================
     # オブジェクトストレージ設定
@@ -283,11 +293,19 @@ def setup_new_installation
   # 既存プロセスの確認と停止
   print_info "5. 既存プロセスの確認..."
   rails_running = system("pgrep -f 'rails server' > /dev/null 2>&1")
-  queue_running = system("pgrep -f 'solid.*queue' > /dev/null 2>&1")
+  
+  # SOLID_QUEUE_IN_PUMAを考慮したプロセス確認
+  if ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+    queue_running = false  # Puma内で動作するため独立プロセスなし
+  else
+    queue_running = system("pgrep -f 'solid.*queue' > /dev/null 2>&1")
+  end
 
   if rails_running || queue_running
     print_warning "既存のプロセスが動作中です。停止します..."
-    system("pkill -f 'solid.*queue' 2>/dev/null || true")
+    unless ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+      system("pkill -f 'solid.*queue' 2>/dev/null || true")
+    end
     system("pkill -f 'rails server' 2>/dev/null || true")
     system("pkill -f 'puma.*pit1' 2>/dev/null || true")
     sleep 3
@@ -295,7 +313,9 @@ def setup_new_installation
   end
 
   FileUtils.rm_f("tmp/pids/server.pid")
-  Dir.glob("tmp/pids/solid_queue*.pid").each { |f| FileUtils.rm_f(f) }
+  unless ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+    Dir.glob("tmp/pids/solid_queue*.pid").each { |f| FileUtils.rm_f(f) }
+  end
 
   answer = safe_gets("サーバを起動しますか？ (y/N): ")
   
@@ -324,8 +344,13 @@ def setup_new_installation
   system!("RAILS_ENV=#{rails_env} rails server -b 0.0.0.0 -p 3000 -d")
   print_success "Railsサーバを起動しました"
 
-  system("RAILS_ENV=#{rails_env} nohup bin/jobs > log/solid_queue.log 2>&1 &")
-  print_success "Solid Queueワーカーを起動しました"
+  # Solid Queue起動（SOLID_QUEUE_IN_PUMAを考慮）
+  if ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+    print_success "Solid Queue（Puma内）が設定されています"
+  else
+    system("RAILS_ENV=#{rails_env} nohup bin/jobs > log/solid_queue.log 2>&1 &")
+    print_success "Solid Queueワーカーを起動しました"
+  end
 
   # 起動確認
   print_info "8. 起動確認中..."
@@ -338,12 +363,23 @@ def setup_new_installation
     print_warning "Railsサーバの応答確認に失敗しました"
   end
 
-  # Solid Queue確認
-  queue_ok = system("pgrep -f 'solid.*queue' > /dev/null 2>&1")
-  if queue_ok
-    print_success "Solid Queueワーカーが動作中です"
+  # Solid Queue確認（SOLID_QUEUE_IN_PUMAを考慮）
+  if ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+    # Puma内でSolid Queueが動作している場合の確認
+    queue_ok = check_solid_queue_in_puma_status
+    if queue_ok
+      print_success "Solid Queue（Puma内）が動作中です"
+    else
+      print_warning "Solid Queue（Puma内）の動作確認に失敗しました"
+    end
   else
-    print_warning "Solid Queueワーカーが動作していません"
+    # 独立プロセスとしてのSolid Queue確認
+    queue_ok = system("pgrep -f 'solid.*queue' > /dev/null 2>&1")
+    if queue_ok
+      print_success "Solid Queueワーカーが動作中です"
+    else
+      print_warning "Solid Queueワーカーが動作していません"
+    end
   end
 
   # Solid Cache確認
@@ -383,12 +419,14 @@ def cleanup_and_start
   print_header "クリーンアップ＆再起動"
   print_info "実行時刻: #{Time.now}"
 
-  # プロセス終了
+  # プロセス終了（SOLID_QUEUE_IN_PUMAを考慮）
   print_info "1. 関連プロセスの終了..."
-  system("pkill -f 'solid.queue' 2>/dev/null || true")
+  unless ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+    system("pkill -f 'solid.queue' 2>/dev/null || true")
+    system("pkill -f 'bin/jobs' 2>/dev/null || true")
+  end
   system("pkill -f 'rails server' 2>/dev/null || true")
   system("pkill -f 'puma.*pit1' 2>/dev/null || true")
-  system("pkill -f 'bin/jobs' 2>/dev/null || true")
   sleep 3
   print_success "関連プロセスを終了しました"
 
@@ -409,7 +447,9 @@ def cleanup_and_start
   # PIDファイルクリーンアップ
   print_info "3. PIDファイルのクリーンアップ..."
   FileUtils.rm_f("tmp/pids/server.pid")
-  Dir.glob("tmp/pids/solid_queue*.pid").each { |f| FileUtils.rm_f(f) }
+  unless ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+    Dir.glob("tmp/pids/solid_queue*.pid").each { |f| FileUtils.rm_f(f) }
+  end
   print_success "PIDファイルをクリーンアップしました"
 
   # データベースメンテナンス
@@ -429,12 +469,16 @@ def cleanup_and_start
     return
   end
 
-  # Solid Queue 起動
+  # Solid Queue 起動（SOLID_QUEUE_IN_PUMAを考慮）
   print_info "6. Solid Queueワーカーを起動中..."
-  if system("RAILS_ENV=#{rails_env} ACTIVITYPUB_DOMAIN='#{domain}' ACTIVITYPUB_PROTOCOL='#{protocol}' nohup bin/jobs > log/solid_queue.log 2>&1 &")
-    print_success "Solid Queueワーカーを起動しました"
+  if ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+    print_success "Solid Queue（Puma内）が設定されています"
   else
-    print_warning "Solid Queueワーカーの起動に失敗しました"
+    if system("RAILS_ENV=#{rails_env} ACTIVITYPUB_DOMAIN='#{domain}' ACTIVITYPUB_PROTOCOL='#{protocol}' nohup bin/jobs > log/solid_queue.log 2>&1 &")
+      print_success "Solid Queueワーカーを起動しました"
+    else
+      print_warning "Solid Queueワーカーの起動に失敗しました"
+    end
   end
 
   # 起動確認
@@ -447,12 +491,23 @@ def cleanup_and_start
     print_error "Railsサーバが応答していません"
   end
 
-  # Solid Queue確認
-  queue_ok = system("pgrep -f 'solid.*queue' > /dev/null 2>&1")
-  if queue_ok
-    print_success "Solid Queueワーカーが動作中です"
+  # Solid Queue確認（SOLID_QUEUE_IN_PUMAを考慮）
+  if ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+    # Puma内でSolid Queueが動作している場合の確認
+    queue_ok = check_solid_queue_in_puma_status
+    if queue_ok
+      print_success "Solid Queue（Puma内）が動作中です"
+    else
+      print_warning "Solid Queue（Puma内）の動作確認に失敗しました"
+    end
   else
-    print_warning "Solid Queueワーカーが動作していません"
+    # 独立プロセスとしてのSolid Queue確認
+    queue_ok = system("pgrep -f 'solid.*queue' > /dev/null 2>&1")
+    if queue_ok
+      print_success "Solid Queueワーカーが動作中です"
+    else
+      print_warning "Solid Queueワーカーが動作していません"
+    end
   end
 
   # Solid Cache確認
@@ -517,9 +572,14 @@ def check_domain_config
     local_response = `curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "http://localhost:3000" 2>/dev/null`.strip
     puts "  ローカル応答: #{local_response}"
     
-    # Solid Queue確認
-    queue_ok = system("pgrep -f 'solid.*queue' > /dev/null 2>&1")
-    puts "  Solid Queue: #{queue_ok ? '動作中' : '停止中'}"
+    # Solid Queue確認（SOLID_QUEUE_IN_PUMAを考慮）
+    if ENV['SOLID_QUEUE_IN_PUMA'] == 'true'
+      queue_ok = check_solid_queue_in_puma_status
+      puts "  Solid Queue（Puma内）: #{queue_ok ? '正常' : 'エラー'}"
+    else
+      queue_ok = system("pgrep -f 'solid.*queue' > /dev/null 2>&1")
+      puts "  Solid Queue: #{queue_ok ? '動作中' : '停止中'}"
+    end
     
     # Solid Cache確認
     cache_ok = check_solid_cache_status
@@ -566,6 +626,11 @@ def switch_domain
   if new_domain.empty?
     print_error "ドメインが入力されていません"
     return
+  end
+  
+  # URLが入力された場合はドメイン部分を抽出
+  if new_domain.match(/^https?:\/\/(.+)/)
+    new_domain = $1
   end
   
   print "プロトコルを入力してください (https/http, デフォルト: https): "
@@ -617,7 +682,7 @@ def switch_domain
     local_actors = Actor.where(local: true)
     
     if local_actors.any?
-      puts "#{local_actors.count}個のローカルアクターのドメインを更新します: #{new_base_url}"
+      puts "\#{local_actors.count}個のローカルアクターのドメインを更新します: \#{new_base_url}"
       
       local_actors.each do |actor|
         actor.update!(
@@ -2127,6 +2192,61 @@ def check_solid_cable_status
     end
   rescue => e
     Rails.logger.warn "Solid Cable check error: #{e.message}" if defined?(Rails)
+    false
+  end
+end
+
+def check_solid_queue_in_puma_status
+  begin
+    # Solid Queue（Puma内）の動作確認
+    queue_check_code = <<~RUBY
+      begin
+        # Active Job adapter確認
+        adapter = ActiveJob::Base.queue_adapter
+        if adapter.is_a?(ActiveJob::QueueAdapters::SolidQueueAdapter)
+          # データベース接続確認
+          ActiveRecord::Base.establish_connection(:queue)
+          if ActiveRecord::Base.connection.table_exists?('solid_queue_jobs')
+            # テストジョブエンキュー
+            test_job_id = SecureRandom.uuid
+            ActiveJob::Base.connection.exec_query(
+              "INSERT INTO solid_queue_jobs (queue_name, class_name, arguments, active_job_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+              "Test Job Insert",
+              ['test', 'TestJob', '[]', test_job_id, Time.current, Time.current]
+            )
+            # テストジョブ削除
+            ActiveJob::Base.connection.exec_query(
+              "DELETE FROM solid_queue_jobs WHERE active_job_id = ?",
+              "Test Job Delete",
+              [test_job_id]
+            )
+            puts 'queue_ok'
+          else
+            puts 'queue_failed|Jobs table not found'
+          end
+          ActiveRecord::Base.establish_connection(:primary)
+        else
+          puts 'queue_unused|Adapter not SolidQueue'
+        end
+      rescue => e
+        puts "queue_error|\#{e.message}"
+      end
+    RUBY
+    
+    result = run_rails_command(queue_check_code)
+    
+    if result.strip == 'queue_ok'
+      true
+    else
+      error_line = result.lines.find { |l| l.include?('|') }
+      if error_line
+        _, error_msg = error_line.strip.split('|', 2)
+        Rails.logger.warn "Solid Queue check failed: #{error_msg}" if defined?(Rails)
+      end
+      false
+    end
+  rescue => e
+    Rails.logger.warn "Solid Queue check error: #{e.message}" if defined?(Rails)
     false
   end
 end

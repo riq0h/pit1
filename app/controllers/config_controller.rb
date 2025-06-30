@@ -225,31 +225,27 @@ class ConfigController < ApplicationController
       end
       actor_params[:fields] = fields_array.to_json if fields_array.any?
     end
-    
+
     # アバター画像の処理
     if actor_params[:avatar].present?
       process_avatar_upload(actor_params[:avatar])
       actor_params.delete(:avatar)
     end
-    
+
     # ヘッダー画像の処理（通常のアップロード）
-    if actor_params[:header].present?
-      header_file = actor_params.delete(:header)
-    end
+    header_file = actor_params.delete(:header) if actor_params[:header].present?
 
     result = current_user.update(actor_params)
-    
+
     # ヘッダー画像を通常通りアップロード
-    if header_file.present?
-      current_user.header.attach(header_file)
-    end
-    
+    current_user.header.attach(header_file) if header_file.present?
+
     result
   rescue StandardError => e
     Rails.logger.error "User profile update failed: #{e.message}"
     false
   end
-  
+
   def process_avatar_upload(uploaded_file)
     processor = ActorImageProcessor.new(current_user)
     processor.attach_avatar_with_folder(

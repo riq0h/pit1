@@ -259,14 +259,20 @@ RSpec.describe Actor, type: :model do
 
   describe 'image attachment' do
     let(:actor) { create(:actor) }
-    let(:test_image) { StringIO.new('fake image data') }
 
     describe '#attach_avatar_with_folder' do
       it 'successfully calls ActorImageProcessor to attach avatar' do
+        # ActorImageProcessorのメソッド呼び出しをモック
+        processor_instance = instance_double(ActorImageProcessor)
+        allow(ActorImageProcessor).to receive(:new).with(actor).and_return(processor_instance)
+        allow(processor_instance).to receive(:attach_avatar_with_folder).and_return(true)
+
         # 実際のActorImageProcessorサービスが呼ばれることを確認
         expect do
-          actor.attach_avatar_with_folder(io: test_image, filename: 'test.jpg', content_type: 'image/jpeg')
+          actor.attach_avatar_with_folder(io: StringIO.new('fake'), filename: 'test.jpg', content_type: 'image/jpeg')
         end.not_to raise_error
+
+        expect(processor_instance).to have_received(:attach_avatar_with_folder)
       end
     end
   end
@@ -334,16 +340,30 @@ RSpec.describe Actor, type: :model do
     let(:actor) { create(:actor) }
 
     describe '#avatar_url' do
-      it 'successfully calls ActorImageProcessor for avatar URL' do
+      it 'delegates to ActorImageProcessor' do
+        processor_instance = instance_double(ActorImageProcessor)
+        allow(ActorImageProcessor).to receive(:new).with(actor).and_return(processor_instance)
+        allow(processor_instance).to receive(:avatar_url).and_return('https://example.com/avatar.jpg')
+
         result = actor.avatar_url
-        expect(result).to be_a(String).or be_nil
+
+        expect(ActorImageProcessor).to have_received(:new).with(actor)
+        expect(processor_instance).to have_received(:avatar_url)
+        expect(result).to eq('https://example.com/avatar.jpg')
       end
     end
 
-    describe '#header_image_url' do
-      it 'successfully calls ActorImageProcessor for header image URL' do
-        result = actor.header_image_url
-        expect(result).to be_a(String).or be_nil
+    describe '#header_url' do
+      it 'delegates to ActorImageProcessor' do
+        processor_instance = instance_double(ActorImageProcessor)
+        allow(ActorImageProcessor).to receive(:new).with(actor).and_return(processor_instance)
+        allow(processor_instance).to receive(:header_url).and_return('https://example.com/header.jpg')
+
+        result = actor.header_url
+
+        expect(ActorImageProcessor).to have_received(:new).with(actor)
+        expect(processor_instance).to have_received(:header_url)
+        expect(result).to eq('https://example.com/header.jpg')
       end
     end
   end

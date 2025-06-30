@@ -248,24 +248,24 @@ RSpec.describe ActivityPubObject, type: :model do
     end
   end
 
-  describe '#apply_edit!' do
+  describe '#perform_edit!' do
     let(:object) { create(:activity_pub_object, content: 'Original content') }
 
     it 'creates edit snapshot before updating' do
       expect do
-        object.apply_edit!(content: 'Updated content')
+        object.perform_edit!(content: 'Updated content')
       end.to change(StatusEdit, :count).by(1)
     end
 
     it 'updates content and sets edited_at' do
-      object.apply_edit!(content: 'Updated content')
+      object.perform_edit!(content: 'Updated content')
 
       expect(object.reload.content).to eq('Updated content')
       expect(object.edited_at).to be_present
     end
 
     it 'returns true on successful edit' do
-      result = object.apply_edit!(content: 'Updated content')
+      result = object.perform_edit!(content: 'Updated content')
       expect(result).to be true
     end
   end
@@ -303,9 +303,14 @@ RSpec.describe ActivityPubObject, type: :model do
 
     describe '#create_delete_activity' do
       it 'calls ActivityPubActivityDistributor but may fail due to missing job classes' do
-        expect do
-          object.send(:create_delete_activity)
-        end.to raise_error(NameError, /DeliverActivityJob/)
+        # ActivityPubActivityDistributorの呼び出しをモック
+        distributor_instance = instance_double(ActivityPubActivityDistributor)
+        allow(ActivityPubActivityDistributor).to receive(:new).with(object).and_return(distributor_instance)
+        allow(distributor_instance).to receive(:create_delete_activity).and_return(true)
+
+        object.send(:create_delete_activity)
+
+        expect(distributor_instance).to have_received(:create_delete_activity)
       end
     end
 
@@ -313,9 +318,14 @@ RSpec.describe ActivityPubObject, type: :model do
       it 'calls ActivityPubActivityDistributor but may fail due to missing job classes' do
         quoted_object = create(:activity_pub_object, :remote)
 
-        expect do
-          object.create_quote_activity(quoted_object)
-        end.to raise_error(NameError, /DeliverActivityJob/)
+        # ActivityPubActivityDistributorの呼び出しをモック
+        distributor_instance = instance_double(ActivityPubActivityDistributor)
+        allow(ActivityPubActivityDistributor).to receive(:new).with(object).and_return(distributor_instance)
+        allow(distributor_instance).to receive(:create_quote_activity).and_return(true)
+
+        object.create_quote_activity(quoted_object)
+
+        expect(distributor_instance).to have_received(:create_quote_activity)
       end
     end
   end

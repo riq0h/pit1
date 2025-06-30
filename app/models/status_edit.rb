@@ -20,6 +20,10 @@ class StatusEdit < ApplicationRecord
 
   # 編集履歴エントリを作成
   def self.create_snapshot(object)
+    # 投票情報を保存
+    poll_options_data = []
+    poll_options_data = object.poll.options.pluck('title') if object.poll.present?
+
     create!(
       object: object,
       content: object.content,
@@ -28,7 +32,8 @@ class StatusEdit < ApplicationRecord
       sensitive: object.sensitive,
       language: object.language,
       media_ids: object.media_attachments.pluck(:id),
-      media_descriptions: object.media_attachments.pluck(:description)
+      media_descriptions: object.media_attachments.pluck(:description),
+      poll_options: poll_options_data
     )
   end
 

@@ -12,33 +12,64 @@ class WebPushNotificationService
   end
 
   def self.send_to_subscription(subscription, notification_type, title, body, options = {})
-    payload = subscription.push_payload(notification_type, title, body, options)
+    return false unless vapid_keys_configured?
 
+    payload = subscription.push_payload(notification_type, title, body, options)
     Rails.logger.info "📱 Sending push notification for #{subscription.actor.username}: #{payload.to_json}"
 
-    begin
-      WebPush.payload_send(
+    send_push_notification(subscription, payload)
+  end
+
+  class << self
+    private
+
+    def vapid_keys_configured?
+      unless vapid_public_key.present? && vapid_private_key.present?
+        Rails.logger.warn '⚠️ VAPID keys not configured, skipping push notification'
+        return false
+      end
+      true
+    end
+
+    def send_push_notification(subscription, payload)
+      WebPush.payload_send(build_push_options(subscription, payload))
+      Rails.logger.info "✅ Push notification sent successfully to #{subscription.endpoint[0..50]}..."
+      true
+    rescue WebPush::InvalidSubscription, WebPush::ExpiredSubscription => e
+      handle_invalid_subscription(subscription, e)
+    rescue StandardError => e
+      handle_push_error(subscription, e)
+    end
+
+    def build_push_options(subscription, payload)
+      {
         message: payload.to_json,
         endpoint: subscription.endpoint,
         p256dh: subscription.p256dh_key,
         auth: subscription.auth_key,
-        vapid: {
-          subject: Rails.application.config.activitypub.base_url,
-          public_key: vapid_public_key,
-          private_key: vapid_private_key
-        },
+        vapid: build_vapid_options,
         ttl: 3600 * 24,
         urgency: 'normal'
-      )
-      Rails.logger.info "✅ Push notification sent successfully to #{subscription.endpoint[0..50]}..."
-      true
-    rescue WebPush::InvalidSubscription, WebPush::ExpiredSubscription => e
-      Rails.logger.warn "Invalid push subscription for #{subscription.actor.username}: #{e.message}"
+      }
+    end
+
+    def build_vapid_options
+      {
+        subject: Rails.application.config.activitypub.base_url,
+        public_key: vapid_public_key,
+        private_key: vapid_private_key
+      }
+    end
+
+    def handle_invalid_subscription(subscription, error)
+      Rails.logger.warn "Invalid push subscription for #{subscription.actor.username}: #{error.message}"
       subscription.destroy
       false
-    rescue StandardError => e
-      Rails.logger.error "Push notification failed for #{subscription.actor.username}: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n") if Rails.env.development?
+    end
+
+    def handle_push_error(subscription, error)
+      Rails.logger.error "Push notification failed for #{subscription.actor.username}: #{error.message}"
+      Rails.logger.error error.backtrace.join("\n") if Rails.env.development?
       false
     end
   end

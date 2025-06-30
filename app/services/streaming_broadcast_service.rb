@@ -152,7 +152,7 @@ class StreamingBroadcastService
       note: sanitize_content(actor.note),
       url: actor.public_url || actor.ap_id,
       avatar: actor.avatar_url,
-      header: actor.header_image_url,
+      header: actor.header_url,
       followers_count: actor.followers_count,
       following_count: actor.following_count,
       statuses_count: actor.posts_count,

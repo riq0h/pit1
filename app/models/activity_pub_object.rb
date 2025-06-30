@@ -211,7 +211,7 @@ class ActivityPubObject < ApplicationRecord
     if update!(update_attributes)
       # メディア添付の更新
       if params.key?(:media_ids)
-        if params[:media_ids].present?
+        if params[:media_ids].present? && params[:media_ids].any?
           # 既存のメディアと新しいメディアの両方を考慮
           existing_media = media_attachments.where(id: params[:media_ids])
           new_media = actor.media_attachments.where(id: params[:media_ids], object_id: nil)
@@ -226,6 +226,9 @@ class ActivityPubObject < ApplicationRecord
         end
       end
 
+      # 投票の更新処理
+      update_poll_for_edit(params[:poll_options]) if params.key?(:poll_options)
+
       # ActivityPub配信用のUpdate活動を作成
       create_update_activity if local?
 
@@ -238,6 +241,36 @@ class ActivityPubObject < ApplicationRecord
   # Quote活動を作成してActivityPub配信
   def create_quote_activity(quoted_object)
     ActivityPubActivityDistributor.new(self).create_quote_activity(quoted_object)
+  end
+
+  # 投票の編集処理
+  def update_poll_for_edit(poll_options_param)
+    if poll_options_param.present? && poll_options_param.any?
+      # 投票を作成または更新
+      if poll.present?
+        # 既存の投票を更新
+        poll.update!(
+          options: poll_options_param.map { |option| { 'title' => option } },
+          votes_count: 0,
+          voters_count: 0
+        )
+        # 既存の投票を削除（編集では投票はリセット）
+        poll.poll_votes.destroy_all
+      else
+        # 新しい投票を作成
+        Poll.create!(
+          object: self,
+          options: poll_options_param.map { |option| { 'title' => option } },
+          expires_at: 7.days.from_now, # デフォルト期限
+          multiple: false,
+          votes_count: 0,
+          voters_count: 0
+        )
+      end
+    else
+      # 投票を削除
+      poll&.destroy
+    end
   end
 
   private
@@ -371,7 +404,7 @@ class ActivityPubObject < ApplicationRecord
   # Update活動を作成してActivityPub配信
   def create_update_activity
     activity = Activity.create!(
-      ap_id: "#{ap_id}#update-#{Time.current.to_i}",
+      ap_id: "#{ap_id}#update-#{Time.current.to_f}",
       activity_type: 'Update',
       actor: actor,
       object_ap_id: ap_id,

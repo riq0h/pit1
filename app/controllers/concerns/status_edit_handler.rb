@@ -2,37 +2,70 @@
 
 module StatusEditHandler
   extend ActiveSupport::Concern
+  include MediaSerializer
+
+  # 編集履歴用の一時オブジェクト構造体
+  TempEditStatus = Struct.new(:content, :summary, :mentions, :tags)
+  TempActor = Struct.new(:id, :username, :local?)
+  TempMention = Struct.new(:actor, :acct)
+  TempTag = Struct.new(:name)
 
   private
 
   def build_edit_params
-    edit_params = params.permit(:status, :spoiler_text, :language, :sensitive)
-    edit_params[:media_ids] = @media_ids if @media_ids&.any?
+    # Mastodon API poll format: poll[options][] または poll: { options: [] }
+    edit_params = params.permit(:status, :spoiler_text, :language, :sensitive,
+                                media_ids: [], poll: { options: [] })
+
+    # spoiler_textをsummaryにマッピング（ActivityPubObjectで使用されるフィールド名）
+    edit_params[:summary] = edit_params.delete(:spoiler_text) if edit_params.key?(:spoiler_text)
+
+    # contentパラメータをstatusからマッピング
+    edit_params[:content] = edit_params.delete(:status) if edit_params.key?(:status)
+
+    # メディアIDの処理
+    if edit_params.key?(:media_ids)
+      edit_params[:media_ids] = if edit_params[:media_ids].is_a?(Array)
+                                  edit_params[:media_ids].compact.compact_blank
+                                else
+                                  []
+                                end
+    end
+
+    # 投票パラメータの処理
+    edit_params[:poll_options] = if edit_params[:poll].present? && edit_params[:poll][:options].present?
+                                   edit_params[:poll][:options].compact.compact_blank
+                                 else
+                                   []
+                                 end
+    edit_params.delete(:poll)
+
     edit_params
   end
 
-  def process_mentions_and_tags_for_edit
-    return unless edit_params[:status]
+  def process_mentions_and_tags_for_edit(edit_params)
+    return unless edit_params[:content]
 
-    content = edit_params[:status]
+    content = edit_params[:content]
+    parser = TextParser.new(content)
 
     # メンションの処理
-    mentions = extract_mentions(content)
-    edit_params[:mentions] = mentions.map(&:username).uniq if mentions.any?
+    mentions = parser.extract_mentions
+    edit_params[:mentions] = mentions.pluck(:username).uniq if mentions.any?
 
     # ハッシュタグの処理
-    hashtags = extract_hashtags(content)
-    edit_params[:tags] = hashtags.map(&:name).uniq if hashtags.any?
+    hashtags = parser.extract_hashtags
+    edit_params[:tags] = hashtags.uniq if hashtags.any?
   end
 
   def build_current_version
     {
       account: serialized_account(@status.actor),
       content: @status.content || '',
-      created_at: @status.published_at.iso8601,
+      created_at: (@status.edited_at || @status.published_at).iso8601,
       emojis: extract_emojis_from_status(@status),
-      media_attachments: @status.media_attachments.map { |media| serialized_media_attachment(media) },
-      poll: @status.poll ? serialized_poll(@status.poll) : nil,
+      media_attachments: @status.media_attachments.map { |media| serialize_single_media_attachment(media) },
+      poll: serialize_poll(@status),
       sensitive: @status.sensitive || false,
       spoiler_text: @status.summary || '',
       tags: @status.tags.map { |tag| serialized_tag(tag) },
@@ -41,23 +74,20 @@ module StatusEditHandler
   end
 
   def build_edit_version(edit)
-    edit_data = JSON.parse(edit.data || '{}')
+    # 編集時のコンテンツから動的に情報を抽出
+    temp_status = build_temp_status_for_edit(edit)
 
     {
       account: serialized_account(@status.actor),
-      content: edit_data['content'] || '',
+      content: edit.content || '',
       created_at: edit.created_at.iso8601,
-      emojis: edit_data['emojis'] || [],
-      media_attachments: (edit_data['media_attachments'] || []).map do |media|
-        serialized_media_attachment_from_data(media)
-      end,
-      poll: edit_data['poll'] ? serialized_poll_from_data(edit_data['poll']) : nil,
-      sensitive: edit_data['sensitive'] || false,
-      spoiler_text: edit_data['spoiler_text'] || '',
-      tags: (edit_data['tags'] || []).map { |tag| serialized_tag_from_data(tag) },
-      mentions: (edit_data['mentions'] || []).map do |mention|
-        serialized_mention_from_data(mention)
-      end
+      emojis: serialized_emojis(temp_status),
+      media_attachments: edit.media_attachments_data,
+      poll: build_poll_from_edit_options(edit),
+      sensitive: edit.sensitive || false,
+      spoiler_text: edit.summary || '',
+      tags: serialized_tags(temp_status),
+      mentions: serialized_mentions(temp_status)
     }
   end
 
@@ -108,5 +138,60 @@ module StatusEditHandler
     emojis.map(&:to_activitypub)
   rescue StandardError
     []
+  end
+
+  # 編集履歴用：既存のシリアライザメソッドを活用するための一時オブジェクト作成
+  def build_temp_status_for_edit(edit)
+    # コンテンツからメンション・タグを動的に抽出
+    mentions_objs = []
+    tags_objs = []
+
+    if edit.content.present?
+      parser = TextParser.new(edit.content)
+
+      # メンション用の簡易オブジェクト作成
+      mentions_data = parser.extract_mentions
+      mentions_objs = mentions_data.map do |mention_data|
+        TempMention.new(
+          TempActor.new(
+            0,
+            mention_data[:username],
+            mention_data[:domain].nil?
+          ),
+          mention_data[:acct]
+        )
+      end
+
+      # タグ用の簡易オブジェクト作成
+      hashtags = parser.extract_hashtags
+      tags_objs = hashtags.map { |tag_name| TempTag.new(tag_name) }
+    end
+
+    # 既存のserializedメソッドと互換性のある構造を作成
+    TempEditStatus.new(
+      edit.content,
+      edit.summary,
+      mentions_objs,
+      tags_objs
+    )
+  end
+
+  def build_poll_from_edit_options(edit)
+    return nil if edit.poll_options.blank? || edit.poll_options.empty?
+
+    {
+      id: '0',
+      expires_at: nil,
+      expired: false,
+      multiple: false,
+      votes_count: 0,
+      voters_count: 0,
+      options: edit.poll_options.map { |option| { title: option, votes_count: 0 } },
+      emojis: [],
+      voted: false,
+      own_votes: []
+    }
+  rescue StandardError
+    nil
   end
 end

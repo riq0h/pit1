@@ -291,8 +291,8 @@ class Actor < ApplicationRecord
     ActorImageProcessor.new(self).avatar_url
   end
 
-  def header_image_url
-    ActorImageProcessor.new(self).header_image_url
+  def header_url
+    ActorImageProcessor.new(self).header_url
   end
 
   def extract_remote_image_url(field_name)

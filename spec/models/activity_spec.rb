@@ -54,8 +54,9 @@ RSpec.describe Activity, type: :model do
 
     it '.processed returns only processed activities' do
       # after_createコールバックを回避して明示的に作成
-      processed_activity = create(:activity, processed: true)
-      unprocessed_activity = create(:activity, processed: false)
+      processed_activity = create(:activity)
+      unprocessed_activity = create(:activity)
+      unprocessed_activity.update_column(:processed, false)
 
       processed_activities = described_class.processed
       expect(processed_activities).to include(processed_activity)
@@ -64,8 +65,9 @@ RSpec.describe Activity, type: :model do
 
     it '.unprocessed returns only unprocessed activities' do
       # after_createコールバックを回避して明示的に作成
-      processed_activity = create(:activity, processed: true)
-      unprocessed_activity = create(:activity, processed: false)
+      processed_activity = create(:activity)
+      unprocessed_activity = create(:activity)
+      unprocessed_activity.update_column(:processed, false)
 
       unprocessed_activities = described_class.unprocessed
       expect(unprocessed_activities).to include(unprocessed_activity)

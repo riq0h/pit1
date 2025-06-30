@@ -70,7 +70,7 @@ class ActorSerializer
   def activitypub_images(_request = nil)
     {
       'icon' => actor.avatar_url ? { 'type' => 'Image', 'url' => actor.avatar_url } : nil,
-      'image' => actor.header_image_url ? { 'type' => 'Image', 'url' => actor.header_image_url } : nil
+      'image' => actor.header_url ? { 'type' => 'Image', 'url' => actor.header_url } : nil
     }
   end
 

@@ -15,16 +15,19 @@ development:
   primary:
     <<: *default
     database: storage/development.sqlite3
+    application_name: letter
   
   cache:
     <<: *default
     database: storage/cache_development.sqlite3
     migrations_paths: db/cache_migrate
+    application_name: letter
 
 test:
   primary:
     <<: *default
     database: storage/test.sqlite3
+    application_name: letter
     pragma:
       foreign_keys: :on
   
@@ -32,11 +35,13 @@ test:
     <<: *default
     database: storage/cache_test.sqlite3
     migrations_paths: db/cache_migrate
+    application_name: letter
 
 production:
   primary:
     <<: *default
     database: storage/production.sqlite3
+    application_name: letter
     pragma:
       journal_mode: :wal
       synchronous: :normal
@@ -49,6 +54,7 @@ production:
     <<: *default
     database: storage/queue_production.sqlite3
     migrations_paths: db/queue_migrate
+    application_name: letter
     pragma:
       journal_mode: :wal
       synchronous: :normal
@@ -61,6 +67,7 @@ production:
     <<: *default
     database: storage/cable_production.sqlite3
     migrations_paths: db/cable_migrate
+    application_name: letter
     pragma:
       journal_mode: :wal
       synchronous: :normal
@@ -73,6 +80,7 @@ production:
     <<: *default
     database: storage/cache_production.sqlite3
     migrations_paths: db/cache_migrate
+    application_name: letter
     pragma:
       journal_mode: :wal
       synchronous: :normal

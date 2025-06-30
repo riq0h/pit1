@@ -28,14 +28,18 @@ module Api
 
       # GET /api/v1/statuses/:id
       def show
-        # jbuilderビューを使用
+        render json: serialized_status(@status)
       end
 
       # GET /api/v1/statuses/:id/context
       def context
-        @ancestors = build_ancestors(@status)
-        @descendants = build_descendants(@status)
-        # jbuilderビューを使用
+        ancestors = build_ancestors(@status)
+        descendants = build_descendants(@status)
+
+        render json: {
+          ancestors: ancestors.map { |status| serialized_status(status) },
+          descendants: descendants.map { |status| serialized_status(status) }
+        }
       end
 
       # POST /api/v1/statuses
@@ -245,7 +249,7 @@ module Api
 
         if @status.perform_edit!(edit_params)
           # メンションやタグの再処理
-          process_mentions_and_tags_for_edit if edit_params[:content]
+          process_mentions_and_tags_for_edit(edit_params) if edit_params[:content]
 
           render json: serialized_status(@status)
         else
@@ -257,13 +261,41 @@ module Api
       # GET /api/v1/statuses/:id/history
       def history
         edits = @status.status_edits.order(:created_at) # 古いものから新しい順
-        edit_versions = edits.map { |edit| build_edit_version(edit) }
 
-        # 現在の状態を最後に追加（完全な編集履歴）
+        # 編集履歴が空の場合は現在の状態のみ
+        if edits.empty?
+          render json: [build_current_version]
+          return
+        end
+
+        # Mastodon API仕様: 編集履歴は時系列順
+        # 各StatusEditレコードは編集前の状態を保存している
+        # つまり: Edit0=オリジナル, Edit1=1回目編集前, Edit2=2回目編集前...
+        # 表示順序: オリジナル → 1回目編集後 → 2回目編集後 → ... → 現在
+
+        versions = []
+
+        # 編集レコードから各時点の状態を構築
+        edits.each_with_index do |edit, index|
+          edit_version = build_edit_version(edit)
+
+          # 最初の編集レコード = オリジナル投稿
+          edit_version[:created_at] = if index.zero?
+                                        @status.published_at.iso8601
+                                      else
+                                        # 前の編集レコードの作成時刻 = この状態が存在していた時刻
+                                        edits[index - 1].created_at.iso8601
+                                      end
+
+          versions << edit_version
+        end
+
+        # 最後に現在の状態を追加
         current_version = build_current_version
-        all_versions = edit_versions + [current_version]
+        current_version[:created_at] = edits.last.created_at.iso8601
+        versions << current_version
 
-        render json: all_versions
+        render json: versions
       end
 
       # GET /api/v1/statuses/:id/source

@@ -129,7 +129,7 @@
             <label for="header_image_input" class="cursor-pointer">
               <div id="header_image_preview_container" class="<%= 'hidden' unless current_user&.header&.attached? %>">
                 <% if current_user&.header&.attached? %>
-                  <img id="header_image_preview" src="<%= current_user.header_image_url %>" class="mx-auto max-w-32 max-h-16 object-contain mb-2">
+                  <img id="header_image_preview" src="<%= current_user.header_url %>" class="mx-auto max-w-32 max-h-16 object-contain mb-2">
                 <% else %>
                   <img id="header_image_preview" class="mx-auto max-w-32 max-h-16 object-contain mb-2">
                 <% end %>

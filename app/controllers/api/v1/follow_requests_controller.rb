@@ -101,8 +101,8 @@ module Api
         {
           avatar: actor.avatar_url || '/avatars/missing.png',
           avatar_static: actor.avatar_url || '/avatars/missing.png',
-          header: actor.header_image_url || '/headers/missing.png',
-          header_static: actor.header_image_url || '/headers/missing.png'
+          header: actor.header_url || '/headers/missing.png',
+          header_static: actor.header_url || '/headers/missing.png'
         }
       end
 

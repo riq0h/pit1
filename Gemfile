@@ -10,7 +10,6 @@ gem 'bootsnap', require: false
 gem 'dotenv-rails', groups: %i[development test]
 gem 'image_processing', '~> 1.2'
 gem 'importmap-rails'
-gem 'jbuilder'
 gem 'ostruct'
 gem 'puma', '>= 5.0'
 gem 'rails', '~> 8.0.0'
