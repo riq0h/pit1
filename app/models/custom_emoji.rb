@@ -101,28 +101,6 @@ class CustomEmoji < ApplicationRecord
 
   private
 
-  def read_actual_domain
-    # .envファイルを直接読み込んで正しいドメインを取得
-    env_file = Rails.root.join('.env')
-    return ENV.fetch('ACTIVITYPUB_DOMAIN', nil) unless File.exist?(env_file)
-
-    File.readlines(env_file).each do |line|
-      return ::Regexp.last_match(1).strip if line =~ /^ACTIVITYPUB_DOMAIN=(.+)$/
-    end
-    ENV.fetch('ACTIVITYPUB_DOMAIN', nil)
-  end
-
-  def read_actual_protocol
-    # .envファイルを直接読み込んで正しいプロトコルを取得
-    env_file = Rails.root.join('.env')
-    return ENV['ACTIVITYPUB_PROTOCOL'] || 'https' unless File.exist?(env_file)
-
-    File.readlines(env_file).each do |line|
-      return ::Regexp.last_match(1).strip if line =~ /^ACTIVITYPUB_PROTOCOL=(.+)$/
-    end
-    ENV['ACTIVITYPUB_PROTOCOL'] || 'https'
-  end
-
   def normalize_shortcode
     self.shortcode = shortcode.to_s.downcase.strip
   end

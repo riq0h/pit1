@@ -101,35 +101,7 @@ class UserLimit < ApplicationRecord
     (current_usage.to_f / limit_value * 100).round(1)
   end
 
-  def near_limit?
-    usage_percentage >= 80.0
-  end
-
   def at_limit?
     current_usage >= limit_value
-  end
-
-  def display_usage
-    case limit_type
-    when 'max_accounts'
-      "#{current_usage}/#{limit_value} accounts"
-    else
-      "#{current_usage}/#{limit_value}"
-    end
-  end
-
-  def account_status
-    case limit_type
-    when 'max_accounts'
-      if at_limit?
-        "⚠️ Account limit reached! (#{current_usage}/#{limit_value} accounts used)"
-      elsif current_usage == 1
-        "👤 One account active, one slot remaining (#{current_usage}/#{limit_value})"
-      else
-        "✅ Ready for new accounts (#{current_usage}/#{limit_value})"
-      end
-    else
-      display_usage
-    end
   end
 end

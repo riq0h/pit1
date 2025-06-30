@@ -61,9 +61,9 @@ ports:
 
 ## 管理コマンド
 
-### letter管理スクリプト
+### letter統合管理ツール
 ```bash
-# 統合管理スクリプトを実行
+# 統合管理ツールを実行
 docker-compose exec web rails runner bin/letter_manager.rb
 ```
 

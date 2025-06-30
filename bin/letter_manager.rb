@@ -2309,7 +2309,7 @@ def main_loop
         manage_remote_image_cache
       when "x"
         puts ""
-        print_success "letter管理ツールを終了します"
+        print_success "letter統合管理ツールを終了します"
         break
       else
         puts ""

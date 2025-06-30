@@ -33,10 +33,4 @@ class LinkPreview < ApplicationRecord
   def fresh?
     created_at > 1.week.ago
   end
-
-  def truncated_description(length = 150)
-    return description if description.blank? || description.length <= length
-
-    "#{description[0, length]}..."
-  end
 end

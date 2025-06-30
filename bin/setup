@@ -545,7 +545,7 @@ FileUtils.chdir APP_ROOT do
     print_info "停止コマンド:"
     puts "  pkill -f 'rails server|solid.*queue'"
     puts ""
-    print_info "管理ツール:"
+    print_info "統合管理ツール:"
     puts "  bin/letter_manager.rb - アカウントの作成や削除、システムの再起動"
   else
     print_success "サーバの起動をスキップしました (--skip-server)"
