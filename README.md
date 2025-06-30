@@ -1,8 +1,10 @@
 # letter : General Letter Publication System based on ActivityPub / 一般書簡公衆化システム
 
 <div align="center">
-  <img src="/public/icon.png" alt="letter icon">
+  <img src="/public/icon-192.png" alt="letter icon">
 </div>
+
+## 特徴
 
 letterはRails8およびSQLite、Hotwireで構成されるミニマルなActivityPub実装であり、一般的に作成された電子書簡を速やかに公衆送信することができます。この実装系は以下の特徴を備えています。
 
