@@ -35,13 +35,13 @@ class RelayDistributionService
     announce_activity = create_announce_activity(activity_pub_object, relay)
 
     # リレーに送信
-    success = @activity_sender.send_activity(
+    result = @activity_sender.send_activity(
       activity: announce_activity,
       target_inbox: relay.inbox_url,
       signing_actor: local_actor
     )
 
-    if success
+    if result[:success]
       Rails.logger.info "✅ Successfully distributed to relay: #{relay.domain}"
     else
       Rails.logger.error "❌ Failed to distribute to relay: #{relay.domain}"

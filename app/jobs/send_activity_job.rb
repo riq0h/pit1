@@ -29,17 +29,20 @@ class SendActivityJob < ApplicationJob
   private
 
   def send_to_inbox(inbox_url)
+    # 配信前に利用不可能なサーバをチェック
+    return skip_unavailable_server(inbox_url) if server_unavailable?(inbox_url)
+
     activity_data = build_activity_data(@activity)
     sender = ActivitySender.new
 
-    success = sender.send_activity(
+    result = sender.send_activity(
       activity: activity_data,
       target_inbox: inbox_url,
       signing_actor: @activity.actor
     )
 
-    log_delivery_result(success, inbox_url)
-    success
+    # 410応答の特別処理
+    handle_delivery_result(result, inbox_url)
   rescue StandardError => e
     Rails.logger.error "💥 Failed to send to #{inbox_url}: #{e.message}"
     false
@@ -111,5 +114,38 @@ class SendActivityJob < ApplicationJob
 
   def exponential_backoff
     (executions**2).minutes
+  end
+
+  # 利用不可能なサーバかチェック
+  def server_unavailable?(inbox_url)
+    return false unless inbox_url
+
+    begin
+      domain = URI(inbox_url).host
+      UnavailableServer.unavailable?(domain)
+    rescue URI::InvalidURIError
+      false
+    end
+  end
+
+  # 利用不可能なサーバへの配信をスキップ
+  def skip_unavailable_server(inbox_url)
+    domain = URI(inbox_url).host
+    Rails.logger.info "⏭️ Skipping delivery to unavailable server: #{domain}"
+    false
+  rescue URI::InvalidURIError
+    Rails.logger.error "🔗 Invalid inbox URI: #{inbox_url}"
+    false
+  end
+
+  # 配信結果の処理
+  def handle_delivery_result(result, inbox_url)
+    success = result[:success]
+
+    # 410応答でドメインが利用不可能にマークされた場合の特別処理
+    Rails.logger.warn "🚫 Domain marked unavailable due to 410 response: #{inbox_url}" if result[:code] == 410 && result[:domain_marked_unavailable]
+
+    log_delivery_result(success, inbox_url)
+    success
   end
 end

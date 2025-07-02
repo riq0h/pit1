@@ -40,11 +40,13 @@ class SendPinnedStatusAddJob < ApplicationJob
   def send_activity_to_inbox(activity, inbox_url, actor)
     activity_sender = ActivitySender.new
 
-    activity_sender.send_activity(
+    result = activity_sender.send_activity(
       activity: activity,
       target_inbox: inbox_url,
       signing_actor: actor
     )
+
+    result[:success]
   rescue StandardError => e
     Rails.logger.error "💥 Error sending Add activity to #{inbox_url}: #{e.message}"
     false

@@ -5,9 +5,9 @@ class SendFollowJob < ApplicationJob
 
   def perform(follow)
     follow_activity = build_follow_activity(follow)
-    success = send_follow_activity(follow_activity, follow)
+    result = send_follow_activity(follow_activity, follow)
 
-    handle_response(success, follow)
+    handle_response(result[:success], follow)
   rescue StandardError => e
     handle_error(e, 'Follow job error')
   end

@@ -12,7 +12,7 @@ class ActivitySender
     headers = build_headers(target_inbox, body, signing_actor)
     response = perform_request(target_inbox, body, headers)
 
-    handle_response(response, activity['type'])
+    handle_response(response, activity['type'], target_inbox)
   rescue Net::TimeoutError => e
     Rails.logger.error "⏰ Activity sending timeout: #{e.message}"
     { success: false, error: "Timeout: #{e.message}" }
@@ -52,9 +52,11 @@ class ActivitySender
     )
   end
 
-  def handle_response(response, activity_type)
+  def handle_response(response, activity_type, target_inbox = nil)
     if response.success?
       { success: true, code: response.code }
+    elsif response.code == 410
+      handle_gone_response(target_inbox, response, activity_type)
     else
       error_msg = "#{response.code} - #{response.body.to_s[0..200]}"
       Rails.logger.error "❌ #{activity_type} sending failed: #{error_msg}"
@@ -97,5 +99,31 @@ class ActivitySender
   def generate_digest(body)
     digest = Digest::SHA256.digest(body)
     "SHA-256=#{Base64.strict_encode64(digest)}"
+  end
+
+  # 410 Gone応答の処理
+  def handle_gone_response(target_inbox, response, _activity_type)
+    return { success: false, error: 'No target inbox provided', code: 410 } unless target_inbox
+
+    begin
+      domain = URI(target_inbox).host
+      error_msg = "410 Gone - #{response.body.to_s[0..200]}"
+
+      Rails.logger.warn "🚫 Server gone (410): #{domain} - marking as unavailable"
+
+      # UnavailableServerに記録
+      unavailable_server = UnavailableServer.record_gone_response(domain, error_msg)
+
+      # フォロー関係のクリーンアップを非同期で実行
+      CleanupUnavailableServerJob.perform_later(unavailable_server.id)
+
+      { success: false, error: error_msg, code: 410, domain_marked_unavailable: true }
+    rescue URI::InvalidURIError => e
+      Rails.logger.error "🔗 Invalid inbox URI: #{target_inbox} - #{e.message}"
+      { success: false, error: "Invalid inbox URI: #{e.message}", code: 410 }
+    rescue StandardError => e
+      Rails.logger.error "💥 Error handling 410 response: #{e.message}"
+      { success: false, error: "Error handling 410: #{e.message}", code: 410 }
+    end
   end
 end
