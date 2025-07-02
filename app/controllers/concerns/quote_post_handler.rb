@@ -32,13 +32,15 @@ module QuotePostHandler
     quote_status
   end
 
-  def create_quote_post_record(quoted_status, quote_params)
+  def create_quote_post_record(quoted_status, quote_status)
     quote_post = QuotePost.new(
       actor: current_user,
-      object: quoted_status,
-      quote_content: quote_params[:content],
-      quote_sensitive: quote_params[:sensitive] || false,
-      quote_spoiler_text: quote_params[:summary]
+      object: quote_status,
+      quoted_object: quoted_status,
+      shallow_quote: quote_status.content.blank?,
+      quote_text: quote_status.content,
+      visibility: quote_status.visibility,
+      ap_id: "#{quote_status.ap_id}#quote"
     )
 
     unless quote_post.save

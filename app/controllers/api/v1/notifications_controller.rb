@@ -156,7 +156,7 @@ module Api
       end
 
       def status_notification?(notification)
-        %w[mention reblog favourite status update poll].include?(notification.notification_type)
+        %w[mention reblog favourite status update poll quote].include?(notification.notification_type)
       end
 
       def build_status_json(status)

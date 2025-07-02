@@ -155,7 +155,7 @@ module Api
           base_url = Rails.application.config.activitypub.base_url
           @status.update_column(:ap_id, "#{base_url}/users/#{current_user.username}/posts/#{@status.id}")
 
-          create_quote_post_record(quoted_status, quote_params)
+          create_quote_post_record(quoted_status, @status)
           process_mentions_and_tags if @status.content.present?
           @status.create_quote_activity(quoted_status) if @status.local?
           render json: serialized_status(@status), status: :created

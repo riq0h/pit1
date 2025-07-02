@@ -199,6 +199,22 @@ class WebPushNotificationService
     )
   end
 
+  def self.notification_for_quote(quote_post, notification_id = nil)
+    return unless quote_post.quoted_object.actor.local?
+
+    send_notification(
+      quote_post.quoted_object.actor,
+      'quote',
+      "#{quote_post.actor.display_name_or_username}さんがあなたの投稿を引用しました",
+      strip_tags(quote_post.object.content || ''),
+      {
+        notification_id: notification_id,
+        url: quote_post.object.ap_id,
+        icon: quote_post.actor.avatar_url
+      }
+    )
+  end
+
   def self.strip_tags(html)
     return '' if html.blank?
 

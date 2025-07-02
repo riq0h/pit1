@@ -27,6 +27,7 @@ class Notification < ApplicationRecord
     favourite
     poll
     update
+    quote
     admin.sign_up
     admin.report
   ].freeze
@@ -102,37 +103,70 @@ class Notification < ApplicationRecord
     )
   end
 
+  def self.create_quote_notification(quote_post, quoted_status)
+    create!(
+      account: quoted_status.actor,
+      from_account: quote_post.actor,
+      activity_type: 'ActivityPubObject',
+      activity_id: quote_post.object.id.to_s,
+      notification_type: 'quote'
+    )
+  end
+
   private
 
   def send_push_notification
     case notification_type
-    when 'follow'
-      WebPushNotificationService.notification_for_follow(from_account, account, id)
-    when 'follow_request'
-      WebPushNotificationService.notification_for_follow_request(from_account, account, id)
-    when 'mention'
-      status = activity
-      WebPushNotificationService.notification_for_mention(status, account, id) if status
-    when 'favourite'
-      status = activity
-      favourite = Favourite.find_by(actor: from_account, object: status)
-      WebPushNotificationService.notification_for_favourite(favourite, id) if favourite && status
-    when 'reblog'
-      status = activity
-      reblog = Reblog.find_by(actor: from_account, object: status)
-      WebPushNotificationService.notification_for_reblog(reblog, id) if reblog && status
-    when 'poll'
-      status = activity
-      WebPushNotificationService.notification_for_poll(status, account, id) if status
-    when 'status'
-      status = activity
-      WebPushNotificationService.notification_for_status(status, account, id) if status
-    when 'update'
-      status = activity
-      WebPushNotificationService.notification_for_update(status, account, id) if status
+    when 'follow', 'follow_request'
+      send_follow_notification
+    when 'mention', 'status', 'update', 'poll'
+      send_status_notification
+    when 'favourite', 'reblog', 'quote'
+      send_interaction_notification
     end
   rescue StandardError => e
     Rails.logger.error "Failed to send push notification: #{e.message}"
+  end
+
+  def send_follow_notification
+    if notification_type == 'follow'
+      WebPushNotificationService.notification_for_follow(from_account, account, id)
+    else
+      WebPushNotificationService.notification_for_follow_request(from_account, account, id)
+    end
+  end
+
+  def send_status_notification
+    status = activity
+    return unless status
+
+    case notification_type
+    when 'mention'
+      WebPushNotificationService.notification_for_mention(status, account, id)
+    when 'poll'
+      WebPushNotificationService.notification_for_poll(status, account, id)
+    when 'status'
+      WebPushNotificationService.notification_for_status(status, account, id)
+    when 'update'
+      WebPushNotificationService.notification_for_update(status, account, id)
+    end
+  end
+
+  def send_interaction_notification
+    status = activity
+    return unless status
+
+    case notification_type
+    when 'favourite'
+      favourite = Favourite.find_by(actor: from_account, object: status)
+      WebPushNotificationService.notification_for_favourite(favourite, id) if favourite
+    when 'reblog'
+      reblog = Reblog.find_by(actor: from_account, object: status)
+      WebPushNotificationService.notification_for_reblog(reblog, id) if reblog
+    when 'quote'
+      quote_post = QuotePost.find_by(object: status)
+      WebPushNotificationService.notification_for_quote(quote_post, id) if quote_post
+    end
   end
 
   def broadcast_notification

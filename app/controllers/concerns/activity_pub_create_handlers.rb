@@ -51,6 +51,7 @@ module ActivityPubCreateHandlers
     handle_mentions(object, object_data)
     handle_emojis(object, object_data)
     handle_poll(object, object_data) if object_data['type'] == 'Question' || object_data['oneOf'] || object_data['anyOf']
+    handle_quote_post(object, object_data) if object_data['quoteUrl'] || object_data['_misskey_quote'] || object_data['quoteUri']
     handle_direct_message_conversation(object, object_data) if object.visibility == 'direct'
     update_reply_count_if_needed(object)
 
@@ -229,5 +230,30 @@ module ActivityPubCreateHandlers
     Rails.logger.info "🗳️ Vote processed for poll #{target_object.poll.id}: #{choice_name}"
   rescue StandardError => e
     Rails.logger.error "Failed to process vote: #{e.message}"
+  end
+
+  def handle_quote_post(object, object_data)
+    # 引用元のURLを取得（Misskey、Fedibird、その他の実装に対応）
+    quoted_url = object_data['quoteUrl'] || object_data['_misskey_quote'] || object_data['quoteUri']
+    return unless quoted_url
+
+    # 引用元の投稿を検索
+    quoted_object = ActivityPubObject.find_by(ap_id: quoted_url)
+    return unless quoted_object
+
+    # QuotePostレコードを作成
+    quote_post = QuotePost.create!(
+      actor: object.actor,
+      object: object,
+      quoted_object: quoted_object,
+      shallow_quote: object.content.blank?,
+      quote_text: object.content,
+      visibility: object.visibility,
+      ap_id: "#{object.ap_id}#quote"
+    )
+
+    Rails.logger.info "💬 Quote post created: #{quote_post.id} quotes #{quoted_object.ap_id}"
+  rescue StandardError => e
+    Rails.logger.error "❌ Failed to create quote post: #{e.message}"
   end
 end

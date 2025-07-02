@@ -11,6 +11,9 @@ class QuotePost < ApplicationRecord
   validates :visibility, inclusion: { in: ActivityPubObject::VISIBILITY_LEVELS }
   validates :ap_id, presence: true, uniqueness: true
 
+  # コールバック
+  after_create :notify_quoted_status_author
+
   scope :recent, -> { order(created_at: :desc) }
   scope :shallow, -> { where(shallow_quote: true) }
   scope :deep, -> { where(shallow_quote: false) }
@@ -50,5 +53,15 @@ class QuotePost < ApplicationRecord
 
   def build_audience_list(type)
     ActivityBuilders::AudienceBuilder.new(self).build(type)
+  end
+
+  def notify_quoted_status_author
+    # 自分自身の投稿を引用した場合は通知しない
+    return if quoted_object.actor == actor
+
+    # 引用された投稿の作者に通知を送信
+    Notification.create_quote_notification(self, quoted_object)
+  rescue StandardError => e
+    Rails.logger.error "Failed to create quote notification: #{e.message}"
   end
 end
