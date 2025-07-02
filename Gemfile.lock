@@ -268,6 +268,11 @@ GEM
       prettyprint
     prettyprint (0.2.0)
     prism (1.4.0)
+    propshaft (1.1.0)
+      actionpack (>= 7.0.0)
+      activesupport (>= 7.0.0)
+      rack
+      railties (>= 7.0.0)
     pry (0.15.2)
       coderay (~> 1.1)
       method_source (~> 1.0)
@@ -406,14 +411,6 @@ GEM
       railties (>= 7.1)
       thor (~> 1.3.1)
     spring (4.3.0)
-    sprockets (4.2.2)
-      concurrent-ruby (~> 1.0)
-      logger
-      rack (>= 2.2.4, < 4)
-    sprockets-rails (3.5.2)
-      actionpack (>= 6.1)
-      activesupport (>= 6.1)
-      sprockets (>= 3.0.0)
     sqlite3 (2.6.0-aarch64-linux-gnu)
     sqlite3 (2.6.0-aarch64-linux-musl)
     sqlite3 (2.6.0-arm-linux-gnu)
@@ -500,6 +497,7 @@ DEPENDENCIES
   nanoid
   nokogiri
   ostruct
+  propshaft
   pry-rails
   puma (>= 5.0)
   rack-cors
@@ -515,7 +513,6 @@ DEPENDENCIES
   solid_cache
   solid_queue
   spring
-  sprockets-rails
   sqlite3 (>= 2.1)
   stimulus-rails
   tailwindcss-rails
