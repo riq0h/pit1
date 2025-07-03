@@ -15,7 +15,7 @@ letterはRails8およびSQLite、Hotwireで構成されるミニマルなActivit
 ・ローカル投稿の全文検索に対応  
 ・Mastodon APIに準拠
 
-## セットアップ
+## セットアップ（本番環境）
 
 ```
 RAILS_ENV=production bin/setup

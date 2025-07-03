@@ -2,6 +2,8 @@
 
 class CreateSolidQueueTables < ActiveRecord::Migration[8.0]
   def change
+    current_db = ActiveRecord::Base.connection_db_config.name
+    return unless current_db == "primary" || current_db == "queue"
     create_table :solid_queue_jobs do |t|
       t.string :queue_name, null: false, index: { name: "index_solid_queue_jobs_for_polling" }
       t.string :class_name, null: false

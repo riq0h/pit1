@@ -20,7 +20,11 @@ development:
   cache:
     <<: *default
     database: storage/cache_development.sqlite3
-    migrations_paths: db/cache_migrate
+    application_name: letter
+  
+  queue:
+    <<: *default
+    database: storage/queue_development.sqlite3
     application_name: letter
 
 test:
@@ -34,7 +38,11 @@ test:
   cache:
     <<: *default
     database: storage/cache_test.sqlite3
-    migrations_paths: db/cache_migrate
+    application_name: letter
+  
+  queue:
+    <<: *default
+    database: storage/queue_test.sqlite3
     application_name: letter
 
 production:
@@ -53,7 +61,6 @@ production:
   queue:
     <<: *default
     database: storage/queue_production.sqlite3
-    migrations_paths: db/queue_migrate
     application_name: letter
     pragma:
       journal_mode: :wal
@@ -66,7 +73,6 @@ production:
   cable:
     <<: *default
     database: storage/cable_production.sqlite3
-    migrations_paths: db/cable_migrate
     application_name: letter
     pragma:
       journal_mode: :wal
@@ -79,7 +85,6 @@ production:
   cache:
     <<: *default
     database: storage/cache_production.sqlite3
-    migrations_paths: db/cache_migrate
     application_name: letter
     pragma:
       journal_mode: :wal
