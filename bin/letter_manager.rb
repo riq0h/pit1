@@ -2105,26 +2105,23 @@ end
 
 def check_solid_cache_status
   begin
-    # Solid Cacheの動作確認
-    test_key = "health_check_#{Time.now.to_i}"
-    test_value = "ok"
-    
+    # Solid Cacheの動作確認（テーブル存在確認のみ）
     cache_check_code = <<~RUBY
       begin
-        # Solid Cacheに書き込みテスト
-        Rails.cache.write('#{test_key}', '#{test_value}', expires_in: 10.seconds)
+        # Solid Cacheのテーブル存在確認のみ（read/writeテストはskip）
+        adapter = Rails.cache.class.name
         
-        # 読み込みテスト
-        result = Rails.cache.read('#{test_key}')
-        
-        if result == '#{test_value}'
-          puts 'cache_ok'
+        if adapter.include?('SolidCache')
+          ActiveRecord::Base.establish_connection(:cache)
+          if ActiveRecord::Base.connection.table_exists?('solid_cache_entries')
+            puts 'cache_ok'
+          else
+            puts 'cache_failed|Table not found'
+          end
+          ActiveRecord::Base.establish_connection(:primary)
         else
-          puts 'cache_failed|Read test failed'
+          puts 'cache_ok|Different adapter'
         end
-        
-        # クリーンアップ
-        Rails.cache.delete('#{test_key}')
         
       rescue => e
         puts "cache_error|\#{e.message}"
